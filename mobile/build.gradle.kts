@@ -3,6 +3,10 @@ plugins {
     alias(libs.plugins.kotlin.compose)
 }
 
+// Optional local-only input. CI and ordinary source builds contain no accessory identity.
+val localAuthenticationAssets = providers.environmentVariable("DIPLAY_AUTH_ASSETS_DIR")
+    .orNull?.let { file(it).canonicalFile }
+
 android {
     namespace = "com.shilapi.xcertplay"
     compileSdk {
@@ -18,6 +22,8 @@ android {
 
     }
 
+
+    localAuthenticationAssets?.let { sourceSets.getByName("main").assets.srcDir(it) }
 
     signingConfigs {
         create("release") {
@@ -63,7 +69,7 @@ dependencies {
     debugImplementation(libs.androidx.compose.ui.tooling)
 }
 
-// Source builds must never silently import a shared accessory private key.
+// No implicit import. Only the two explicitly selected local runtime assets are allowed.
 val credentialAssets = files(android.sourceSets.flatMap { source ->
     source.assets.directories.map { directory ->
         fileTree(directory) {
@@ -74,14 +80,16 @@ val credentialAssets = files(android.sourceSets.flatMap { source ->
 })
 val rejectBundledCredentials by tasks.registering {
     group = "verification"
-    description = "Reject credential files in every APK asset source directory."
+    description = "Reject unexpected credential files in APK assets."
     val filesToCheck = credentialAssets
+    val allowed = localAuthenticationAssets?.let { dir ->
+        listOf("identity.pk8", "certificate.p7b").map { dir.resolve("offline-mfi/$it").canonicalFile }.toSet()
+    } ?: emptySet()
     inputs.files(filesToCheck)
     doLast {
-        check(filesToCheck.isEmpty) {
-            "Credential assets are forbidden in distributable APKs: " +
-                filesToCheck.files.joinToString { it.name }
-        }
+        check(allowed.all { it.isFile }) { "Explicit local authentication assets are incomplete" }
+        val unexpected = filesToCheck.files.filter { it.canonicalFile !in allowed }
+        check(unexpected.isEmpty()) { "Unexpected credential files in APK assets" }
     }
 }
 tasks.named("preBuild") { dependsOn(rejectBundledCredentials) }

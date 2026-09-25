@@ -30,7 +30,7 @@ Gradle dependency declarations and version catalog accompany the source. License
 
 ## Experimental authentication data
 
-The withdrawn 0.1.0 preview APK included an accessory certificate/key pair recovered from public Carlinkit C2Air Allwinner V821 firmware during the owner's local investigation. These data are not newly generated Apple-issued credentials for DiPlay and are not relicensed as project source code. That distribution has been suspended. The credential must not be redistributed in new builds; the current source snapshot contains no accessory identity files. The source archive does not contain the private key, and the separate Android APK-signing key is never distributed.
+The public preview APK includes an accessory certificate/key pair recovered from public Carlinkit C2Air Allwinner V821 firmware during the owner's local investigation. These data are not newly generated Apple-issued credentials for DiPlay and are not relicensed as project source code. They are bundled in the preview APK to reproduce the offline experiment; continued acceptance and suitability for general distribution are unresolved. The source archive does not contain the private key, and the separate Android APK-signing key is never distributed.
 
 ## Download website
 
