@@ -34,6 +34,7 @@ class AndroidMediaSink(
     private val preferSoftwareHevcDecoder: Boolean = false,
     private val advancedAudioChannelMapping: Boolean = false,
     onScreenStreamActiveChanged: ((Int, Boolean) -> Unit)? = null,
+    private val mediaBufferMillis: Int = MediaAudioBuffer.DEFAULT_MILLIS,
 ) : MediaSink {
     private val screenStateLock = Any()
     private val activeScreenTypes = mutableSetOf<Int>()
@@ -167,7 +168,7 @@ class AndroidMediaSink(
         val existing = audioRenderers[type]
         if (existing?.format == format) return existing
         existing?.close()
-        return AudioRenderer(format, advancedAudioChannelMapping).also { audioRenderers[type] = it }
+        return AudioRenderer(format, advancedAudioChannelMapping, mediaBufferMillis).also { audioRenderers[type] = it }
     }
 }
 
@@ -190,6 +191,7 @@ private class VideoDecoder(
     private var duplicateConfigLogged = false
     private val referenceChain = VideoReferenceChain()
     private var lastKeyFrameRequestNs = 0L
+    private val stats = VideoStats()
     private val thread = Thread(::run, "carplay-video").apply { isDaemon = true; start() }
 
     fun configure(codec: VideoCodec, codecData: ByteArray) {
@@ -197,6 +199,7 @@ private class VideoDecoder(
     }
 
     fun submit(nalus: ByteArray) {
+        stats.onReceived(nalus.size)
         queue.offer(VideoJob.Frame(nalus))
     }
 
@@ -227,6 +230,7 @@ private class VideoDecoder(
                         null -> Unit
                     }
                     decoder?.let(::drainOutput)
+                    stats.logIfDue()
                     if (referenceChain.needsKeyFrame && lastConfig != null && outputSurface != null) requestKeyFrameIfDue()
                 } catch (error: Exception) {
                     if (running) Log.e(TAG, "video decoder job failed: ${job?.javaClass?.simpleName}", error)
@@ -386,8 +390,11 @@ private class VideoDecoder(
 
     private fun recover(reason: String) {
         Log.w(TAG, "Video recovery: $reason; waiting for keyframe")
+        stats.onRecovery()
         report("recovery: $reason; waiting for keyframe")
-        releaseDecoder()
+        // Flushing keeps the configured codec; recreating it at 2K+ adds a visible stall on every Wi-Fi burst.
+        val codec = decoder
+        if (codec == null || runCatching { codec.flush() }.isFailure) releaseDecoder()
         referenceChain.reset()
         requestKeyFrameIfDue()
     }
@@ -409,6 +416,7 @@ private class VideoDecoder(
                 index >= 0 -> {
                     val render = outputSurface != null
                     codec.releaseOutputBuffer(index, render)
+                    if (render) stats.onRendered()
                     if (render && !renderedFrameLogged) {
                         renderedFrameLogged = true
                         report("first frame rendered")
@@ -483,6 +491,7 @@ private fun MediaFormat.intOrNull(key: String): Int? =
 private class AudioRenderer(
     val format: AudioFormat,
     private val advancedAudioChannelMapping: Boolean,
+    private val mediaBufferMillis: Int,
 ) : Closeable {
     private data class AudioPacket(val rtp: ByteArray, val sample: Int)
 
@@ -504,6 +513,11 @@ private class AudioRenderer(
     private var inputDropped = 0
     private var outputBuffers = 0
     private var firstPcmLogged = false
+    @Volatile private var packetsReceived = 0
+    @Volatile private var packetsDropped = 0
+    private var statsWindowStartNs = 0L
+    private var statsLastUnderruns = 0
+    private var bytesPerSecond = 0
     private val thread = Thread(::run, "carplay-audio").apply { isDaemon = true }
 
     fun start() {
@@ -513,7 +527,9 @@ private class AudioRenderer(
     }
 
     fun submit(rtp: ByteArray, sample: Int) {
+        if (started) packetsReceived++
         if (!started || !queue.offer(AudioPacket(rtp, sample))) {
+            if (started) packetsDropped++
             if (started && !droppedPacketsLogged) {
                 droppedPacketsLogged = true
                 Log.w(TAG, "audio queue full; dropping newest packets to bound latency")
@@ -534,7 +550,10 @@ private class AudioRenderer(
                 AudioCodecKind.LPCM -> Unit
             }
             createTrack()
-            while (running) handle(queue.take())
+            while (running) {
+                handle(queue.take())
+                logStatsIfDue()
+            }
         } catch (_: InterruptedException) {
             // Worker shut down.
         } catch (error: Exception) {
@@ -587,13 +606,10 @@ private class AudioRenderer(
             Log.e(TAG, "AudioTrack buffer size unavailable rate=${format.sampleRate} channels=${format.channels}")
             return
         }
-        val bufferBytes = maxOf(minBuffer * 4, MIN_TRACK_BUFFER_BYTES)
-        startThresholdBytes = if (format.audioType == "telephony" || format.audioType == "speechrecognition") {
-            maxOf(minBuffer, MIN_START_BUFFER_BYTES)
-        } else {
-            maxOf(minBuffer, MIN_START_BUFFER_BYTES)
-        }
-        track = AudioTrack.Builder()
+        val plan = MediaAudioBuffer.plan(format.audioType, format.sampleRate, format.channels, minBuffer, mediaBufferMillis)
+        val frameBytes = if (format.channels >= 2) 4 else 2
+        bytesPerSecond = format.sampleRate * frameBytes
+        val built = AudioTrack.Builder()
             .setAudioAttributes(audioAttributes())
             .setAudioFormat(
                 AndroidAudioFormat.Builder()
@@ -602,14 +618,18 @@ private class AudioRenderer(
                     .setChannelMask(channelMask)
                     .build(),
             )
-            .setBufferSizeInBytes(bufferBytes)
+            .setBufferSizeInBytes(plan.trackBufferBytes)
             .setTransferMode(AudioTrack.MODE_STREAM)
             .build()
+        track = built
+        val capacityBytes = built.bufferSizeInFrames * frameBytes
+        startThresholdBytes = MediaAudioBuffer.startBytesFor(plan.startBytes, capacityBytes, PREBUFFER_WRITE_CHUNK_BYTES)
         Log.i(
             TAG,
             "audio track prepared type=${format.payloadType} audioType=${format.audioType} " +
                 "codec=${format.codec} " +
-                "rate=${format.sampleRate} channels=${format.channels}",
+                "rate=${format.sampleRate} channels=${format.channels} " +
+                "buffer=${capacityBytes * 1000L / bytesPerSecond}ms start=${startThresholdBytes * 1000L / bytesPerSecond}ms",
         )
     }
 
@@ -839,6 +859,25 @@ private class AudioRenderer(
         }
     }
 
+    // One line per 5 s while audio flows, so a drive log shows whether music gaps come from the network.
+    private fun logStatsIfDue() {
+        val now = System.nanoTime()
+        if (statsWindowStartNs == 0L) statsWindowStartNs = now
+        if (now - statsWindowStartNs < STATS_WINDOW_NS) return
+        val track = track
+        val underruns = track?.underrunCount ?: 0
+        Log.i(
+            STATS_TAG,
+            "audio stats audioType=${format.audioType} codec=${format.codec} rx=$packetsReceived " +
+                "dropped=$packetsDropped underruns=+${underruns - statsLastUnderruns} queue=${queue.size} " +
+                "playing=$playbackStarted",
+        )
+        statsLastUnderruns = underruns
+        packetsReceived = 0
+        packetsDropped = 0
+        statsWindowStartNs = now
+    }
+
     private fun applyFadeIn(data: ByteArray, offset: Int, length: Int) {
         val samples = (length - length % 2) / 2
         val fadeSamples = minOf(samples, maxOf(1, format.sampleRate / 100))
@@ -904,10 +943,11 @@ private class AudioRenderer(
         const val OPUS_CODEC_DELAY_NANOS = 6_500_000L
         const val OPUS_SEEK_PRE_ROLL_NANOS = 80_000_000L
         const val INPUT_TIMEOUT_US = 10_000L
-        const val MAX_QUEUED_PACKETS = 64
-        const val MIN_TRACK_BUFFER_BYTES = 16 * 1024
-        const val MIN_START_BUFFER_BYTES = 4 * 1024
+        // Holds a burst after a Wi-Fi gap (~4 s of AAC) instead of dropping it.
+        const val MAX_QUEUED_PACKETS = 192
         const val PREBUFFER_WRITE_CHUNK_BYTES = 2 * 1024
+        const val STATS_TAG = "DiPlay-AudioStats"
+        const val STATS_WINDOW_NS = 5_000_000_000L
         const val DECODED_BUFFER_LOG_INTERVAL = 50
     }
 }

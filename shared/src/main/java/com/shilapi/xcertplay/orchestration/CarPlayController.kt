@@ -27,6 +27,8 @@ import com.shilapi.xcertplay.airplay.AirPlayMediaHandler
 import com.shilapi.xcertplay.airplay.AirPlaySession
 import com.shilapi.xcertplay.airplay.AirPlaySessionListener
 import com.shilapi.xcertplay.airplay.PairingStore
+import com.shilapi.xcertplay.hud.BydClusterBridge
+import com.shilapi.xcertplay.hud.BydHudBridge
 import com.shilapi.xcertplay.iap2.session.Iap2Session
 import com.shilapi.xcertplay.mfi.Iap2MfiAuthenticationClient
 import com.shilapi.xcertplay.mfi.MfiAuthenticationClient
@@ -146,6 +148,8 @@ class CarPlayController(
         require(!config.locationReportingEnabled || locationProvider != null) {
             "A location provider is required when location reporting is enabled"
         }
+        BydHudBridge.initialize(context.applicationContext)
+        BydClusterBridge.initialize(context.applicationContext)
     }
 
     private enum class Phase { IDLE, MFI, WIRELESS, IPHONE, REENUMERATION, DATAPATHS, CONTROL }
@@ -230,7 +234,11 @@ class CarPlayController(
         }
 
         override fun onSessionEnded(session: AirPlaySession) {
-            if (activeSession === session) activeSession = null
+            if (activeSession === session) {
+                activeSession = null
+                BydHudBridge.clear()
+                BydClusterBridge.clear()
+            }
             debugLog("AirPlay session ended peer=${session.host}")
             uiListener?.onSessionEnded(session)
         }
@@ -248,7 +256,16 @@ class CarPlayController(
             uiListener?.onDeviceInfo(session, info)
         }
 
+        // The user tapped the car icon in CarPlay: show the head unit's own menu, like its Home button.
+        // The session keeps running in the background, so returning to DiPlay resumes CarPlay.
         override fun onHostUiRequested(session: AirPlaySession) {
+            debugLog("CarPlay requested the car UI; opening the head-unit home screen")
+            runCatching {
+                appContext.startActivity(
+                    Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME)
+                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+                )
+            }.onFailure { debugLog("Car home screen could not open: ${it.javaClass.simpleName}") }
             uiListener?.onHostUiRequested(session)
         }
 
@@ -394,6 +411,12 @@ class CarPlayController(
             Thread.currentThread().interrupt()
             false
         }
+    }
+
+    // HUD (SOME/IP) and cluster (AMap broadcast) keep separate state so one failing cannot stall the other.
+    private fun onRouteFrame(frame: com.shilapi.xcertplay.iap2.wire.Iap2Frame) {
+        runCatching { BydHudBridge.onFrame(frame) }.onFailure { debugLog("BYD HUD frame failed: $it") }
+        runCatching { BydClusterBridge.onFrame(frame) }.onFailure { debugLog("BYD cluster frame failed: $it") }
     }
 
     private fun startMfi() {
@@ -925,6 +948,7 @@ class CarPlayController(
                 endpoint = endpoint,
                 timeoutMillis = controlLoopTimeoutMillis(),
                 locationProvider = locationProvider,
+                onIncoming = ::onRouteFrame,
                 onProgress = ::debugLog,
             )
             if (isStaleWirelessRun(generation)) {
@@ -1013,6 +1037,7 @@ class CarPlayController(
                         onReady = {
                             onWirelessTunnelReady(generation)
                         },
+                        onIncoming = ::onRouteFrame,
                         onProgress = { message -> debugLog("iAP tunnel $message") },
                     )
                     if (closed || generation != wirelessGeneration.get()) return@execute
@@ -1463,7 +1488,7 @@ class CarPlayController(
                 availableCurrentMilliAmps = config.availableCurrentMilliAmps,
                 timeoutMillis = controlLoopTimeoutMillis(),
                 locationProvider = locationProvider,
-                onIncoming = { },
+                onIncoming = ::onRouteFrame,
                 onProgress = { message -> debugLog("wired $message") },
             )
             onStatus(
@@ -1511,6 +1536,11 @@ class CarPlayController(
             WirelessHotspotMode.LOCAL_ONLY_HOTSPOT
         } else {
             config.wirelessHotspotMode
+        }
+        if (hotspotMode == WirelessHotspotMode.MANUAL &&
+            com.shilapi.xcertplay.network.CarHotspotStatus.isEnabled(appContext) == false
+        ) {
+            throw IOException("The car hotspot is off. Turn it on in the car settings and connect again.")
         }
         val manager: WirelessHotspotManager = when (hotspotMode) {
             WirelessHotspotMode.WIFI_P2P -> WifiP2pGroupManager(appContext, ::debugLog)

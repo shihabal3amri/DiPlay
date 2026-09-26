@@ -174,7 +174,9 @@ class ManualHotspotManager(
                     "configured band ${wifiBandLabel(if (expectedBand == ManualHotspotBand.GHZ_2_4) 1 else 2)}",
             )
         }
-        if (configuration.security != expectedSecurity) {
+        // WPA2 vs WPA3 variants are fine: the live security is what the iPhone is told (see start()).
+        // Only an open/secured mismatch means the saved password cannot be right.
+        if ((configuration.security == Iap2WirelessSecurity.NONE) != (expectedSecurity == Iap2WirelessSecurity.NONE)) {
             throw IOException(
                 "Manual hotspot security ${configuration.security} does not match configured " +
                     "security $expectedSecurity",
