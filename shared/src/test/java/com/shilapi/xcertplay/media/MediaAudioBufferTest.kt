@@ -13,6 +13,14 @@ class MediaAudioBufferTest {
     }
 
     @Test
+    fun `longest music buffer is 1500 ms`() {
+        assertEquals(1500, MediaAudioBuffer.sanitize(1500))
+        val plan = MediaAudioBuffer.plan("media", 48_000, 2, minBufferBytes = 7_680, mediaMillis = 1500)
+        assertEquals(288_000, plan.startBytes)
+        assertEquals(326_400, plan.trackBufferBytes)
+    }
+
+    @Test
     fun `calls and prompts keep the low-latency buffer`() {
         val plan = MediaAudioBuffer.plan("telephony", 16_000, 1, minBufferBytes = 1_280, mediaMillis = 1000)
         assertEquals(4 * 1024, plan.startBytes)

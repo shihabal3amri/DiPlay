@@ -8,6 +8,29 @@ import org.junit.Test
 
 class AirPlayInfoPlistTest {
     @Test
+    fun musicBufferIsReportedAsMediaOutputLatencyOnly() {
+        val info = AirPlayInfoPlist.build(
+            AirPlayConfig(
+                deviceName = "test",
+                deviceId = "02:00:00:00:00:02",
+                btMac = "02:00:00:00:00:02",
+                sourceVersion = "366.0",
+                main = AirPlayDisplayConfig(widthPixels = 1280, heightPixels = 720),
+                mediaBufferMillis = 1000,
+            ),
+        )
+
+        val latencies = (info["audioLatencies"] as List<*>).map { it as Map<*, *> }
+        fun latency(type: Int, audioType: String?) =
+            latencies.single { it["type"] == type && it["audioType"] == audioType }["outputLatencyMicros"]
+        assertEquals(1_000_000L, latency(100, "media"))
+        assertEquals(0L, latency(102, "default"))
+        assertEquals(0L, latency(100, "telephony"))
+        assertEquals(0L, latency(100, "speechRecognition"))
+        assertEquals(0L, latency(101, "default"))
+    }
+
+    @Test
     fun defaultDisplayIncludesFullViewAndSafeAreas() {
         val info = AirPlayInfoPlist.build(
             AirPlayConfig(

@@ -7,7 +7,7 @@ package com.shilapi.xcertplay.media
  */
 object MediaAudioBuffer {
     const val DEFAULT_MILLIS = 300
-    val presets = listOf(DEFAULT_MILLIS, 500, 1000)
+    val presets = listOf(DEFAULT_MILLIS, 500, 1000, 1500)
 
     private const val HEADROOM_MILLIS = 200 // room above the start level so bursts after a gap fit
     private const val MIN_TRACK_BUFFER_BYTES = 16 * 1024

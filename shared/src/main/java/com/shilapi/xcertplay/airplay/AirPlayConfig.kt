@@ -42,6 +42,8 @@ data class AirPlayConfig(
     val entertainmentSampleRate: Int = 48000,
     val hevc: Boolean = false,
     val disableAudioOutput: Boolean = false,
+    /** Music buffer the renderer holds; reported to the phone as output latency. 0 = none. */
+    val mediaBufferMillis: Int = 0,
     val microphone: Boolean = false,
     val manufacturer: String = "xcertplay",
     val model: String = "xcertplay",
