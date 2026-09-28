@@ -89,17 +89,24 @@ class DiPlayActivity : ComponentActivity() {
         super.onNewIntent(intent); setIntent(intent)
         page = intent.getStringExtra("page") ?: "home"; render()
         handleWirelessRecovery()
+        // The iPhone joined the car's Bluetooth while DiPlay was already open.
+        if (intent.getStringExtra(AutoStartLauncher.EXTRA_AUTO_START) == AutoStartLauncher.TRIGGER_BLUETOOTH &&
+            setupError == null && !CarPlayBackgroundSession.hasSession()) {
+            handler.post { connect(AirPlayPersistence.loadWirelessEnabled(this)) }
+        }
     }
     override fun onSaveInstanceState(outState: Bundle) { outState.putString("page", page); super.onSaveInstanceState(outState) }
     override fun onConfigurationChanged(newConfig: Configuration) { super.onConfigurationChanged(newConfig); render() }
     override fun onResume() {
         super.onResume(); handler.removeCallbacks(tick); handler.post(tick)
-        // Back from the car settings: refresh the car hotspot reminder on the home page.
-        if (!initialLaunch && page == "home") render()
+        // Back from the car settings: refresh the car hotspot reminder and the overlay permission row.
+        if (!initialLaunch && page != "about") render()
         if (initialLaunch) {
             initialLaunch = false
+            // A Bluetooth start means the iPhone is here: connect even if "Connect when DiPlay opens" is off.
+            val bluetoothStart = intent.getStringExtra(AutoStartLauncher.EXTRA_AUTO_START) == AutoStartLauncher.TRIGGER_BLUETOOTH
             if (setupError == null && !CarPlayBackgroundSession.hasSession() &&
-                DiPlayPreferences.autoConnect(this) && intent.getStringExtra("page") == null) {
+                (DiPlayPreferences.autoConnect(this) || bluetoothStart) && intent.getStringExtra("page") == null) {
                 handler.post { connect(AirPlayPersistence.loadWirelessEnabled(this)) }
             }
         }
@@ -201,7 +208,12 @@ class DiPlayActivity : ComponentActivity() {
         content.addView(label("Apply reconnects CarPlay for size, resolution, music buffer and frame rate. Other changes apply to your next connection.", 17, MUTED).apply { setPadding(0, dp(8), 0, dp(24)) })
         section(content, "Automatic connection") { card ->
             toggle(card, "Connect when DiPlay opens", "Use your last connection type and selected iPhone.", DiPlayPreferences.autoConnect(this)) { DiPlayPreferences.saveAutoConnect(this, it) }
-            toggle(card, "Open after the car starts", "Availability depends on your head unit’s startup settings.", AirPlayPersistence.loadAutoStartOnBoot(this)) { AirPlayPersistence.saveAutoStartOnBoot(this, it) }
+            toggle(card, "Open when your iPhone connects", "Start DiPlay and connect when the iPhone you chose joins the car’s Bluetooth. Works after the car wakes from sleep.", DiPlayPreferences.autoStartOnBluetooth(this)) { DiPlayPreferences.saveAutoStartOnBluetooth(this, it) }
+            toggle(card, "Open after the car starts", "Only after a full restart. Availability depends on your head unit’s startup settings.", AirPlayPersistence.loadAutoStartOnBoot(this)) { AirPlayPersistence.saveAutoStartOnBoot(this, it) }
+            if (!AutoStartLauncher.canDrawOverlays(this)) {
+                card.addView(label("Android lets DiPlay open itself from the background only with “Display over other apps”. Without it, DiPlay shows a notification to tap instead.", 14, WARNING).apply { setPadding(0, dp(12), 0, 0) })
+                card.addView(button("Allow display over other apps", false) { openSystem(AutoStartLauncher.overlayPermissionIntent(this)) }, matchButton(12, 60))
+            }
             card.addView(button("Choose iPhone · ${DiPlayPreferences.phoneName(this)}", false) { choosePhone() }, matchButton(12, 60))
         }
         section(content, "Wireless connection") { card -> wirelessLinkControls(card) }
