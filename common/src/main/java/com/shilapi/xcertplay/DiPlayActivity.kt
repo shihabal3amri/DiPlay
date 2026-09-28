@@ -232,7 +232,7 @@ class DiPlayActivity : ComponentActivity() {
             carPlaySizeControl(card)
             choice(card, "Resolution", listOf("Native", "80% · lighter load", "60% · lightest load"), listOf(10, 8, 6).indexOf(AirPlayPersistence.loadDisplayScaleTenths(this)).coerceAtLeast(0)) { AirPlayPersistence.saveDisplayScaleTenths(this, listOf(10, 8, 6)[it]) }
             val bufferPresets = com.shilapi.xcertplay.media.MediaAudioBuffer.presets
-            choice(card, "Music buffer", listOf("300 ms · default", "500 ms", "1000 ms · most stable"),
+            choice(card, "Music buffer", listOf("300 ms · default", "500 ms", "1000 ms", "1500 ms · weakest Wi-Fi"),
                 bufferPresets.indexOf(AirPlayPersistence.loadMediaBufferMillis(this)).coerceAtLeast(0)) {
                 AirPlayPersistence.saveMediaBufferMillis(this, bufferPresets[it])
             }

@@ -7,6 +7,7 @@ import android.media.MediaCodec
 import android.media.MediaCodecList
 import android.media.MediaFormat
 import android.os.Build
+import android.os.Process
 import android.util.Log
 import android.view.Surface
 import com.shilapi.xcertplay.airplay.AudioCodecKind
@@ -564,6 +565,11 @@ private class AudioRenderer(
 
     private fun run() {
         try {
+            Process.setThreadPriority(Process.THREAD_PRIORITY_URGENT_AUDIO)
+        } catch (error: Exception) {
+            Log.w(TAG, "audio renderer priority unavailable", error)
+        }
+        try {
             when (format.codec) {
                 AudioCodecKind.AAC_LC -> configureCodec(MediaFormat.MIMETYPE_AUDIO_AAC)
                 AudioCodecKind.OPUS -> configureCodec(MediaFormat.MIMETYPE_AUDIO_OPUS)
@@ -637,18 +643,28 @@ private class AudioRenderer(
         val plan = MediaAudioBuffer.plan(format.audioType, format.sampleRate, format.channels, minBuffer, mediaBufferMillis)
         val frameBytes = if (format.channels >= 2) 4 else 2
         bytesPerSecond = format.sampleRate * frameBytes
-        val built = AudioTrack.Builder()
-            .setAudioAttributes(audioAttributes())
-            .setAudioFormat(
-                AndroidAudioFormat.Builder()
-                    .setEncoding(encoding)
-                    .setSampleRate(format.sampleRate)
-                    .setChannelMask(channelMask)
-                    .build(),
-            )
-            .setBufferSizeInBytes(plan.trackBufferBytes)
+        val attributes = audioAttributes()
+        val trackFormat = AndroidAudioFormat.Builder()
+            .setEncoding(encoding)
+            .setSampleRate(format.sampleRate)
+            .setChannelMask(channelMask)
+            .build()
+        fun build(bufferBytes: Int): AudioTrack = AudioTrack.Builder()
+            .setAudioAttributes(attributes)
+            .setAudioFormat(trackFormat)
+            .setBufferSizeInBytes(bufferBytes)
             .setTransferMode(AudioTrack.MODE_STREAM)
             .build()
+        val built = try {
+            build(plan.trackBufferBytes)
+        } catch (error: Exception) {
+            // Some head-unit HALs reject large music buffers; the low-latency size always works,
+            // and startBytesFor() below keeps the start level under whatever was granted.
+            val fallbackBytes = MediaAudioBuffer.plan("", format.sampleRate, format.channels, minBuffer, 0).trackBufferBytes
+            Log.w(TAG, "audio track buffer=${plan.trackBufferBytes} rejected; retrying with $fallbackBytes", error)
+            report("Audio: buffer ${plan.trackBufferBytes} bytes rejected; using $fallbackBytes")
+            build(fallbackBytes)
+        }
         track = built
         val capacityBytes = built.bufferSizeInFrames * frameBytes
         startThresholdBytes = MediaAudioBuffer.startBytesFor(plan.startBytes, capacityBytes, PREBUFFER_WRITE_CHUNK_BYTES)

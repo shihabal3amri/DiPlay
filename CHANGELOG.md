@@ -1,3 +1,10 @@
+# Unreleased
+
+- Music buffer adds a 1500 ms option for the weakest Wi-Fi links.
+- The chosen music buffer is advertised to the iPhone as `media` output latency; other streams still report 0.
+- Audio receive and playback threads run at urgent-audio priority.
+- If a head unit rejects a large music AudioTrack, fall back to the low-latency size instead of losing audio.
+
 # 0.2.0 — BYD navigation and connection improvements
 
 - Standalone windshield HUD arrows, distance and street names on the verified DiLink5.1 firmware; no ADB, root or computer helper.
