@@ -34,7 +34,7 @@ jobs:
         run: chmod +x gradlew
 
       - name: Unit tests, lint and source-only debug build
-        run: ./gradlew :shared:testDebugUnitTest :common:testDebugUnitTest :mobile:lintDebug :mobile:assembleDebug --stacktrace
+        run: ./gradlew :shared:testDebugUnitTest :common:testDebugUnitTest :app:lintDebug :app:assembleDebug --stacktrace
 
       - name: Test reports
         if: always()
@@ -44,4 +44,4 @@ jobs:
           path: |
             shared/build/reports/tests/
             common/build/reports/tests/
-            mobile/build/reports/lint-results-debug.html
+            app/build/reports/lint-results-debug.html
