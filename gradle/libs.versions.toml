@@ -1,6 +1,7 @@
 [versions]
-agp = "9.3.0"
-coreKtx = "1.19.0"
+desugarJdkLibs = "2.1.4"
+agp = "9.1.1"
+coreKtx = "1.15.0"
 lifecycleRuntimeKtx = "2.6.1"
 activityCompose = "1.8.0"
 kotlin = "2.2.10"
@@ -14,6 +15,7 @@ bouncycastle = "1.79"
 jmdns = "3.6.3"
 
 [libraries]
+desugar-jdk-libs = { module = "com.android.tools:desugar_jdk_libs", version.ref = "desugarJdkLibs" }
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
 androidx-lifecycle-runtime-ktx = { group = "androidx.lifecycle", name = "lifecycle-runtime-ktx", version.ref = "lifecycleRuntimeKtx" }
 androidx-activity-compose = { group = "androidx.activity", name = "activity-compose", version.ref = "activityCompose" }

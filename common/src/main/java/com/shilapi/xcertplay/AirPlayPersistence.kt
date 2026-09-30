@@ -237,17 +237,31 @@ object AirPlayPersistence {
     fun loadWirelessHotspotMode(context: Context): WirelessHotspotMode {
         val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
         val stored = prefs.getString(KEY_WIRELESS_HOTSPOT_MODE, null)
-        val mode = WirelessHotspotMode.entries.firstOrNull { it.name == stored }
-            ?: WirelessHotspotMode.MANUAL
-        val supported = if (mode == WirelessHotspotMode.LOCAL_ONLY_HOTSPOT ||
-            (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q && mode == WirelessHotspotMode.WIFI_P2P)
-        ) WirelessHotspotMode.MANUAL else mode
+        val isGac = com.shilapi.xcertplay.gac.GACHycanConfiguration.isGacHycan()
+        val defaultMode = if (isGac) WirelessHotspotMode.WIFI_P2P else WirelessHotspotMode.MANUAL
+        val mode = WirelessHotspotMode.entries.firstOrNull { it.name == stored } ?: defaultMode
+        val supported = if (
+            mode == WirelessHotspotMode.LOCAL_ONLY_HOTSPOT ||
+            (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q && mode == WirelessHotspotMode.WIFI_P2P && !isGac)
+        ) {
+            WirelessHotspotMode.MANUAL
+        } else {
+            mode
+        }
         if (stored != supported.name) saveWirelessHotspotMode(context, supported)
         return supported
     }
 
     fun saveWirelessHotspotMode(context: Context, mode: WirelessHotspotMode) {
-        val supported = if (mode == WirelessHotspotMode.LOCAL_ONLY_HOTSPOT) WirelessHotspotMode.MANUAL else mode
+        val isGac = com.shilapi.xcertplay.gac.GACHycanConfiguration.isGacHycan()
+        val supported = if (
+            mode == WirelessHotspotMode.LOCAL_ONLY_HOTSPOT ||
+            (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q && mode == WirelessHotspotMode.WIFI_P2P && !isGac)
+        ) {
+            WirelessHotspotMode.MANUAL
+        } else {
+            mode
+        }
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
             .putString(KEY_WIRELESS_HOTSPOT_MODE, supported.name)
             .apply()
@@ -346,11 +360,39 @@ object AirPlayPersistence {
             .apply()
     }
 
-    fun loadManufacturer(context: Context): String =
-        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+    fun detectDefaultOemLabel(): String {
+        val brand = Build.BRAND.orEmpty()
+        val mfg = Build.MANUFACTURER.orEmpty()
+        val model = Build.MODEL.orEmpty()
+        return when {
+            brand.contains("GAC", ignoreCase = true) ||
+                mfg.contains("GAC", ignoreCase = true) ||
+                model.contains("G6SA", ignoreCase = true) ||
+                model.contains("Hycan", ignoreCase = true) -> "GAC"
+            brand.contains("BYD", ignoreCase = true) ||
+                mfg.contains("BYD", ignoreCase = true) -> "BYD"
+            brand.isNotBlank() && !brand.equals("unknown", ignoreCase = true) && !brand.equals("generic", ignoreCase = true) -> brand
+            else -> DEFAULT_OEM_LABEL
+        }
+    }
+
+    fun loadManufacturer(context: Context): String {
+        val stored = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
             .getString(KEY_MANUFACTURER, null)
             ?.takeIf { it.isNotBlank() }
-            ?: DEFAULT_MANUFACTURER
+        if (stored != null) return stored
+        val brand = Build.BRAND.orEmpty()
+        val mfg = Build.MANUFACTURER.orEmpty()
+        val model = Build.MODEL.orEmpty()
+        return when {
+            brand.contains("GAC", ignoreCase = true) ||
+                mfg.contains("GAC", ignoreCase = true) ||
+                model.contains("G6SA", ignoreCase = true) ||
+                model.contains("Hycan", ignoreCase = true) -> "GAC Hycan"
+            brand.isNotBlank() && !brand.equals("unknown", ignoreCase = true) && !brand.equals("generic", ignoreCase = true) -> brand
+            else -> DEFAULT_MANUFACTURER
+        }
+    }
 
     fun saveManufacturer(context: Context, manufacturer: String) {
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
@@ -358,11 +400,18 @@ object AirPlayPersistence {
             .apply()
     }
 
-    fun loadModel(context: Context): String =
-        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+    fun loadModel(context: Context): String {
+        val stored = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
             .getString(KEY_MODEL, null)
             ?.takeIf { it.isNotBlank() }
-            ?: DEFAULT_MODEL
+        if (stored != null) return stored
+        val model = Build.MODEL.orEmpty()
+        return when {
+            model.contains("G6SA", ignoreCase = true) || model.contains("Hycan", ignoreCase = true) -> "Hycan Z03"
+            model.isNotBlank() && !model.equals("unknown", ignoreCase = true) && !model.equals("generic", ignoreCase = true) -> model
+            else -> DEFAULT_MODEL
+        }
+    }
 
     fun saveModel(context: Context, model: String) {
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
@@ -372,9 +421,9 @@ object AirPlayPersistence {
 
     fun loadOemLabel(context: Context): String =
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-            .getString(KEY_OEM_LABEL, DEFAULT_OEM_LABEL)
-            // iOS hides the car icon without a label.
-            .orEmpty().ifBlank { DEFAULT_OEM_LABEL }
+            .getString(KEY_OEM_LABEL, null)
+            ?.takeIf { it.isNotBlank() }
+            ?: detectDefaultOemLabel()
 
     fun saveOemLabel(context: Context, oemLabel: String) {
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()

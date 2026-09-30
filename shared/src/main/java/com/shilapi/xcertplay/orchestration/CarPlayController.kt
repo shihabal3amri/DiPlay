@@ -1610,20 +1610,21 @@ class CarPlayController(
             type.equals("disable-bluetooth", ignoreCase = true)
 
     private fun startWirelessHotspot(generation: Int): WirelessHotspotInfo {
-        val hotspotMode = if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q &&
-            config.wirelessHotspotMode == WirelessHotspotMode.WIFI_P2P
-        ) {
-            WirelessHotspotMode.LOCAL_ONLY_HOTSPOT
-        } else {
-            config.wirelessHotspotMode
-        }
+        val isGac = com.shilapi.xcertplay.gac.GACHycanConfiguration.isGacHycan()
+        val hotspotMode = config.wirelessHotspotMode
         if (hotspotMode == WirelessHotspotMode.MANUAL &&
             com.shilapi.xcertplay.network.CarHotspotStatus.isEnabled(appContext) == false
         ) {
             throw IOException("The car hotspot is off. Turn it on in the car settings and connect again.")
         }
         val manager: WirelessHotspotManager = when (hotspotMode) {
-            WirelessHotspotMode.WIFI_P2P -> WifiP2pGroupManager(appContext, ::debugLog)
+            WirelessHotspotMode.WIFI_P2P -> {
+                if (isGac || Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
+                    com.shilapi.xcertplay.gac.GACHycanConfiguration.createAndroid8P2pManager(appContext, ::debugLog)
+                } else {
+                    WifiP2pGroupManager(appContext, ::debugLog)
+                }
+            }
             WirelessHotspotMode.LOCAL_ONLY_HOTSPOT -> LocalOnlyHotspotManager(appContext, ::debugLog)
             WirelessHotspotMode.MANUAL -> ManualHotspotManager(
                 context = appContext,
@@ -1819,6 +1820,9 @@ class CarPlayController(
 
     @Suppress("DEPRECATION")
     private fun accessoryBluetoothMac(adapter: BluetoothAdapter): String {
+        val gacAddress = com.shilapi.xcertplay.gac.GACHycanConfiguration.resolveBluetoothAddress(appContext)
+        if (gacAddress != null) return gacAddress
+
         val address = try {
             adapter.address
         } catch (_: SecurityException) {

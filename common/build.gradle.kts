@@ -5,12 +5,10 @@ plugins {
 
 android {
     namespace = "com.shilapi.xcertplay.host"
-    compileSdk {
-        version = release(37)
-    }
+    compileSdk = 36
 
     defaultConfig {
-        minSdk = 28
+        minSdk = 26
     }
 
     compileOptions {

@@ -1,0 +1,8 @@
+{
+  "name": "DiPlay",
+  "description": "CarPlay receiver for compatible Android head units with wired and wireless connection support.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

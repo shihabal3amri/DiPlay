@@ -9,56 +9,62 @@ val localAuthenticationAssets = providers.environmentVariable("DIPLAY_AUTH_ASSET
 
 android {
     namespace = "com.shilapi.xcertplay"
-    compileSdk {
-        version = release(37)
-    }
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.shihab.diplay"
-        minSdk = 28
-        targetSdk = 37
+        minSdk = 26
+        targetSdk = 36
         versionCode = 26
         versionName = "0.2.7"
-
     }
-
 
     localAuthenticationAssets?.let { sourceSets.getByName("main").assets.srcDir(it) }
 
     signingConfigs {
         create("release") {
             storeFile = file(
-                providers.environmentVariable("ANDROID_KEYSTORE_PATH")
-                    .getOrElse("missing-release-keystore.jks"),
+                providers.environmentVariable("RELEASE_KEYSTORE_FILE")
+                    .orElse(providers.gradleProperty("RELEASE_KEYSTORE_FILE"))
+                    .orNull ?: "${rootDir}/release.keystore"
             )
-            storePassword = providers.environmentVariable("ANDROID_KEYSTORE_PASSWORD").getOrElse("")
-            keyAlias = providers.environmentVariable("ANDROID_KEY_ALIAS").getOrElse("")
-            keyPassword = providers.environmentVariable("ANDROID_KEY_PASSWORD").getOrElse("")
+            storePassword = providers.environmentVariable("RELEASE_KEYSTORE_PASSWORD")
+                .orElse(providers.gradleProperty("RELEASE_KEYSTORE_PASSWORD"))
+                .orNull
+            keyAlias = providers.environmentVariable("RELEASE_KEY_ALIAS")
+                .orElse(providers.gradleProperty("RELEASE_KEY_ALIAS"))
+                .orNull
+            keyPassword = providers.environmentVariable("RELEASE_KEY_PASSWORD")
+                .orElse(providers.gradleProperty("RELEASE_KEY_PASSWORD"))
+                .orNull
         }
     }
 
     buildTypes {
         debug {
-            applicationIdSuffix = ".hudtest"
-            versionNameSuffix = "-hud-test"
+            // Standard debug signing works out of the box
         }
         release {
+            signingConfig = signingConfigs.getByName("release")
             optimization {
                 enable = false
             }
-            signingConfig = signingConfigs.getByName("release")
         }
     }
+
     compileOptions {
+        isCoreLibraryDesugaringEnabled = true
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
     }
+
     buildFeatures {
         compose = true
     }
 }
 
 dependencies {
+    coreLibraryDesugaring(libs.desugar.jdk.libs)
     implementation(platform(libs.androidx.compose.bom))
     implementation(project(":common"))
     implementation(project(":shared"))
@@ -117,4 +123,22 @@ tasks.register("assembleStandaloneDebug") {
     group = "build"
     description = "Build a standalone car-test APK with explicitly provisioned authentication."
     dependsOn(verifyStandaloneAuthentication, "assembleDebug")
+}
+
+val verifyReleaseSigning by tasks.registering {
+    group = "verification"
+    description = "Verify release keystore and credentials exist before building a release APK."
+    doLast {
+        val config = android.signingConfigs.getByName("release")
+        val keystore = config.storeFile
+        check(keystore != null && keystore.isFile && keystore.length() > 0L) {
+            "Release keystore file is missing: set RELEASE_KEYSTORE_FILE or place release.keystore at the repository root."
+        }
+        check(!config.storePassword.isNullOrBlank()) { "RELEASE_KEYSTORE_PASSWORD is not set." }
+        check(!config.keyAlias.isNullOrBlank()) { "RELEASE_KEY_ALIAS is not set." }
+        check(!config.keyPassword.isNullOrBlank()) { "RELEASE_KEY_PASSWORD is not set." }
+    }
+}
+tasks.matching { it.name.startsWith("assembleRelease") || it.name.startsWith("bundleRelease") }.configureEach {
+    dependsOn(verifyReleaseSigning)
 }

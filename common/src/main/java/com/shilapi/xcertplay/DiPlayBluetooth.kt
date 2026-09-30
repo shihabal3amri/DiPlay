@@ -6,6 +6,9 @@ import android.provider.Settings
 
 internal object DiPlayBluetooth {
     fun localAddress(context: Context): String? {
+        val gacAddress = com.shilapi.xcertplay.gac.GACHycanConfiguration.resolveBluetoothAddress(context)
+        if (gacAddress != null) return gacAddress
+
         val adapter = runCatching { context.getSystemService(BluetoothManager::class.java)?.adapter?.address }.getOrNull()
         val setting = runCatching { Settings.Secure.getString(context.contentResolver, "bluetooth_address") }.getOrNull()
         return listOfNotNull(adapter, setting).firstOrNull {
