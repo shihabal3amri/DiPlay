@@ -2,7 +2,6 @@ package com.shilapi.xcertplay.network
 
 import android.content.Context
 import android.net.ConnectivityManager
-import android.net.MacAddress
 import android.net.wifi.SoftApConfiguration
 import android.net.wifi.WifiConfiguration
 import android.net.wifi.WifiManager
@@ -90,7 +89,10 @@ class LocalOnlyHotspotManager(context: Context, private val onDiagnostic: (Strin
             )
             val liveRadio = awaitRadioInfo(radioInfo, apInterface, configuration, attempt, deadlineNanos)
             if (liveRadio?.frequencyMHz?.let { it !in 5160..5895 } ?: (configuration.bandLabel != "5 GHz")) {
-                throw IOException("This firmware did not provide the requested 5 GHz local hotspot; choose Wi-Fi Direct or Car hotspot")
+                onDiagnostic("LocalOnlyHotspot: operating on ${configuration.bandLabel} (${liveRadio?.frequencyMHz ?: "unknown"} MHz); 5 GHz preferred")
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && configuration.bandLabel != "5 GHz") {
+                    throw IOException("This firmware did not provide the requested 5 GHz local hotspot; choose Wi-Fi Direct or Car hotspot")
+                }
             }
 
             synchronized(stateLock) {
@@ -444,13 +446,7 @@ class LocalOnlyHotspotManager(context: Context, private val onDiagnostic: (Strin
         val ssid = validateSsid(configuration.SSID)
         val security = mapWifiConfigurationSecurity(configuration)
         val passphrase = validatePassphrase(security, unquote(configuration.preSharedKey))
-        val bssid = configuration.BSSID?.let {
-            try {
-                MacAddress.fromString(it)
-            } catch (failure: IllegalArgumentException) {
-                throw IOException("LocalOnlyHotspot reported an invalid BSSID: $it", failure)
-            }
-        }
+        val bssid = configuration.BSSID?.let(::parseMacAddress)
         val channel = readWifiConfigurationChannel(configuration)
 
         return HotspotConfiguration(
@@ -458,10 +454,22 @@ class LocalOnlyHotspotManager(context: Context, private val onDiagnostic: (Strin
             passphrase = passphrase,
             security = security,
             channel = channel,
-            bssid = bssid?.toString(),
-            bssidBytes = bssid?.toByteArray(),
+            bssid = bssid?.first,
+            bssidBytes = bssid?.second,
             bandLabel = readWifiConfigurationBandLabel(configuration, channel),
         )
+    }
+
+    private fun parseMacAddress(mac: String): Pair<String, ByteArray>? {
+        val clean = mac.trim()
+        val parts = clean.split(':', '-').takeIf { it.size == 6 } ?: return null
+        return try {
+            val bytes = ByteArray(6) { index -> parts[index].toInt(16).toByte() }
+            val formatted = bytes.joinToString(":") { "%02x".format(it) }
+            formatted to bytes
+        } catch (_: NumberFormatException) {
+            null
+        }
     }
 
     @RequiresApi(36)
@@ -502,13 +510,10 @@ class LocalOnlyHotspotManager(context: Context, private val onDiagnostic: (Strin
     private fun readWifiConfigurationChannel(configuration: WifiConfiguration): Int {
         val channel = try {
             WifiConfiguration::class.java.getField("apChannel").getInt(configuration)
-        } catch (failure: ReflectiveOperationException) {
-            throw IOException(
-                "Android ${Build.VERSION.RELEASE} does not expose WifiConfiguration.apChannel",
-                failure,
-            )
+        } catch (_: ReflectiveOperationException) {
+            0
         }
-        return requireChannel(channel, "WifiConfiguration.apChannel", allowAuto = true)
+        return if (channel > 0) requireChannel(channel, "WifiConfiguration.apChannel", allowAuto = true) else 0
     }
 
     private fun readWifiConfigurationBandLabel(

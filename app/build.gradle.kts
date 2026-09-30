@@ -9,50 +9,44 @@ val localAuthenticationAssets = providers.environmentVariable("DIPLAY_AUTH_ASSET
 
 android {
     namespace = "com.shilapi.xcertplay"
-    compileSdk {
-        version = release(37)
-    }
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.shihab.diplay"
-        minSdk = 28
-        targetSdk = 37
+        minSdk = 26
+        targetSdk = 36
         versionCode = 26
         versionName = "0.2.7"
-
     }
-
 
     localAuthenticationAssets?.let { sourceSets.getByName("main").assets.srcDir(it) }
 
     signingConfigs {
-        create("release") {
-            storeFile = file(
-                providers.environmentVariable("ANDROID_KEYSTORE_PATH")
-                    .getOrElse("missing-release-keystore.jks"),
-            )
-            storePassword = providers.environmentVariable("ANDROID_KEYSTORE_PASSWORD").getOrElse("")
-            keyAlias = providers.environmentVariable("ANDROID_KEY_ALIAS").getOrElse("")
-            keyPassword = providers.environmentVariable("ANDROID_KEY_PASSWORD").getOrElse("")
+        create("debugConfig") {
+            storeFile = file("${rootDir}/debug.keystore")
+            storePassword = "android"
+            keyAlias = "androiddebugkey"
+            keyPassword = "android"
         }
     }
 
     buildTypes {
         debug {
-            applicationIdSuffix = ".hudtest"
-            versionNameSuffix = "-hud-test"
+            signingConfig = signingConfigs.getByName("debugConfig")
         }
         release {
             optimization {
                 enable = false
             }
-            signingConfig = signingConfigs.getByName("release")
+            signingConfig = signingConfigs.getByName("debugConfig")
         }
     }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
     }
+
     buildFeatures {
         compose = true
     }
