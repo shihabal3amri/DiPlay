@@ -877,7 +877,6 @@ private class AudioRenderer(
             report("Audio: buffer ${plan.trackBufferBytes} bytes rejected; using $fallbackBytes")
             tryBuild(fallbackBytes)
         }
-        }
         track = built
         trackAttributes = built.audioAttributes
         val capacityBytes = built.bufferSizeInFrames * frameBytes
