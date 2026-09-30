@@ -12,6 +12,7 @@ import android.media.MediaFormat
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
+import android.os.Process
 import android.util.Log
 import android.view.Surface
 import com.shilapi.xcertplay.airplay.AudioCodecKind
@@ -749,6 +750,11 @@ private class AudioRenderer(
 
     private fun run() {
         try {
+            Process.setThreadPriority(Process.THREAD_PRIORITY_URGENT_AUDIO)
+        } catch (error: Exception) {
+            Log.w(TAG, "audio renderer priority unavailable", error)
+        }
+        try {
             when (format.codec) {
                 AudioCodecKind.AAC_LC -> configureCodec(MediaFormat.MIMETYPE_AUDIO_AAC)
                 AudioCodecKind.OPUS -> configureCodec(MediaFormat.MIMETYPE_AUDIO_OPUS)
@@ -829,37 +835,48 @@ private class AudioRenderer(
             format.sampleRate, format.channels, minBuffer, mediaBufferMillis)
         bytesPerSecond = format.sampleRate * frameBytes
         val built: AudioTrack
-        var routeLabel: String
-        if (streamOverride == 0) {
-            val attributes = audioAttributesFor(selection)
-            routeLabel = "usage"
-            built = AudioTrack.Builder()
-                .setAudioAttributes(attributes)
-                .setAudioFormat(pcmFormat(encoding, channelMask))
-                .setTransferMode(AudioTrack.MODE_STREAM)
-                .setBufferSizeInBytes(plan.trackBufferBytes)
-                .build()
-        } else {
-            val streamType = streamOverride
-            routeLabel = "streamType=$streamType"
-            built = LegacyAudioFallback.build(
-                createLegacy = {
-                    AudioTrack(streamType, format.sampleRate, channelMask, encoding,
-                        plan.trackBufferBytes, AudioTrack.MODE_STREAM)
-                },
-                isInitialized = { it.state == AudioTrack.STATE_INITIALIZED },
-                release = { it.release() },
-                createFallback = {
-                    routeLabel = "streamType=$streamType(fallback=usage)"
-                    Log.w(TAG, "streamType=$streamType rejected by this ROM; falling back to usage-based track")
-                    AudioTrack.Builder()
-                        .setAudioAttributes(audioAttributesFor(selection))
-                        .setAudioFormat(pcmFormat(encoding, channelMask))
-                        .setTransferMode(AudioTrack.MODE_STREAM)
-                        .setBufferSizeInBytes(plan.trackBufferBytes)
-                        .build()
-                },
-            )
+        var routeLabel: String = ""
+        fun tryBuild(bufferBytes: Int): AudioTrack {
+            return if (streamOverride == 0) {
+                val attributes = audioAttributesFor(selection)
+                routeLabel = "usage"
+                AudioTrack.Builder()
+                    .setAudioAttributes(attributes)
+                    .setAudioFormat(pcmFormat(encoding, channelMask))
+                    .setTransferMode(AudioTrack.MODE_STREAM)
+                    .setBufferSizeInBytes(bufferBytes)
+                    .build()
+            } else {
+                val streamType = streamOverride
+                routeLabel = "streamType=$streamType"
+                LegacyAudioFallback.build(
+                    createLegacy = {
+                        AudioTrack(streamType, format.sampleRate, channelMask, encoding,
+                            bufferBytes, AudioTrack.MODE_STREAM)
+                    },
+                    isInitialized = { it.state == AudioTrack.STATE_INITIALIZED },
+                    release = { it.release() },
+                    createFallback = {
+                        routeLabel = "streamType=$streamType(fallback=usage)"
+                        Log.w(TAG, "streamType=$streamType rejected by this ROM; falling back to usage-based track")
+                        AudioTrack.Builder()
+                            .setAudioAttributes(audioAttributesFor(selection))
+                            .setAudioFormat(pcmFormat(encoding, channelMask))
+                            .setTransferMode(AudioTrack.MODE_STREAM)
+                            .setBufferSizeInBytes(bufferBytes)
+                            .build()
+                    },
+                )
+            }
+        }
+        built = try {
+            tryBuild(plan.trackBufferBytes)
+        } catch (error: Exception) {
+            val fallbackBytes = MediaAudioBuffer.plan(false, format.sampleRate, format.channels, minBuffer, 0).trackBufferBytes
+            Log.w(TAG, "audio track buffer=${plan.trackBufferBytes} rejected; retrying with $fallbackBytes", error)
+            report("Audio: buffer ${plan.trackBufferBytes} bytes rejected; using $fallbackBytes")
+            tryBuild(fallbackBytes)
+        }
         }
         track = built
         trackAttributes = built.audioAttributes

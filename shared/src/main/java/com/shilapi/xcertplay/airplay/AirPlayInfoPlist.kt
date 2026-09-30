@@ -45,7 +45,7 @@ object AirPlayInfoPlist {
             "modes" to modes(),
         )
         if (!config.disableAudioOutput) {
-            info["audioLatencies"] = audioLatencies()
+            info["audioLatencies"] = audioLatencies(config.mediaBufferMillis)
             info["audioFormats"] = audioFormats(config.entertainmentSampleRate, config.microphone)
         }
         info["extendedFeatures"] = listOf("vocoderInfo", "enhancedRequestCarUI")
@@ -95,12 +95,14 @@ object AirPlayInfoPlist {
         ),
     )
 
-    private fun audioLatencies(): List<Map<String, Any?>> {
+    private fun audioLatencies(mediaBufferMillis: Int): List<Map<String, Any?>> {
         fun base(type: Int, audioType: String? = null): Map<String, Any?> {
+            // Only music is buffered by the renderer (MediaAudioBuffer); other streams add none.
+            val outputMicros = if (audioType == "media") mediaBufferMillis * 1000L else 0L
             val entry = linkedMapOf<String, Any?>(
                 "type" to type,
                 "inputLatencyMicros" to 0L,
-                "outputLatencyMicros" to 0L,
+                "outputLatencyMicros" to outputMicros,
             )
             if (audioType != null) entry["audioType"] = audioType
             return entry
