@@ -59,4 +59,12 @@ internal object DiPlayPreferences {
     fun saveAutoConnect(context: Context, value: Boolean) {
         prefs(context).edit().putBoolean("auto_connect", value).apply()
     }
+    fun autoStartOnBluetooth(context: Context) = prefs(context).getBoolean("auto_start_bluetooth", false)
+    fun saveAutoStartOnBluetooth(context: Context, value: Boolean) {
+        prefs(context).edit().putBoolean("auto_start_bluetooth", value).apply()
+    }
+    fun lastAutoStartMillis(context: Context) = prefs(context).getLong("auto_start_last", 0L)
+    fun saveLastAutoStartMillis(context: Context, value: Long) {
+        prefs(context).edit().putLong("auto_start_last", value).apply()
+    }
 }
