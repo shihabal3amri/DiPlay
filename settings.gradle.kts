@@ -25,5 +25,4 @@ dependencyResolutionManagement {
 rootProject.name = "DiPlay"
 include(":common")
 include(":app")
-include(":mobile")
 include(":shared")
