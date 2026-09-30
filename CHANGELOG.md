@@ -30,6 +30,13 @@
 - Android 10+ only lets DiPlay open itself from the background with *Display over other apps*; the settings page offers the permission, and without it DiPlay posts a notification to tap. Repeated triggers within 30 s count once; nothing happens while a CarPlay session runs.
 - Decision logic is covered by unit tests. Not yet validated on the DiLink 5.1 development car.
 
+# Unreleased
+
+- The in-session Resolution slider now goes up to 1.5x. Steps above 1.0x ask the iPhone for a supersampled canvas (for example 1920x990 → 2880x1486 at 1.5x), capped at 4K; if the head unit's decoder cannot handle it, CarPlay uses Native and says so. The default stays 1.0x.
+- CarPlay keeps a fixed negotiated resolution when the car's camera or 360° surround view resizes the screen, instead of reconnecting. The video is letterboxed without distortion and touch maps to the visible CarPlay area.
+- Swiping down with three fingers in CarPlay opens the in-session settings overlay again. CarPlay keeps running while it is open; Save and reconnect applies changes with one reconnection, and closing without saving leaves the session untouched.
+- Each Resolution option is a fixed size derived from the largest screen size seen for the current bar layout; the settings page and diagnostic reports show it. Changing it applies and reconnects once.
+
 # 0.2.0 — BYD navigation and connection improvements
 
 - Standalone windshield HUD arrows, distance and street names on the verified DiLink5.1 firmware; no ADB, root or computer helper.

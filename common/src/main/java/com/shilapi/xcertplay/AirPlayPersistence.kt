@@ -9,6 +9,7 @@ import com.shilapi.xcertplay.airplay.CarPlayClusterDisplay
 import com.shilapi.xcertplay.airplay.CarPlayUiScale
 import com.shilapi.xcertplay.airplay.AirPlayIdentity
 import com.shilapi.xcertplay.airplay.PairingStore
+import com.shilapi.xcertplay.airplay.PixelSize
 import com.shilapi.xcertplay.airplay.SafeAreaCodec
 import com.shilapi.xcertplay.airplay.SafeAreaRect
 import com.shilapi.xcertplay.orchestration.ManualHotspotBand
@@ -65,6 +66,11 @@ object AirPlayPersistence {
     private const val KEY_PHYSICAL_SIZE_BASIS = "display_physical_size_basis"
     private const val KEY_MAX_DETECTED_WIDTH = "display_max_detected_width"
     private const val KEY_MAX_DETECTED_HEIGHT = "display_max_detected_height"
+    private const val KEY_RESOLUTION_BASE_PREFIX = "resolution_base_"
+    private const val KEY_FIXED_BASE_WIDTH = "fixed_resolution_base_width"
+    private const val KEY_FIXED_BASE_HEIGHT = "fixed_resolution_base_height"
+    private const val KEY_FIXED_WIDTH = "fixed_resolution_width"
+    private const val KEY_FIXED_HEIGHT = "fixed_resolution_height"
     private const val KEY_RIGHT_HAND_DRIVE = "right_hand_drive"
     private const val KEY_HIDE_TOP_BAR = "hide_top_bar"
     private const val KEY_HIDE_BOTTOM_BAR = "hide_bottom_bar"
@@ -492,6 +498,42 @@ object AirPlayPersistence {
     fun saveClusterMarkerVerticalStep(context: Context, step: Int) {
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
             .putInt(KEY_CLUSTER_MARKER_Y, step.coerceIn(CarPlayClusterDisplay.verticalSteps)).apply()
+    }
+
+    /** Largest host size seen for one bar layout and orientation; the fixed-resolution base. */
+    fun loadResolutionBase(context: Context, layout: String): PixelSize? {
+        val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        val width = prefs.getInt("$KEY_RESOLUTION_BASE_PREFIX${layout}_width", 0)
+        val height = prefs.getInt("$KEY_RESOLUTION_BASE_PREFIX${layout}_height", 0)
+        return if (width > 0 && height > 0) PixelSize(width, height) else null
+    }
+
+    fun saveResolutionBase(context: Context, layout: String, size: PixelSize) {
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
+            .putInt("$KEY_RESOLUTION_BASE_PREFIX${layout}_width", size.width.coerceAtLeast(0))
+            .putInt("$KEY_RESOLUTION_BASE_PREFIX${layout}_height", size.height.coerceAtLeast(0))
+            .apply()
+    }
+
+    /** Base and negotiated resolution of the most recent session, for settings and reports. */
+    fun loadFixedResolution(context: Context): Pair<PixelSize, PixelSize>? {
+        val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        val base = PixelSize(prefs.getInt(KEY_FIXED_BASE_WIDTH, 0), prefs.getInt(KEY_FIXED_BASE_HEIGHT, 0))
+        val fixed = PixelSize(prefs.getInt(KEY_FIXED_WIDTH, 0), prefs.getInt(KEY_FIXED_HEIGHT, 0))
+        return if (base.width > 0 && base.height > 0 && fixed.width > 0 && fixed.height > 0) {
+            base to fixed
+        } else {
+            null
+        }
+    }
+
+    fun saveFixedResolution(context: Context, base: PixelSize, fixed: PixelSize) {
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
+            .putInt(KEY_FIXED_BASE_WIDTH, base.width)
+            .putInt(KEY_FIXED_BASE_HEIGHT, base.height)
+            .putInt(KEY_FIXED_WIDTH, fixed.width)
+            .putInt(KEY_FIXED_HEIGHT, fixed.height)
+            .apply()
     }
 
     fun loadRightHandDrive(context: Context): Boolean =
