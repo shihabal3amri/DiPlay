@@ -21,24 +21,15 @@ android {
 
     localAuthenticationAssets?.let { sourceSets.getByName("main").assets.srcDir(it) }
 
-    signingConfigs {
-        create("debugConfig") {
-            storeFile = file("${rootDir}/debug.keystore")
-            storePassword = "android"
-            keyAlias = "androiddebugkey"
-            keyPassword = "android"
-        }
-    }
-
     buildTypes {
         debug {
-            signingConfig = signingConfigs.getByName("debugConfig")
+            // Let AGP use the standard local debug keystore in CI/local development.
+            // This avoids failing source-only builds when no repository-local debug.keystore exists.
         }
         release {
             optimization {
                 enable = false
             }
-            signingConfig = signingConfigs.getByName("debugConfig")
         }
     }
 
