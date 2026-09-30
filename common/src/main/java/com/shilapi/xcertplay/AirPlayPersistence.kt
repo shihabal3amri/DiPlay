@@ -202,17 +202,31 @@ object AirPlayPersistence {
     fun loadWirelessHotspotMode(context: Context): WirelessHotspotMode {
         val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
         val stored = prefs.getString(KEY_WIRELESS_HOTSPOT_MODE, null)
-        val mode = WirelessHotspotMode.entries.firstOrNull { it.name == stored }
-            ?: WirelessHotspotMode.MANUAL
-        val supported = if (mode == WirelessHotspotMode.LOCAL_ONLY_HOTSPOT ||
-            (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q && mode == WirelessHotspotMode.WIFI_P2P)
-        ) WirelessHotspotMode.MANUAL else mode
+        val isGac = com.shilapi.xcertplay.gac.GACHycanConfiguration.isGacHycan()
+        val defaultMode = if (isGac) WirelessHotspotMode.WIFI_P2P else WirelessHotspotMode.MANUAL
+        val mode = WirelessHotspotMode.entries.firstOrNull { it.name == stored } ?: defaultMode
+        val supported = if (
+            mode == WirelessHotspotMode.LOCAL_ONLY_HOTSPOT ||
+            (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q && mode == WirelessHotspotMode.WIFI_P2P && !isGac)
+        ) {
+            WirelessHotspotMode.MANUAL
+        } else {
+            mode
+        }
         if (stored != supported.name) saveWirelessHotspotMode(context, supported)
         return supported
     }
 
     fun saveWirelessHotspotMode(context: Context, mode: WirelessHotspotMode) {
-        val supported = if (mode == WirelessHotspotMode.LOCAL_ONLY_HOTSPOT) WirelessHotspotMode.MANUAL else mode
+        val isGac = com.shilapi.xcertplay.gac.GACHycanConfiguration.isGacHycan()
+        val supported = if (
+            mode == WirelessHotspotMode.LOCAL_ONLY_HOTSPOT ||
+            (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q && mode == WirelessHotspotMode.WIFI_P2P && !isGac)
+        ) {
+            WirelessHotspotMode.MANUAL
+        } else {
+            mode
+        }
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
             .putString(KEY_WIRELESS_HOTSPOT_MODE, supported.name)
             .apply()

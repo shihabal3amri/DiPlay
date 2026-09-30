@@ -21,13 +21,24 @@ internal object DiPlayBootstrap {
             staging.setReadable(false, false); staging.setReadable(true, true)
             staging.setExecutable(false, false); staging.setExecutable(true, true)
             try {
+                var assetsLoaded = true
                 for (name in listOf("identity.pk8", "certificate.p7b")) {
                     val file = File(staging, name)
-                    context.assets.open("offline-mfi/$name").use { input ->
-                        file.outputStream().use { output -> input.copyTo(output) }
+                    val loaded = runCatching {
+                        context.assets.open("offline-mfi/$name").use { input ->
+                            file.outputStream().use { output -> input.copyTo(output) }
+                        }
+                    }.isSuccess
+                    if (loaded) {
+                        file.setReadable(false, false); file.setReadable(true, true)
+                        file.setWritable(false, false); file.setWritable(true, true)
+                    } else {
+                        assetsLoaded = false
+                        break
                     }
-                    file.setReadable(false, false); file.setReadable(true, true)
-                    file.setWritable(false, false); file.setWritable(true, true)
+                }
+                if (!assetsLoaded) {
+                    com.shilapi.xcertplay.mfi.LocalMfiIdentityGenerator.generate(staging)
                 }
                 LocalMfiAuthenticationClient.load(staging)
                 check(staging.renameTo(target)) { "Could not install local authentication" }
