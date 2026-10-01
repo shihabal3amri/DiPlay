@@ -167,22 +167,22 @@ object AirPlayPersistence {
     fun loadMediaAudioChannel(context: Context): Int =
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
             .getInt(KEY_MEDIA_AUDIO_CHANNEL, 0)
-            .takeIf { it in 0..10 } ?: 0
+            .takeIf { it in 0..16 } ?: 0
 
     fun saveMediaAudioChannel(context: Context, channel: Int) {
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
-            .putInt(KEY_MEDIA_AUDIO_CHANNEL, channel.takeIf { it in 0..10 } ?: 0)
+            .putInt(KEY_MEDIA_AUDIO_CHANNEL, channel.takeIf { it in 0..16 } ?: 0)
             .apply()
     }
 
     fun loadNavigationAudioChannel(context: Context): Int =
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-            .getInt(KEY_NAVIGATION_AUDIO_CHANNEL, 0)
-            .takeIf { it in 0..10 } ?: 0
+            .getInt(KEY_NAVIGATION_AUDIO_CHANNEL, 14)
+            .takeIf { it in 0..16 } ?: 14
 
     fun saveNavigationAudioChannel(context: Context, channel: Int) {
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
-            .putInt(KEY_NAVIGATION_AUDIO_CHANNEL, channel.takeIf { it in 0..10 } ?: 0)
+            .putInt(KEY_NAVIGATION_AUDIO_CHANNEL, channel.takeIf { it in 0..16 } ?: 14)
             .apply()
     }
 
@@ -570,7 +570,7 @@ object AirPlayPersistence {
 
     fun loadFillScreen(context: Context): Boolean =
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-            .getBoolean(KEY_FILL_SCREEN, true)
+            .getBoolean(KEY_FILL_SCREEN, false)
 
     fun saveFillScreen(context: Context, fill: Boolean) {
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()

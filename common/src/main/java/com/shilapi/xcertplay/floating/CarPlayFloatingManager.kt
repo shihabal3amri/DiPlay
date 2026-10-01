@@ -215,12 +215,11 @@ object CarPlayFloatingManager {
         val touchOverlay = View(context).apply {
             isClickable = true
             setOnTouchListener { v, event ->
-                val fill = AirPlayPersistence.loadFillScreen(context)
                 val canvas = snapshot.canvas
-                val content = if (fill || canvas == null || v.width <= 0 || v.height <= 0) {
-                    ContentRect(0f, 0f, v.width.toFloat(), v.height.toFloat())
-                } else {
+                val content = if (canvas != null && v.width > 0 && v.height > 0) {
                     ContentRect.fit(canvas, v.width, v.height)
+                } else {
+                    ContentRect(0f, 0f, v.width.toFloat(), v.height.toFloat())
                 }
                 val contacts = CarPlayTouchMapper.contacts(event, content)
                 snapshot.controller.sendTouch(contacts)
@@ -354,16 +353,12 @@ object CarPlayFloatingManager {
         snapshot: CarPlayBackgroundSession.Snapshot
     ) {
         if (viewWidth <= 0 || viewHeight <= 0) return
+        val canvas = snapshot.canvas ?: return
+        val rect = ContentRect.fit(canvas, viewWidth, viewHeight)
         val matrix = Matrix()
-        if (!com.shilapi.xcertplay.AirPlayPersistence.loadFillScreen(view.context)) {
-            val canvas = snapshot.canvas
-            if (canvas != null) {
-                val rect = ContentRect.fit(canvas, viewWidth, viewHeight)
-                if (!rect.isFullView) {
-                    matrix.setScale(rect.width / viewWidth, rect.height / viewHeight)
-                    matrix.postTranslate(rect.left, rect.top)
-                }
-            }
+        if (!rect.isFullView) {
+            matrix.setScale(rect.width / viewWidth, rect.height / viewHeight)
+            matrix.postTranslate(rect.left, rect.top)
         }
         view.setTransform(matrix)
     }

@@ -633,6 +633,7 @@ class CarPlayHostActivity : ComponentActivity() {
         if (CarPlayFloatingManager.isFloating) {
             CarPlayFloatingManager.dismiss()
         }
+        loadPersistedSettings()
         maybeStartCarPlay()
         applyFullscreenMode()
     }
@@ -2313,20 +2314,6 @@ class CarPlayHostActivity : ComponentActivity() {
         )
         section.addView(
             settingsSwitchRow(
-                label = getString(R.string.fill_screen),
-                checked = fillScreen,
-                description = getString(R.string.fill_screen_desc),
-            ) { checked ->
-                fillScreen = checked
-                videoView?.let { updateVideoLayout(it.width, it.height) }
-            },
-            LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT,
-            ).apply { topMargin = dp(10) },
-        )
-        section.addView(
-            settingsSwitchRow(
                 label = getString(R.string.auto_floating_on_leave),
                 checked = autoFloatingOnLeave,
                 description = getString(R.string.auto_floating_on_leave_desc),
@@ -3665,7 +3652,6 @@ class CarPlayHostActivity : ComponentActivity() {
         )
 
     private fun contentRect(viewWidth: Int, viewHeight: Int): ContentRect {
-        if (fillScreen) return ContentRect(0f, 0f, viewWidth.toFloat(), viewHeight.toFloat())
         return ContentRect.fit(sessionCanvas, viewWidth, viewHeight)
     }
 
@@ -3831,21 +3817,10 @@ class CarPlayHostActivity : ComponentActivity() {
      * underneath; only "Save and reconnect" renegotiates, Cancel leaves the session untouched.
      */
     private fun openSettingsMenu() {
-        val menu = settingsMenu ?: return
-        if (menuOpen || shuttingDown.get()) return
+        if (shuttingDown.get()) return
         controller?.sendTouch(emptyList())
-        settingsBaseline = captureSettingsBaseline()
-        menuOpen = true
-        reconnectAfterSettings = false
-        gestureOverlay?.visibility = View.GONE
-        menu.visibility = View.VISIBLE
-        syncMfiSettingsControls()
-        updateManualHotspotFields()
-        updateAirPlayIconPreview()
-        updateSafeAreaSummary()
-        updateHotspotStatusBlock()
-        updateResolutionMenu()
-        appendLog("Settings opened; CarPlay session kept running")
+        appendLog("Three-finger gesture triggered; opening unified DiPlay settings")
+        showDiPlayHome("settings")
     }
 
     private fun saveSettingsAndReconnect() {
@@ -4017,8 +3992,8 @@ class CarPlayHostActivity : ComponentActivity() {
                 val deltaX = Math.abs(pointerCentroid(event, horizontal = true) - gestureStartX)
                 val deltaY = pointerCentroid(event, horizontal = false) - gestureStartY
                 if (
-                    deltaY >= dp(THREE_FINGER_SWIPE_DISTANCE_DP) &&
-                    deltaY >= deltaX * THREE_FINGER_SWIPE_DIRECTION_RATIO
+                    Math.abs(deltaY) >= dp(THREE_FINGER_SWIPE_DISTANCE_DP) &&
+                    Math.abs(deltaY) >= deltaX * THREE_FINGER_SWIPE_DIRECTION_RATIO
                 ) {
                     gestureSequenceActive = false
                     gestureTracking = false

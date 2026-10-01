@@ -113,8 +113,16 @@ class DiPlayActivity : ComponentActivity() {
         handleWirelessRecovery()
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
-                if (page != "home") { page = "home"; render() }
-                else { isEnabled = false; onBackPressedDispatcher.onBackPressed(); isEnabled = true }
+                if (CarPlayBackgroundSession.hasSession()) {
+                    openProjection()
+                } else if (page != "home") {
+                    page = "home"
+                    render()
+                } else {
+                    isEnabled = false
+                    onBackPressedDispatcher.onBackPressed()
+                    isEnabled = true
+                }
             }
         })
     }
@@ -367,9 +375,6 @@ class DiPlayActivity : ComponentActivity() {
             toggle(card, getString(R.string.right_hand_drive), getString(R.string.place_carplay_s_controls_closer_to_the_driver), AirPlayPersistence.loadRightHandDrive(this)) { AirPlayPersistence.saveRightHandDrive(this, it) }
             toggle(card, getString(R.string.full_screen), getString(R.string.hide_the_car_s_system_bars_while_carplay_is_open), AirPlayPersistence.loadHideTopBar(this) && AirPlayPersistence.loadHideBottomBar(this)) {
                 AirPlayPersistence.saveHideTopBar(this, it); AirPlayPersistence.saveHideBottomBar(this, it)
-            }
-            toggle(card, getString(R.string.fill_screen), getString(R.string.fill_screen_desc), AirPlayPersistence.loadFillScreen(this)) {
-                AirPlayPersistence.saveFillScreen(this, it)
             }
             toggle(card, getString(R.string.auto_floating_on_leave), getString(R.string.auto_floating_on_leave_desc), AirPlayPersistence.loadAutoFloatingOnLeave(this)) {
                 AirPlayPersistence.saveAutoFloatingOnLeave(this, it)
@@ -749,8 +754,16 @@ class DiPlayActivity : ComponentActivity() {
         val preview = AudioChannelPreview { channel ->
             toast(getString(R.string.contrib_audio_home_channel_preview_unavailable, channel))
         }
-        val labels = (0..10).map(Int::toString).toTypedArray()
-        var selection = current.coerceIn(0, 10)
+        val options = (0..16).toList()
+        val labels = options.map { ch ->
+            when (ch) {
+                0 -> "0 (系统默认 / Usage 路由)"
+                13 -> "13 (BYD 车机媒体推荐)"
+                14 -> "14 (BYD 车机导航推荐)"
+                else -> ch.toString()
+            }
+        }.toTypedArray()
+        var selection = current.coerceIn(0, 16)
         AlertDialog.Builder(this).setTitle(title)
             .setSingleChoiceItems(labels, selection) { _, which ->
                 selection = which
@@ -778,7 +791,12 @@ class DiPlayActivity : ComponentActivity() {
         if (CarPlayBackgroundSession.hasSession()) connect(AirPlayPersistence.loadWirelessEnabled(this))
     }
 
-    private fun channelLabel(value: Int): String = value.toString()
+    private fun channelLabel(value: Int): String = when (value) {
+        0 -> "0 (默认)"
+        13 -> "13 (媒体推荐)"
+        14 -> "14 (导航推荐)"
+        else -> value.toString()
+    }
 
 
     /** Each tier is a fixed resolution negotiated with the iPhone; screen changes keep it. */
