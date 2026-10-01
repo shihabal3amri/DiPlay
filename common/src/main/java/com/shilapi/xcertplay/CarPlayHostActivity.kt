@@ -337,6 +337,7 @@ class CarPlayHostActivity : ComponentActivity() {
     private var awaitingLocationPermission = false
     private var vpnReady = false
     private var hotspotStatus = HotspotStatus(state = "off")
+    private var isForeground = false
     private var menuOpen = false
     private var latestStage = "Preparing CarPlay"
     private var darkMode = false
@@ -607,6 +608,7 @@ class CarPlayHostActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
+        isForeground = true
         val languagePreference = AppLocale.preference(this)
         if (Build.VERSION.SDK_INT < 33 && languagePreference != languagePreferenceAtCreate) {
             languagePreferenceAtCreate = languagePreference
@@ -630,6 +632,7 @@ class CarPlayHostActivity : ComponentActivity() {
         ensureClusterPresentation()
         ensureHostSurfaceAttached()
         loadPersistedSettings()
+        sink?.mediaVolumePercent = AirPlayPersistence.loadMediaVolumePercent(this)
         maybeStartCarPlay()
         applyFullscreenMode()
     }
@@ -783,6 +786,11 @@ class CarPlayHostActivity : ComponentActivity() {
             applyFullscreenMode()
             ensureHostSurfaceAttached()
         }
+    }
+
+    override fun onPause() {
+        isForeground = false
+        super.onPause()
     }
 
     override fun onStop() {
@@ -3034,7 +3042,7 @@ class CarPlayHostActivity : ComponentActivity() {
                 effectiveDisplayScaleTenths = CarPlayDisplayScale.NATIVE_TENTHS
                 runOnUiThread {
                     android.widget.Toast.makeText(this,
-                        "This head unit cannot decode this resolution. Using Native.",
+                        getString(R.string.head_unit_cannot_decode_resolution),
                         android.widget.Toast.LENGTH_LONG).show()
                 }
             }
@@ -3273,6 +3281,7 @@ class CarPlayHostActivity : ComponentActivity() {
                 diagnosticLog?.append(formattedLogLine(message, System.currentTimeMillis()))
             },
             onMediaAudioChanged = CarPlayMediaKeys::onMediaAudioChanged,
+            mediaVolumePercent = AirPlayPersistence.loadMediaVolumePercent(this),
         )
     }
 
@@ -3566,6 +3575,11 @@ class CarPlayHostActivity : ComponentActivity() {
 
     private fun applyDisplaySize(size: DisplaySize) {
         if (shuttingDown.get() || size == activeDisplaySize) return
+        if (!isForeground && (controller != null || CarPlayBackgroundSession.hasSession())) {
+            // Activity is backgrounded (e.g. DiPlay settings is open). Do not alter session resolution or renegotiate.
+            appendLog("Display size updated while in background: ${size.width}x${size.height}")
+            return
+        }
         val previous = activeDisplaySize
         activeDisplaySize = size
         recordDetectedMaximum(size)
@@ -4267,6 +4281,11 @@ internal object CarPlayBackgroundSession {
         val currentController = controller ?: return null
         val currentSink = sink ?: return null
         return Snapshot(currentController, currentSink, width, height, canvas, layout)
+    }
+
+    @Synchronized
+    fun updateMediaVolume(percent: Int) {
+        sink?.mediaVolumePercent = percent
     }
 
     @Synchronized

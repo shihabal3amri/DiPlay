@@ -42,6 +42,7 @@ object AirPlayPersistence {
     private const val KEY_ADVANCED_AUDIO_CHANNEL_MAPPING = "advanced_audio_channel_mapping"
     private const val KEY_AUDIO_FOCUS_ENABLED = "audio_focus_enabled"
     private const val KEY_MEDIA_AUDIO_CHANNEL = "media_audio_channel"
+    private const val KEY_MEDIA_VOLUME_PERCENT = "media_volume_percent"
     private const val KEY_NAVIGATION_AUDIO_CHANNEL = "navigation_audio_channel"
     private const val KEY_NAVIGATION_STREAM_TYPE = "navigation_stream_type"
     private const val KEY_WIRELESS_ENABLED = "wireless_enabled"
@@ -171,6 +172,17 @@ object AirPlayPersistence {
     fun saveMediaAudioChannel(context: Context, channel: Int) {
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
             .putInt(KEY_MEDIA_AUDIO_CHANNEL, channel.takeIf { it in 0..16 } ?: 0)
+            .apply()
+    }
+
+    fun loadMediaVolumePercent(context: Context): Int =
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .getInt(KEY_MEDIA_VOLUME_PERCENT, 100)
+            .coerceIn(10, 100)
+
+    fun saveMediaVolumePercent(context: Context, percent: Int) {
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
+            .putInt(KEY_MEDIA_VOLUME_PERCENT, percent.coerceIn(10, 100))
             .apply()
     }
 

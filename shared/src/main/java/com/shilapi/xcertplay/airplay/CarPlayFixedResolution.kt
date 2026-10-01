@@ -117,10 +117,13 @@ object CarPlayDisplayChangePolicy {
         sessionLayout != currentLayout -> DisplayChangeAction.RENEGOTIATE
         sessionBase.isLandscape != next.isLandscape -> DisplayChangeAction.RENEGOTIATE
         else -> {
-            val aspectDiff = abs((next.width.toDouble() / next.height) / (sessionBase.width.toDouble() / sessionBase.height) - 1.0)
-            val widthRatio = abs(next.width.toDouble() / sessionBase.width - 1.0)
-            val heightRatio = abs(next.height.toDouble() / sessionBase.height - 1.0)
-            if (aspectDiff > 0.08 || widthRatio > 0.15 || heightRatio > 0.15) {
+            val baseAspect = sessionBase.width.toDouble() / sessionBase.height
+            val nextAspect = next.width.toDouble() / next.height
+            val aspectDiff = abs(nextAspect / baseAspect - 1.0)
+            // Only renegotiate if aspect ratio changes significantly (e.g. square split screen vs 16:9 wide screen).
+            // Pure scale changes (e.g. small window 960x540 vs full screen 1920x1080) stay in KEEP_SESSION,
+            // avoiding unwanted disconnects when opening settings or running in mini window.
+            if (aspectDiff > 0.20) {
                 DisplayChangeAction.RENEGOTIATE
             } else {
                 DisplayChangeAction.KEEP_SESSION

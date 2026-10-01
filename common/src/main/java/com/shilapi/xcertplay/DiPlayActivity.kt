@@ -347,11 +347,11 @@ class DiPlayActivity : ComponentActivity() {
         }
         section(content, getString(R.string.automatic_connection), R.drawable.ic_dp_automation) { card ->
             toggle(card, getString(R.string.connect_when_diplay_opens), getString(R.string.use_your_last_connection_type_and_selected_iphone), DiPlayPreferences.autoConnect(this)) { DiPlayPreferences.saveAutoConnect(this, it) }
-            toggle(card, "Open when your iPhone connects", "Start DiPlay and connect when the iPhone you chose joins the car’s Bluetooth. Works after the car wakes from sleep.", DiPlayPreferences.autoStartOnBluetooth(this)) { DiPlayPreferences.saveAutoStartOnBluetooth(this, it) }
+            toggle(card, getString(R.string.open_when_iphone_connects), getString(R.string.open_when_iphone_connects_desc), DiPlayPreferences.autoStartOnBluetooth(this)) { DiPlayPreferences.saveAutoStartOnBluetooth(this, it) }
             toggle(card, getString(R.string.open_after_the_car_starts), getString(R.string.availability_depends_on_your_head_unit_s_startup_settings), AirPlayPersistence.loadAutoStartOnBoot(this)) { AirPlayPersistence.saveAutoStartOnBoot(this, it) }
             if (!AutoStartLauncher.canDrawOverlays(this)) {
-                card.addView(label("Android lets DiPlay open itself from the background only with “Display over other apps”. Without it, DiPlay shows a notification to tap instead.", 14, WARNING).apply { setPadding(0, dp(12), 0, 0) })
-                card.addView(button("Allow display over other apps", false) { openSystem(AutoStartLauncher.overlayPermissionIntent(this)) }, matchButton(12, 60))
+                card.addView(label(getString(R.string.overlay_permission_notice), 14, WARNING).apply { setPadding(0, dp(12), 0, 0) })
+                card.addView(button(getString(R.string.allow_display_over_other_apps), false) { openSystem(AutoStartLauncher.overlayPermissionIntent(this)) }, matchButton(12, 60))
             }
             card.addView(button("${getString(R.string.choose_iphone_prefix)}${DiPlayPreferences.phoneName(this)}", false) { choosePhone() }, matchButton(12, 60))
         }
@@ -359,7 +359,7 @@ class DiPlayActivity : ComponentActivity() {
             carPlaySizeControl(card)
             resolutionControl(card)
             val bufferPresets = com.shilapi.xcertplay.media.MediaAudioBuffer.presets
-            choice(card, getString(R.string.music_buffer), listOf(getString(R.string.s_300_ms_default), getString(R.string.s_500_ms), getString(R.string.s_1000_ms_most_stable), "1500 ms · weakest Wi-Fi"),
+            choice(card, getString(R.string.music_buffer), listOf(getString(R.string.s_300_ms_default), getString(R.string.s_500_ms), getString(R.string.s_1000_ms_most_stable), getString(R.string.music_buffer_1500ms)),
                 bufferPresets.indexOf(AirPlayPersistence.loadMediaBufferMillis(this)).coerceAtLeast(0)) {
                 AirPlayPersistence.saveMediaBufferMillis(this, bufferPresets[it])
             }
@@ -381,6 +381,7 @@ class DiPlayActivity : ComponentActivity() {
             }
             mediaChannelControl(card)
             navigationChannelControl(card)
+            mediaVolumeControl(card)
         }
         section(content, getString(R.string.swc_category)) { card ->
             card.addView(label(getString(R.string.swc_section_desc), 15, MUTED).apply {
@@ -786,17 +787,55 @@ class DiPlayActivity : ComponentActivity() {
     }
 
 
+    private fun mediaVolumeControl(parent: LinearLayout) {
+        val summary: (Int) -> String = { percent ->
+            val label = if (percent >= 100) "$percent% (${getString(R.string.default_label)})" else "$percent%"
+            "${getString(R.string.media_internal_volume)}: $label"
+        }
+        val currentPercent = AirPlayPersistence.loadMediaVolumePercent(this)
+        val control = button(summary(currentPercent), false) {}
+        control.setOnClickListener {
+            val options = intArrayOf(100, 80, 60, 50, 40, 30, 20)
+            val labels = options.map { pct ->
+                if (pct == 100) "$pct% (${getString(R.string.default_label)})" else "$pct%"
+            }.toTypedArray()
+            val current = AirPlayPersistence.loadMediaVolumePercent(this)
+            var selectionIndex = options.indexOf(current).let { if (it < 0) 0 else it }
+            AlertDialog.Builder(this)
+                .setTitle(getString(R.string.media_internal_volume))
+                .setSingleChoiceItems(labels, selectionIndex) { _, which ->
+                    selectionIndex = which
+                }
+                .setPositiveButton(getString(R.string.save)) { _, _ ->
+                    val chosen = options[selectionIndex]
+                    AirPlayPersistence.saveMediaVolumePercent(this, chosen)
+                    CarPlayBackgroundSession.updateMediaVolume(chosen)
+                    control.text = summary(chosen)
+                }
+                .setNegativeButton(android.R.string.cancel, null)
+                .show()
+        }
+        parent.addView(control, matchButton(0, 60))
+        parent.addView(label(getString(R.string.media_internal_volume_desc), 14, MUTED).apply {
+            setPadding(0, dp(4), 0, dp(12))
+        })
+    }
+
     /** Each tier is a fixed resolution negotiated with the iPhone; screen changes keep it. */
     private fun resolutionControl(parent: LinearLayout) {
         val tiers = listOf(10, 8, 6)
-        val names = listOf("Native", "80% · lighter load", "60% · lightest load")
+        val names = listOf(
+            getString(R.string.resolution_tier_native),
+            getString(R.string.resolution_tier_80),
+            getString(R.string.resolution_tier_60),
+        )
         val base = AirPlayPersistence.loadFixedResolution(this)?.first
         val options = tiers.mapIndexed { index, tenths ->
             base?.let { "${names[index]} · ${CarPlayFixedResolution.negotiated(it, tenths)}" } ?: names[index]
         }
         val current = tiers.indexOf(AirPlayPersistence.loadDisplayScaleTenths(this)).coerceAtLeast(0)
-        choice(parent, "Resolution", options, current) { AirPlayPersistence.saveDisplayScaleTenths(this, tiers[it]) }
-        parent.addView(label("CarPlay keeps the selected resolution when the car's camera or surround view resizes the screen.", 14, MUTED).apply {
+        choice(parent, getString(R.string.resolution_title), options, current) { AirPlayPersistence.saveDisplayScaleTenths(this, tiers[it]) }
+        parent.addView(label(getString(R.string.resolution_fixed_desc), 14, MUTED).apply {
             setPadding(0, 0, 0, dp(12))
         })
     }

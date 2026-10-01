@@ -484,4 +484,18 @@
     <string name="fill_screen_desc">Stretch CarPlay to fill the entire screen, eliminating side black bars.</string>
     <string name="open_full_settings">Open full system settings (DiPlay)</string>
     <string name="return_to_carplay">Return to CarPlay fullscreen</string>
+    <string name="open_when_iphone_connects">Open when your iPhone connects</string>
+    <string name="open_when_iphone_connects_desc">Start DiPlay and connect when the iPhone you chose joins the car’s Bluetooth. Works after the car wakes from sleep.</string>
+    <string name="overlay_permission_notice">Android lets DiPlay open itself from the background only with “Display over other apps”. Without it, DiPlay shows a notification to tap instead.</string>
+    <string name="allow_display_over_other_apps">Allow display over other apps</string>
+    <string name="resolution_title">Resolution</string>
+    <string name="resolution_tier_native">Native</string>
+    <string name="resolution_tier_80">80% · lighter load</string>
+    <string name="resolution_tier_60">60% · lightest load</string>
+    <string name="resolution_fixed_desc">CarPlay keeps the selected resolution when the car\'s camera or surround view resizes the screen.</string>
+    <string name="music_buffer_1500ms">1500 ms · weakest Wi-Fi</string>
+    <string name="media_internal_volume">Media volume attenuation</string>
+    <string name="media_internal_volume_desc">Directly scales audio output power at the software level. Useful if volume level 1 or 2 is too loud on your car.</string>
+    <string name="default_label">Default</string>
+    <string name="head_unit_cannot_decode_resolution">This head unit cannot decode this resolution. Using Native.</string>
 </resources>

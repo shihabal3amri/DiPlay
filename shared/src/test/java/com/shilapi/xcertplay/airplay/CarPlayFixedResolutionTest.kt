@@ -115,6 +115,19 @@ class CarPlayFixedResolutionTest {
     }
 
     @Test
+    fun smallWindowSameAspectKeepsSession() {
+        val small = PixelSize(960, 540)
+        assertEquals(
+            DisplayChangeAction.KEEP_SESSION,
+            decide(previous = small, next = full, sessionBase = small),
+        )
+        assertEquals(
+            DisplayChangeAction.KEEP_SESSION,
+            decide(previous = full, next = small, sessionBase = full),
+        )
+    }
+
+    @Test
     fun baseDoesNotDistortMismatchedAspectRatio() {
         val split = PixelSize(960, 990)
         assertEquals(full, CarPlayFixedResolution.base(full, split))

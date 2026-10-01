@@ -137,6 +137,7 @@ class AndroidMediaSink(
     private val onAudioDiagnostic: (String) -> Unit = {},
     /** True while any music ("media") audio stream is running; called from media threads. */
     private val onMediaAudioChanged: (Boolean) -> Unit = {},
+    mediaVolumePercent: Int = 100,
 ) : MediaSink {
     private val appContext = context?.applicationContext
     private val audioFocusCoordinator = AudioFocusCoordinator(
@@ -144,6 +145,13 @@ class AndroidMediaSink(
         audioFocusEnabled,
         onAudioDiagnostic,
     )
+    @Volatile var mediaVolumePercent: Int = mediaVolumePercent
+        set(value) {
+            val clamped = value.coerceIn(10, 100)
+            field = clamped
+            audioRenderers.values.forEach { it.updateMediaVolume(clamped) }
+        }
+
     private val screenStateLock = Any()
     private val activeScreenTypes = mutableSetOf<Int>()
     private val defaultSurface = surface
@@ -301,6 +309,7 @@ class AndroidMediaSink(
             navigationStreamType,
             mediaBufferMillis,
             onAudioDiagnostic,
+            mediaVolumePercent,
         ).also { audioRenderers[id] = it }
     }
 }
@@ -684,7 +693,19 @@ private class AudioRenderer(
     private val navigationStreamType: Int,
     private val mediaBufferMillis: Int,
     private val report: (String) -> Unit,
+    @Volatile private var mediaVolumePercent: Int = 100,
 ) : Closeable {
+    fun updateMediaVolume(percent: Int) {
+        mediaVolumePercent = percent
+        if (mappedChannel == AudioChannel.MEDIA) {
+            val gain = (percent / 100f).coerceIn(0.1f, 1f)
+            track?.let { t ->
+                runCatching {
+                    t.setStereoVolume(gain, gain)
+                }
+            }
+        }
+    }
     private data class AudioPacket(val rtp: ByteArray, val sample: Int)
 
     private var trackAttributes: AudioAttributes? = null
@@ -888,6 +909,10 @@ private class AudioRenderer(
         }
         track = built
         trackAttributes = built.audioAttributes
+        if (selection.channel == AudioChannel.MEDIA) {
+            val gain = (mediaVolumePercent / 100f).coerceIn(0.1f, 1f)
+            runCatching { built.setStereoVolume(gain, gain) }
+        }
         val capacityBytes = built.bufferSizeInFrames * frameBytes
         startThresholdBytes = MediaAudioBuffer.startBytesFor(plan.startBytes, capacityBytes, PREBUFFER_WRITE_CHUNK_BYTES)
         report("Audio: ready audioType=${format.audioType} codec=${format.codec} " +
@@ -1159,6 +1184,9 @@ private class AudioRenderer(
 
     private fun writePcm(data: ByteArray, offset: Int = 0, length: Int = data.size) {
         val track = track ?: return
+        if (mappedChannel == AudioChannel.MEDIA && mediaVolumePercent < 100) {
+            applyMediaAttenuation(data, offset, length, mediaVolumePercent)
+        }
         if (!firstPcmLogged && length > 0) {
             firstPcmLogged = true
             val end = minOf(data.size, offset + minOf(length, 16))
@@ -1284,6 +1312,21 @@ private class AudioRenderer(
             val scaled = (sample.toLong() * (index + 1) / fadeSamples).toInt()
             data[position] = scaled.toByte()
             data[position + 1] = (scaled shr 8).toByte()
+        }
+    }
+
+    private fun applyMediaAttenuation(data: ByteArray, offset: Int, length: Int, percent: Int) {
+        if (percent >= 100) return
+        val clampedPercent = percent.coerceIn(10, 100)
+        val samples = (length - length % 2) / 2
+        for (index in 0 until samples) {
+            val position = offset + index * 2
+            val low = data[position].toInt() and 0xFF
+            val high = data[position + 1].toInt()
+            val sample = ((high shl 8) or low).toShort()
+            val scaled = (sample * clampedPercent / 100).coerceIn(Short.MIN_VALUE.toInt(), Short.MAX_VALUE.toInt())
+            data[position] = (scaled and 0xFF).toByte()
+            data[position + 1] = ((scaled shr 8) and 0xFF).toByte()
         }
     }
 
