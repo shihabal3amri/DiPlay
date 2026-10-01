@@ -2128,7 +2128,7 @@ class CarPlayHostActivity : ComponentActivity() {
                 ViewGroup.LayoutParams.WRAP_CONTENT),
         )
         section.addView(
-            menuText(getString(R.string.swc_section_desc), 14f, MENU_DIM),
+            menuText(getString(R.string.swc_section_desc), 14f, MENU_SECONDARY),
             LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(4) },
         )
