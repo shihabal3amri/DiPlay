@@ -28,6 +28,11 @@ object CarPlayFixedResolution {
         ) {
             return current
         }
+        val currentAspect = current.width.toDouble() / current.height
+        val maxAspect = recordedMaximum.width.toDouble() / recordedMaximum.height
+        if (abs(maxAspect / currentAspect - 1.0) > 0.06) {
+            return current
+        }
         return PixelSize(
             maxOf(current.width, recordedMaximum.width),
             maxOf(current.height, recordedMaximum.height),
@@ -74,7 +79,7 @@ data class ContentRect(val left: Float, val top: Float, val width: Float, val he
             return ContentRect((viewWidth - width) / 2f, (viewHeight - height) / 2f, width, height)
         }
 
-        const val ASPECT_TOLERANCE = 0.01
+        const val ASPECT_TOLERANCE = 0.04
     }
 }
 
@@ -111,6 +116,15 @@ object CarPlayDisplayChangePolicy {
         sessionBase == null -> DisplayChangeAction.RENEGOTIATE
         sessionLayout != currentLayout -> DisplayChangeAction.RENEGOTIATE
         sessionBase.isLandscape != next.isLandscape -> DisplayChangeAction.RENEGOTIATE
-        else -> DisplayChangeAction.KEEP_SESSION
+        else -> {
+            val aspectDiff = abs((next.width.toDouble() / next.height) / (sessionBase.width.toDouble() / sessionBase.height) - 1.0)
+            val widthRatio = abs(next.width.toDouble() / sessionBase.width - 1.0)
+            val heightRatio = abs(next.height.toDouble() / sessionBase.height - 1.0)
+            if (aspectDiff > 0.08 || widthRatio > 0.15 || heightRatio > 0.15) {
+                DisplayChangeAction.RENEGOTIATE
+            } else {
+                DisplayChangeAction.KEEP_SESSION
+            }
+        }
     }
 }

@@ -806,6 +806,15 @@ class CarPlayHostActivity : ComponentActivity() {
         }
     }
 
+    override fun onMultiWindowModeChanged(isInMultiWindowMode: Boolean, newConfig: Configuration) {
+        super.onMultiWindowModeChanged(isInMultiWindowMode, newConfig)
+        applyFullscreenMode()
+        videoView?.post {
+            val view = videoView ?: return@post
+            scheduleDisplaySize(view.width, view.height)
+        }
+    }
+
     override fun onDestroy() {
         clusterMonitor?.stop()
         dismissClusterPresentation()
@@ -4159,6 +4168,25 @@ class CarPlayHostActivity : ComponentActivity() {
         }
         controller.systemBarsBehavior =
             WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+
+        if (hideTop) {
+            window.addFlags(android.view.WindowManager.LayoutParams.FLAG_FULLSCREEN)
+        } else {
+            window.clearFlags(android.view.WindowManager.LayoutParams.FLAG_FULLSCREEN)
+        }
+        var flags = View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+        if (hideTop || hideBottom) {
+            flags = flags or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+        }
+        if (hideTop) {
+            flags = flags or View.SYSTEM_UI_FLAG_FULLSCREEN
+        }
+        if (hideBottom) {
+            flags = flags or View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION or
+                View.SYSTEM_UI_FLAG_HIDE_NAVIGATION or
+                View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
+        }
+        window.decorView.systemUiVisibility = flags
     }
 
     private fun dp(value: Int): Int = (value * resources.displayMetrics.density).toInt()

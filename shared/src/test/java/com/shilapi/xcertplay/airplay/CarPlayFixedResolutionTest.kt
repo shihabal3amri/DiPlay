@@ -101,6 +101,26 @@ class CarPlayFixedResolutionTest {
         )
     }
 
+    @Test
+    fun splitScreenOrFullscreenTransitionRenegotiates() {
+        val split = PixelSize(960, 990)
+        assertEquals(
+            DisplayChangeAction.RENEGOTIATE,
+            decide(previous = split, next = full, sessionBase = split),
+        )
+        assertEquals(
+            DisplayChangeAction.RENEGOTIATE,
+            decide(previous = full, next = split, sessionBase = full),
+        )
+    }
+
+    @Test
+    fun baseDoesNotDistortMismatchedAspectRatio() {
+        val split = PixelSize(960, 990)
+        assertEquals(full, CarPlayFixedResolution.base(full, split))
+        assertEquals(split, CarPlayFixedResolution.base(split, full))
+    }
+
     private fun decide(
         previous: PixelSize?,
         next: PixelSize,
