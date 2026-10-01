@@ -70,6 +70,7 @@ import com.shilapi.xcertplay.airplay.ContentRect
 import com.shilapi.xcertplay.airplay.DisplayChangeAction
 import com.shilapi.xcertplay.airplay.PixelSize
 import com.shilapi.xcertplay.airplay.SafeAreaRect
+import com.shilapi.xcertplay.floating.CarPlayFloatingManager
 import com.shilapi.xcertplay.host.R
 import com.shilapi.xcertplay.location.AndroidCarPlayLocationProvider
 import com.shilapi.xcertplay.media.AndroidMediaSink
@@ -314,6 +315,7 @@ class CarPlayHostActivity : ComponentActivity() {
     private var rightHandDrive = false
     private var hideTopBar = true
     private var hideBottomBar = true
+    private var autoFloatingOnLeave = false
     private var safeAreaDrawOutside = true
     private var locationReportingEnabled = false
     private var locationPermissionAvailable = false
@@ -494,6 +496,7 @@ class CarPlayHostActivity : ComponentActivity() {
         rightHandDrive = AirPlayPersistence.loadRightHandDrive(this)
         hideTopBar = AirPlayPersistence.loadHideTopBar(this)
         hideBottomBar = AirPlayPersistence.loadHideBottomBar(this)
+        autoFloatingOnLeave = AirPlayPersistence.loadAutoFloatingOnLeave(this)
         safeAreaDrawOutside = AirPlayPersistence.loadSafeAreaDrawOutside(this)
         locationReportingEnabled = AirPlayPersistence.loadLocationReportingEnabled(this)
         locationPermissionAvailable = hasFineLocationPermission()
@@ -625,6 +628,9 @@ class CarPlayHostActivity : ComponentActivity() {
             clusterMonitor = null
         }
         ensureClusterPresentation()
+        if (CarPlayFloatingManager.isFloating) {
+            CarPlayFloatingManager.dismiss()
+        }
         maybeStartCarPlay()
         applyFullscreenMode()
     }
@@ -1731,10 +1737,10 @@ class CarPlayHostActivity : ComponentActivity() {
     }
 
     private fun mfiTargetLabel(target: MfiTarget): String = when (target) {
-        MfiTarget.LOCAL -> getString(R.string.local_offline)
-        MfiTarget.USB_CH341 -> getString(R.string.usb_ch341)
-        MfiTarget.I2C -> getString(R.string.i2c)
-        MfiTarget.REMOTE -> getString(R.string.remote)
+        MfiTarget.LOCAL -> safeString(R.string.local_offline, "Local (offline)")
+        MfiTarget.USB_CH341 -> safeString(R.string.usb_ch341, "USB/CH341")
+        MfiTarget.I2C -> safeString(R.string.i2c, "I2C")
+        MfiTarget.REMOTE -> safeString(R.string.remote, "Remote")
     }
 
     private fun buildIdentitySettingsSection(): View {
@@ -2090,6 +2096,39 @@ class CarPlayHostActivity : ComponentActivity() {
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT,
             ).apply { topMargin = dp(10) },
+        )
+        section.addView(
+            settingsSwitchRow(
+                label = getString(R.string.auto_floating_on_leave),
+                checked = autoFloatingOnLeave,
+                description = getString(R.string.auto_floating_on_leave_desc),
+            ) { checked ->
+                autoFloatingOnLeave = checked
+                AirPlayPersistence.saveAutoFloatingOnLeave(this@CarPlayHostActivity, checked)
+                if (checked && !CarPlayFloatingManager.hasOverlayPermission(this@CarPlayHostActivity)) {
+                    CarPlayFloatingManager.requestOverlayPermission(this@CarPlayHostActivity)
+                }
+            },
+            LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+            ).apply { topMargin = dp(10) },
+        )
+        section.addView(
+            Button(this).apply {
+                text = getString(R.string.enter_floating_window)
+                isAllCaps = false
+                textSize = 16f
+                setTextColor(MENU_BUTTON_TEXT)
+                backgroundTintList = ColorStateList.valueOf(MENU_ACCENT)
+                setOnClickListener {
+                    enterFloatingMode()
+                }
+            },
+            LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                dp(48),
+            ).apply { topMargin = dp(14) },
         )
         return section
     }
@@ -2546,9 +2585,9 @@ class CarPlayHostActivity : ComponentActivity() {
     }
 
     private fun hotspotModeLabel(mode: WirelessHotspotMode): String = when (mode) {
-        WirelessHotspotMode.WIFI_P2P -> getString(R.string.wi_fi_p2p_5_ghz)
-        WirelessHotspotMode.LOCAL_ONLY_HOTSPOT -> getString(R.string.localonlyhotspot)
-        WirelessHotspotMode.MANUAL -> getString(R.string.manual_hotspot)
+        WirelessHotspotMode.WIFI_P2P -> safeString(R.string.wi_fi_p2p_5_ghz, "Wi-Fi P2P (5 GHz)")
+        WirelessHotspotMode.LOCAL_ONLY_HOTSPOT -> safeString(R.string.localonlyhotspot, "Local-only Hotspot")
+        WirelessHotspotMode.MANUAL -> safeString(R.string.manual_hotspot, "Manual Hotspot")
     }
 
     private fun menuText(
@@ -2664,13 +2703,20 @@ class CarPlayHostActivity : ComponentActivity() {
         )
     }
 
+    private fun safeString(resId: Int, fallback: String = ""): String = try {
+        getString(resId)
+    } catch (_: Exception) {
+        fallback
+    }
+
     private fun updateResolutionMenu() {
         resolutionValueView?.text = CarPlayDisplayScale.label(displayScaleTenths)
+        val preview = resolutionPreviewView ?: return
         val native = (activeDisplaySize ?: currentActivitySize())
             ?.let { resolveResolutionBase(it) }
             ?.let { DisplaySize(it.width, it.height) }
         val resolution = if (native == null) {
-            getString(R.string.handshake_resolution_waiting_for_display)
+            safeString(R.string.handshake_resolution_waiting_for_display, "Waiting for display…")
         } else {
             val negotiated = CarPlayDisplayScale.apply(
                 AirPlayDisplayConfig(
@@ -2681,7 +2727,7 @@ class CarPlayHostActivity : ComponentActivity() {
                 ),
                 displayScaleTenths,
             )
-            "${getString(R.string.resolution_handshake_prefix)}${native.width} x ${native.height} -> " +
+            "${safeString(R.string.resolution_handshake_prefix, "Handshake resolution: ")}${native.width} x ${native.height} -> " +
                 "${negotiated.widthPixels} x ${negotiated.heightPixels}"
         }
         val transport = if (!hevcEnabled) {
@@ -2690,42 +2736,42 @@ class CarPlayHostActivity : ComponentActivity() {
             "HEVC (H.265, ${if (hevcSoftwareDecoderEnabled) "software" else "hardware"})"
         }
         val fullscreen = buildString {
-            append(if (hideTopBar) getString(R.string.fullscreen_top_hidden) else getString(R.string.fullscreen_top_shown))
+            append(if (hideTopBar) safeString(R.string.fullscreen_top_hidden, "top hidden") else safeString(R.string.fullscreen_top_shown, "top shown"))
             append(", ")
-            append(if (hideBottomBar) getString(R.string.fullscreen_bottom_hidden) else getString(R.string.fullscreen_bottom_shown))
+            append(if (hideBottomBar) safeString(R.string.fullscreen_bottom_hidden, "bottom hidden") else safeString(R.string.fullscreen_bottom_shown, "bottom shown"))
         }
-        resolutionPreviewView?.text = buildString {
+        preview.text = buildString {
             append(resolution).append('\n')
-            append(getString(R.string.preview_identity)).append(normalizedManufacturer()).append(" / ")
+            append(safeString(R.string.preview_identity, "Identity: ")).append(normalizedManufacturer()).append(" / ")
                 .append(normalizedModel()).append('\n')
-            append(getString(R.string.preview_oem_label)).append(oemLabel.ifBlank { getString(R.string.preview_empty) }).append('\n')
-            append(getString(R.string.preview_frame_rate)).append(fps).append(" fps\n")
-            append(getString(R.string.preview_detected_maximum))
+            append(safeString(R.string.preview_oem_label, "OEM label: ")).append(oemLabel.ifBlank { safeString(R.string.preview_empty, "none") }).append('\n')
+            append(safeString(R.string.preview_frame_rate, "Frame rate: ")).append(fps).append(" fps\n")
+            append(safeString(R.string.preview_detected_maximum, "Detected maximum: "))
                 .append(maximumDetectedWidthPixels).append(" x ")
                 .append(maximumDetectedHeightPixels).append(" px\n")
-            append(getString(R.string.preview_physical_reference))
+            append(safeString(R.string.preview_physical_reference, "Physical reference: "))
                 .append(
                     when (physicalSizeBasis) {
-                        AirPlayPhysicalSizeBasis.WIDTH -> getString(R.string.basis_widest_width)
-                        AirPlayPhysicalSizeBasis.HEIGHT -> getString(R.string.basis_longest_height)
+                        AirPlayPhysicalSizeBasis.WIDTH -> safeString(R.string.basis_widest_width, "widest width")
+                        AirPlayPhysicalSizeBasis.HEIGHT -> safeString(R.string.basis_longest_height, "longest height")
                     },
                 )
                 .append(" = ").append(widthPhysicalMm).append(" mm\n")
             native?.let { size ->
                 val physical = resolvePhysicalSize(size)
-                append(getString(R.string.preview_carplay_physical_size))
+                append(safeString(R.string.preview_carplay_physical_size, "CarPlay physical size: "))
                     .append(physical.widthMm).append(" x ")
                     .append(physical.heightMm).append(" mm\n")
             }
-            append(getString(R.string.preview_driving_side)).append(if (rightHandDrive) getString(R.string.driving_side_right) else getString(R.string.driving_side_left)).append('\n')
-            append(getString(R.string.preview_fullscreen)).append(fullscreen).append('\n')
-            append(getString(R.string.preview_video_transport)).append(transport).append('\n')
-            append(getString(R.string.preview_location_reporting))
-                .append(if (locationReportingEnabled) getString(R.string.enabled_value) else getString(R.string.disabled_value))
+            append(safeString(R.string.preview_driving_side, "Driving side: ")).append(if (rightHandDrive) safeString(R.string.driving_side_right, "right") else safeString(R.string.driving_side_left, "left")).append('\n')
+            append(safeString(R.string.preview_fullscreen, "Fullscreen: ")).append(fullscreen).append('\n')
+            append(safeString(R.string.preview_video_transport, "Video transport: ")).append(transport).append('\n')
+            append(safeString(R.string.preview_location_reporting, "Location reporting: "))
+                .append(if (locationReportingEnabled) safeString(R.string.enabled_value, "enabled") else safeString(R.string.disabled_value, "disabled"))
                 .append('\n')
             if (advancedAudioChannelMappingSupported) {
-                append(getString(R.string.preview_audio_channel_mapping))
-                    .append(if (advancedAudioChannelMapping) getString(R.string.mapping_aaos_buses) else getString(R.string.mapping_mobile_compatible))
+                append(safeString(R.string.preview_audio_channel_mapping, "Audio channel mapping: "))
+                    .append(if (advancedAudioChannelMapping) safeString(R.string.mapping_aaos_buses, "AAOS buses") else safeString(R.string.mapping_mobile_compatible, "Mobile compatible"))
                     .append('\n')
             }
             append(safeAreaSummary())
@@ -2932,12 +2978,12 @@ class CarPlayHostActivity : ComponentActivity() {
         )
 
     private fun safeAreaSummary(): String {
-        val size = currentActivitySize() ?: return getString(R.string.safe_area_waiting_for_activity_size)
+        val size = currentActivitySize() ?: return safeString(R.string.safe_area_waiting_for_activity_size, "Waiting for activity size…")
         val mapping = AirPlayPersistence.loadSafeAreaRect(this, size.width, size.height)
         return if (mapping == null) {
-            "${getString(R.string.safe_area_full_screen_at)}${size.width} x ${size.height}"
+            "${safeString(R.string.safe_area_full_screen_at, "Full screen at ")}${size.width} x ${size.height}"
         } else {
-            "${getString(R.string.safe_area_prefix)}${mapping.width} x ${mapping.height} at " +
+            "${safeString(R.string.safe_area_prefix, "Safe area: ")}${mapping.width} x ${mapping.height} at " +
                 "(${mapping.left}, ${mapping.top}) in ${size.width} x ${size.height}"
         }
     }
@@ -3516,6 +3562,38 @@ class CarPlayHostActivity : ComponentActivity() {
         controller?.sendTouch(emptyList())
         startActivity(Intent(this, DiPlayActivity::class.java)
             .putExtra("page", page).addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT))
+    }
+
+    private fun enterFloatingMode() {
+        if (menuOpen) cancelSettingsEdits()
+        if (controller == null && !CarPlayBackgroundSession.hasSession()) {
+            appendLog("Floating window: no active CarPlay session")
+            return
+        }
+        // Release full screen surface so media sink can bind to the floating TextureView
+        currentSurface?.let { surface ->
+            sink?.clearSurface(SCREEN_TYPE_MAIN, surface)
+            surface.release()
+        }
+        currentSurface = null
+        currentSurfaceTexture = null
+
+        val shown = CarPlayFloatingManager.show(this)
+        if (shown) {
+            appendLog("Entered floating window mode")
+            moveTaskToBack(true)
+        }
+    }
+
+    override fun onUserLeaveHint() {
+        super.onUserLeaveHint()
+        if (autoFloatingOnLeave &&
+            (controller != null || CarPlayBackgroundSession.hasSession()) &&
+            !shuttingDown.get() &&
+            !CarPlayFloatingManager.isFloating
+        ) {
+            enterFloatingMode()
+        }
     }
 
     /**

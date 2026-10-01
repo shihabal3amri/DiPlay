@@ -456,4 +456,13 @@
     <string name="video_play">播放</string>
     <string name="video_pause">暂停</string>
     <string name="video_cannot_play">此视频无法在车机屏幕上播放。受保护的视频（例如 Apple TV+）需要获得授权的接收器。</string>
+    <string name="floating_window">画中画 / 悬浮小窗</string>
+    <string name="enter_floating_window">开启悬浮小窗</string>
+    <string name="auto_floating_on_leave">退到后台时自动开启小窗</string>
+    <string name="auto_floating_on_leave_desc">当按 Home 键返回桌面或切换其他应用时，自动将 CarPlay 最小化为可拖拽的悬浮窗。</string>
+    <string name="grant_overlay_permission">需要悬浮窗权限</string>
+    <string name="grant_overlay_permission_desc">请在系统设置中为 DiPlay 开启“在其他应用上层显示”权限，以便使用画中画小窗。</string>
+    <string name="floating_size">小窗尺寸</string>
+    <string name="expand_fullscreen">放大至全屏</string>
+    <string name="close_window">关闭</string>
 </resources>

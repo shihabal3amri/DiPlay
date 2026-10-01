@@ -456,4 +456,13 @@
     <string name="video_play">Play</string>
     <string name="video_pause">Pause</string>
     <string name="video_cannot_play">This video can\'t play on the car screen. Protected video, such as Apple TV+, needs a licensed receiver.</string>
+    <string name="floating_window">Floating window</string>
+    <string name="enter_floating_window">Enter floating window (PiP)</string>
+    <string name="auto_floating_on_leave">Auto float when switching to home</string>
+    <string name="auto_floating_on_leave_desc">Automatically minimize CarPlay into a floating window when leaving to home or other apps.</string>
+    <string name="grant_overlay_permission">Overlay permission required</string>
+    <string name="grant_overlay_permission_desc">Please grant \"Display over other apps\" permission in settings to use floating window.</string>
+    <string name="floating_size">Floating window size</string>
+    <string name="expand_fullscreen">Expand to full screen</string>
+    <string name="close_window">Close</string>
 </resources>

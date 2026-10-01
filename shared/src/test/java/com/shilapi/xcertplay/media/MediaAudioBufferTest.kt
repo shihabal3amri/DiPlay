@@ -13,7 +13,6 @@ class MediaAudioBufferTest {
     }
 
     @Test
-    @Test
     fun `all streams mapped to media receive the music buffer`() {
         val selection = AudioChannelMapper.map(
             "compatibility", 100, AudioChannelMappingMode.AUTOMOTIVE_BUS,
@@ -29,7 +28,6 @@ class MediaAudioBufferTest {
         val plan = MediaAudioBuffer.plan(true, 48_000, 2, minBufferBytes = 7_680, mediaMillis = 1500)
         assertEquals(288_000, plan.startBytes)
         assertEquals(326_400, plan.trackBufferBytes)
-    }
     }
 
     @Test
