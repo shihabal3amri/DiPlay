@@ -169,7 +169,7 @@ class AndroidMediaSink(
         videoDiagnosticHandlers[type] = handler
     }
 
-    private fun requestVideoRecovery(type: Int) {
+    fun requestVideoRecovery(type: Int) {
         if (!recoveryPending.compareAndSet(false, true)) return
         try {
             recoveryExecutor.execute {

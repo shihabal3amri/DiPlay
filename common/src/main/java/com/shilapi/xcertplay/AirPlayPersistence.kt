@@ -570,7 +570,7 @@ object AirPlayPersistence {
 
     fun loadFillScreen(context: Context): Boolean =
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-            .getBoolean(KEY_FILL_SCREEN, false)
+            .getBoolean(KEY_FILL_SCREEN, true)
 
     fun saveFillScreen(context: Context, fill: Boolean) {
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()

@@ -318,6 +318,19 @@ class DiPlayActivity : ComponentActivity() {
     private fun settings(content: LinearLayout) {
         content.addView(label(getString(R.string.your_drive_your_way), 34, TEXT, true))
         content.addView(label(getString(R.string.apply_reconnects_carplay_for_size_resolution_music_buffer), 17, MUTED).apply { setPadding(0, dp(8), 0, dp(24)) })
+        if (CarPlayBackgroundSession.hasSession()) {
+            val quickRow = row().apply {
+                gravity = Gravity.CENTER_VERTICAL
+                setPadding(0, 0, 0, dp(16))
+            }
+            quickRow.addView(button("📺 " + getString(R.string.return_to_carplay), true) {
+                openProjection()
+            }, LinearLayout.LayoutParams(0, dp(52), 1f).apply { marginEnd = dp(8) })
+            quickRow.addView(button("🖼️ " + getString(R.string.enter_floating_window), false) {
+                CarPlayFloatingManager.show(this@DiPlayActivity)
+            }, LinearLayout.LayoutParams(0, dp(52), 1f))
+            content.addView(quickRow)
+        }
         section(content, getString(R.string.connection_setup), R.drawable.ic_dp_connection) { card ->
             card.addView(label(getString(R.string.choose_how_to_connect_follow_the_setup_steps_and_save_your), 16, MUTED))
             card.addView(button(getString(R.string.open_connection_setup), false) { page = "connection"; render() }, matchButton(12, 60))        }
@@ -397,6 +410,23 @@ class DiPlayActivity : ComponentActivity() {
                 }
                 r.addView(label(actionName, 16, TEXT, true), LinearLayout.LayoutParams(0, -2, 1f))
                 r.addView(label(statusText, 14, ACCENT), LinearLayout.LayoutParams(-2, -2).apply { marginEnd = dp(8) })
+                val bindBtn = button(getString(R.string.swc_bind), false) {
+                    val dialog = AlertDialog.Builder(this)
+                        .setTitle("${getString(R.string.swc_bind)}: $actionName")
+                        .setMessage(getString(R.string.swc_press_key_now))
+                        .setNegativeButton(android.R.string.cancel, null)
+                        .create()
+                    dialog.setOnKeyListener { d, keyCode, keyEvent ->
+                        if (keyEvent.action == KeyEvent.ACTION_DOWN && keyCode != KeyEvent.KEYCODE_BACK) {
+                            SwcCustomBindings.saveBinding(this@DiPlayActivity, action, keyCode)
+                            d.dismiss()
+                            render()
+                            true
+                        } else false
+                    }
+                    dialog.show()
+                }
+                r.addView(bindBtn, LinearLayout.LayoutParams(dp(70), dp(40)).apply { marginEnd = dp(6) })
                 val clearBtn = button(getString(R.string.swc_clear), false) {
                     SwcCustomBindings.clearBinding(this, action)
                     render()

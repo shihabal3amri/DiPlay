@@ -7,6 +7,7 @@ import android.graphics.Color
 import android.graphics.Matrix
 import android.graphics.PixelFormat
 import android.graphics.SurfaceTexture
+import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.os.Build
 import android.provider.Settings
@@ -22,6 +23,7 @@ import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
+import com.shilapi.xcertplay.AirPlayPersistence
 import com.shilapi.xcertplay.CarPlayBackgroundSession
 import com.shilapi.xcertplay.CarPlayHostActivity
 import com.shilapi.xcertplay.airplay.ContentRect
@@ -185,8 +187,9 @@ object CarPlayFloatingManager {
                     val surface = Surface(st)
                     currentSurface = surface
                     snapshot.sink.setSurface(SCREEN_TYPE_MAIN, surface)
+                    snapshot.sink.requestVideoRecovery(SCREEN_TYPE_MAIN)
                     updateTextureAspect(this@apply, w, h, snapshot)
-                    Log.i(TAG, "Floating TextureView surface available: ${w}x$h")
+                    Log.i(TAG, "Floating TextureView surface available: ${w}x$h, keyframe requested")
                 }
 
                 override fun onSurfaceTextureSizeChanged(st: SurfaceTexture, w: Int, h: Int) {
@@ -212,76 +215,77 @@ object CarPlayFloatingManager {
         val touchOverlay = View(context).apply {
             isClickable = true
             setOnTouchListener { v, event ->
+                val fill = AirPlayPersistence.loadFillScreen(context)
                 val canvas = snapshot.canvas
-                val content = if (canvas != null && v.width > 0 && v.height > 0) {
-                    ContentRect.fit(canvas, v.width, v.height)
-                } else {
+                val content = if (fill || canvas == null || v.width <= 0 || v.height <= 0) {
                     ContentRect(0f, 0f, v.width.toFloat(), v.height.toFloat())
+                } else {
+                    ContentRect.fit(canvas, v.width, v.height)
                 }
                 val contacts = CarPlayTouchMapper.contacts(event, content)
                 snapshot.controller.sendTouch(contacts)
                 true
             }
         }
-        root.addView(touchOverlay, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
+        root.addView(touchOverlay, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT).apply {
+            topMargin = dp(40)
+        })
 
         // Top Control Header Bar
         val headerBar = LinearLayout(context).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
-            setBackgroundColor(Color.argb(190, 15, 23, 42))
-            setPadding(dp(10), dp(4), dp(10), dp(4))
+            setBackgroundColor(Color.argb(230, 15, 23, 40))
+            setPadding(dp(12), dp(2), dp(12), dp(2))
         }
 
         // Drag handle title
         val titleView = TextView(context).apply {
             text = "DiPlay · " + context.getString(R.string.floating_window)
             setTextColor(Color.WHITE)
-            textSize = 12f
+            textSize = 13f
+            typeface = Typeface.DEFAULT_BOLD
             isSingleLine = true
+            gravity = Gravity.CENTER_VERTICAL
         }
-        headerBar.addView(titleView, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+        headerBar.addView(titleView, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f))
+
+        fun createHeaderButton(icon: String, textColor: Int, bgColor: Int, onClick: () -> Unit): TextView =
+            TextView(context).apply {
+                text = icon
+                setTextColor(textColor)
+                textSize = 18f
+                gravity = Gravity.CENTER
+                typeface = Typeface.DEFAULT_BOLD
+                background = GradientDrawable().apply {
+                    setColor(bgColor)
+                    cornerRadius = dp(16).toFloat()
+                }
+                setOnClickListener { onClick() }
+            }
 
         // Resize button
-        val resizeBtn = TextView(context).apply {
-            text = "⤢"
-            setTextColor(Color.rgb(166, 200, 255))
-            textSize = 16f
-            setPadding(dp(8), 0, dp(8), 0)
-            setOnClickListener {
-                cycleSize(context, root)
-            }
+        val resizeBtn = createHeaderButton("⤢", Color.WHITE, Color.argb(160, 50, 75, 110)) {
+            cycleSize(context, root)
         }
-        headerBar.addView(resizeBtn)
+        headerBar.addView(resizeBtn, LinearLayout.LayoutParams(dp(32), dp(32)).apply { marginEnd = dp(8) })
 
         // Expand to fullscreen button
-        val expandBtn = TextView(context).apply {
-            text = "🗖"
-            setTextColor(Color.rgb(166, 200, 255))
-            textSize = 16f
-            setPadding(dp(8), 0, dp(8), 0)
-            setOnClickListener {
-                expandToFullscreen(context)
-            }
+        val expandBtn = createHeaderButton("🗖", Color.WHITE, Color.argb(160, 50, 75, 110)) {
+            expandToFullscreen(context)
         }
-        headerBar.addView(expandBtn)
+        headerBar.addView(expandBtn, LinearLayout.LayoutParams(dp(32), dp(32)).apply { marginEnd = dp(8) })
 
         // Close button
-        val closeBtn = TextView(context).apply {
-            text = "✕"
-            setTextColor(Color.rgb(255, 107, 107))
-            textSize = 16f
-            setPadding(dp(8), 0, dp(4), 0)
-            setOnClickListener {
-                dismiss()
-            }
+        val closeBtn = createHeaderButton("✕", Color.WHITE, Color.rgb(220, 50, 50)) {
+            dismiss()
         }
-        headerBar.addView(closeBtn)
+        headerBar.addView(closeBtn, LinearLayout.LayoutParams(dp(32), dp(32)))
 
-        // Setup drag listener on header
-        setupDragListener(headerBar, context)
+        // Setup drag listener on title handle
+        setupDragListener(titleView, context)
 
-        root.addView(headerBar, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(34), Gravity.TOP))
+        root.addView(headerBar, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(40), Gravity.TOP))
 
         return root
     }
@@ -350,12 +354,16 @@ object CarPlayFloatingManager {
         snapshot: CarPlayBackgroundSession.Snapshot
     ) {
         if (viewWidth <= 0 || viewHeight <= 0) return
-        val canvas = snapshot.canvas ?: return
-        val rect = ContentRect.fit(canvas, viewWidth, viewHeight)
         val matrix = Matrix()
-        if (!rect.isFullView) {
-            matrix.setScale(rect.width / viewWidth, rect.height / viewHeight)
-            matrix.postTranslate(rect.left, rect.top)
+        if (!com.shilapi.xcertplay.AirPlayPersistence.loadFillScreen(view.context)) {
+            val canvas = snapshot.canvas
+            if (canvas != null) {
+                val rect = ContentRect.fit(canvas, viewWidth, viewHeight)
+                if (!rect.isFullView) {
+                    matrix.setScale(rect.width / viewWidth, rect.height / viewHeight)
+                    matrix.postTranslate(rect.left, rect.top)
+                }
+            }
         }
         view.setTransform(matrix)
     }

@@ -916,6 +916,29 @@ class CarPlayHostActivity : ComponentActivity() {
             ),
         )
         content.addView(
+            Button(this).apply {
+                text = "⚙️  " + getString(R.string.open_full_settings)
+                isAllCaps = false
+                textSize = 16f
+                setTextColor(Color.WHITE)
+                background = GradientDrawable().apply {
+                    setColor(Color.argb(160, 45, 65, 95))
+                    cornerRadius = dp(12).toFloat()
+                    setStroke(dp(1), Color.argb(180, 100, 150, 220))
+                }
+                setOnClickListener {
+                    showDiPlayHome("settings")
+                }
+            },
+            LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                dp(48),
+            ).apply {
+                topMargin = dp(14)
+                bottomMargin = dp(4)
+            },
+        )
+        content.addView(
             settingsCategoryHeader(getString(R.string.connection)),
             LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
@@ -1039,14 +1062,49 @@ class CarPlayHostActivity : ComponentActivity() {
             ).apply { topMargin = dp(12) },
         )
 
+        content.addView(
+            settingsCategoryHeader(getString(R.string.audio)),
+            LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+            ).apply { topMargin = dp(36) },
+        )
+        content.addView(
+            settingsSwitchRow(
+                label = getString(R.string.contrib_audio_home_toggle_audio_focus),
+                checked = AirPlayPersistence.loadAudioFocusEnabled(this),
+                description = getString(R.string.contrib_audio_home_toggle_audio_focus_desc),
+            ) { checked ->
+                AirPlayPersistence.saveAudioFocusEnabled(this, checked)
+                appendLog("Audio focus ${if (checked) "enabled" else "disabled"}")
+            },
+            LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+            ).apply { topMargin = dp(12) },
+        )
+        val bufferPresets = com.shilapi.xcertplay.media.MediaAudioBuffer.presets
+        val currentBuffer = AirPlayPersistence.loadMediaBufferMillis(this)
+        content.addView(
+            settingsChoiceRow(
+                label = getString(R.string.music_buffer),
+                options = listOf(
+                    bufferPresets[0] to getString(R.string.s_300_ms_default),
+                    bufferPresets[1] to getString(R.string.s_500_ms),
+                    bufferPresets[2] to getString(R.string.s_1000_ms_most_stable),
+                    bufferPresets[3] to "1500 ms",
+                ),
+                selected = if (currentBuffer in bufferPresets) currentBuffer else bufferPresets[0],
+            ) { value ->
+                AirPlayPersistence.saveMediaBufferMillis(this, value)
+                appendLog("Media buffer set to ${value}ms")
+            },
+            LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+            ).apply { topMargin = dp(14) },
+        )
         if (advancedAudioChannelMappingSupported) {
-            content.addView(
-                settingsCategoryHeader(getString(R.string.audio)),
-                LinearLayout.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT,
-                    ViewGroup.LayoutParams.WRAP_CONTENT,
-                ).apply { topMargin = dp(36) },
-            )
             content.addView(
                 settingsSwitchRow(
                     label = getString(R.string.advanced_audio_channel_mapping),
@@ -1545,6 +1603,7 @@ class CarPlayHostActivity : ComponentActivity() {
         AirPlayPersistence.saveHideTopBar(this, hideTopBar)
         AirPlayPersistence.saveHideBottomBar(this, hideBottomBar)
         AirPlayPersistence.saveFillScreen(this, fillScreen)
+        AirPlayPersistence.saveAutoFloatingOnLeave(this, autoFloatingOnLeave)
         AirPlayPersistence.saveSafeAreaDrawOutside(this, safeAreaDrawOutside)
     }
 
@@ -3913,6 +3972,7 @@ class CarPlayHostActivity : ComponentActivity() {
 
     private fun attachSurface(surface: Surface) {
         sink?.setSurface(SCREEN_TYPE_MAIN, surface)
+        sink?.requestVideoRecovery(SCREEN_TYPE_MAIN)
         if (AirPlayPersistence.loadClusterMapEnabled(this)) {
             clusterSurface?.let { sink?.setSurface(SCREEN_TYPE_ALT, it) }
         } else {
