@@ -78,7 +78,6 @@ object AirPlayPersistence {
     private const val KEY_SAFE_AREA_DRAW_OUTSIDE = "safe_area_draw_outside"
     private const val KEY_AUTO_START_ON_BOOT = "auto_start_on_boot"
     private const val KEY_LOCATION_REPORTING_ENABLED = "location_reporting_enabled"
-    private const val KEY_AUTO_FLOATING_ON_LEAVE = "auto_floating_on_leave"
     private const val KEY_MFI_TARGET = "mfi_target"
     private const val KEY_MFI_I2C_PATH = "mfi_i2c_path"
     private const val KEY_REMOTE_MFI_SERVER = "remote_mfi_server"
@@ -585,16 +584,6 @@ object AirPlayPersistence {
     fun saveSafeAreaDrawOutside(context: Context, drawOutside: Boolean) {
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
             .putBoolean(KEY_SAFE_AREA_DRAW_OUTSIDE, drawOutside)
-            .apply()
-    }
-
-    fun loadAutoFloatingOnLeave(context: Context): Boolean =
-        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-            .getBoolean(KEY_AUTO_FLOATING_ON_LEAVE, false)
-
-    fun saveAutoFloatingOnLeave(context: Context, enabled: Boolean) {
-        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
-            .putBoolean(KEY_AUTO_FLOATING_ON_LEAVE, enabled)
             .apply()
     }
 

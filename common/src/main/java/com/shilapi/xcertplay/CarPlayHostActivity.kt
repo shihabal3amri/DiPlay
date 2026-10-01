@@ -70,7 +70,6 @@ import com.shilapi.xcertplay.airplay.ContentRect
 import com.shilapi.xcertplay.airplay.DisplayChangeAction
 import com.shilapi.xcertplay.airplay.PixelSize
 import com.shilapi.xcertplay.airplay.SafeAreaRect
-import com.shilapi.xcertplay.floating.CarPlayFloatingManager
 import com.shilapi.xcertplay.host.R
 import com.shilapi.xcertplay.location.AndroidCarPlayLocationProvider
 import com.shilapi.xcertplay.media.AndroidMediaSink
@@ -316,7 +315,6 @@ class CarPlayHostActivity : ComponentActivity() {
     private var hideTopBar = true
     private var hideBottomBar = true
     private var fillScreen = false
-    private var autoFloatingOnLeave = false
     private var safeAreaDrawOutside = true
     private var locationReportingEnabled = false
     private var locationPermissionAvailable = false
@@ -498,7 +496,6 @@ class CarPlayHostActivity : ComponentActivity() {
         hideTopBar = AirPlayPersistence.loadHideTopBar(this)
         hideBottomBar = AirPlayPersistence.loadHideBottomBar(this)
         fillScreen = AirPlayPersistence.loadFillScreen(this)
-        autoFloatingOnLeave = AirPlayPersistence.loadAutoFloatingOnLeave(this)
         safeAreaDrawOutside = AirPlayPersistence.loadSafeAreaDrawOutside(this)
         locationReportingEnabled = AirPlayPersistence.loadLocationReportingEnabled(this)
         locationPermissionAvailable = hasFineLocationPermission()
@@ -592,9 +589,6 @@ class CarPlayHostActivity : ComponentActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
-        if (CarPlayFloatingManager.isFloating) {
-            CarPlayFloatingManager.dismiss()
-        }
         ensureHostSurfaceAttached()
         if (intent.action == "android.hardware.usb.action.USB_DEVICE_ATTACHED" && wirelessEnabled) {
             shutdown(false, "switching to USB") {
@@ -634,9 +628,6 @@ class CarPlayHostActivity : ComponentActivity() {
             clusterMonitor = null
         }
         ensureClusterPresentation()
-        if (CarPlayFloatingManager.isFloating) {
-            CarPlayFloatingManager.dismiss()
-        }
         ensureHostSurfaceAttached()
         loadPersistedSettings()
         maybeStartCarPlay()
@@ -1619,7 +1610,6 @@ class CarPlayHostActivity : ComponentActivity() {
         AirPlayPersistence.saveHideTopBar(this, hideTopBar)
         AirPlayPersistence.saveHideBottomBar(this, hideBottomBar)
         AirPlayPersistence.saveFillScreen(this, fillScreen)
-        AirPlayPersistence.saveAutoFloatingOnLeave(this, autoFloatingOnLeave)
         AirPlayPersistence.saveSafeAreaDrawOutside(this, safeAreaDrawOutside)
     }
 
@@ -2326,39 +2316,6 @@ class CarPlayHostActivity : ComponentActivity() {
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT,
             ).apply { topMargin = dp(10) },
-        )
-        section.addView(
-            settingsSwitchRow(
-                label = getString(R.string.auto_floating_on_leave),
-                checked = autoFloatingOnLeave,
-                description = getString(R.string.auto_floating_on_leave_desc),
-            ) { checked ->
-                autoFloatingOnLeave = checked
-                AirPlayPersistence.saveAutoFloatingOnLeave(this@CarPlayHostActivity, checked)
-                if (checked && !CarPlayFloatingManager.hasOverlayPermission(this@CarPlayHostActivity)) {
-                    CarPlayFloatingManager.requestOverlayPermission(this@CarPlayHostActivity)
-                }
-            },
-            LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT,
-            ).apply { topMargin = dp(10) },
-        )
-        section.addView(
-            Button(this).apply {
-                text = getString(R.string.enter_floating_window)
-                isAllCaps = false
-                textSize = 16f
-                setTextColor(MENU_BUTTON_TEXT)
-                backgroundTintList = ColorStateList.valueOf(MENU_ACCENT)
-                setOnClickListener {
-                    enterFloatingMode()
-                }
-            },
-            LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                dp(48),
-            ).apply { topMargin = dp(14) },
         )
         return section
     }
@@ -3795,37 +3752,6 @@ class CarPlayHostActivity : ComponentActivity() {
             .putExtra("page", page).addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT))
     }
 
-    private fun enterFloatingMode() {
-        if (menuOpen) cancelSettingsEdits()
-        if (controller == null && !CarPlayBackgroundSession.hasSession()) {
-            appendLog("Floating window: no active CarPlay session")
-            return
-        }
-        // Release full screen surface so media sink can bind to the floating TextureView
-        currentSurface?.let { surface ->
-            sink?.clearSurface(SCREEN_TYPE_MAIN, surface)
-            surface.release()
-        }
-        currentSurface = null
-        currentSurfaceTexture = null
-
-        val shown = CarPlayFloatingManager.show(this)
-        if (shown) {
-            appendLog("Entered floating window mode")
-            moveTaskToBack(true)
-        }
-    }
-
-    override fun onUserLeaveHint() {
-        super.onUserLeaveHint()
-        if (autoFloatingOnLeave &&
-            (controller != null || CarPlayBackgroundSession.hasSession()) &&
-            !shuttingDown.get() &&
-            !CarPlayFloatingManager.isFloating
-        ) {
-            enterFloatingMode()
-        }
-    }
 
     /**
      * Opens the in-session settings overlay (three-finger swipe down). CarPlay keeps running

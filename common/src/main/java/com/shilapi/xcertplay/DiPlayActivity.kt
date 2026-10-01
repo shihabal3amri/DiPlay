@@ -34,7 +34,6 @@ import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import com.shilapi.xcertplay.airplay.CarPlayClusterDisplay
-import com.shilapi.xcertplay.floating.CarPlayFloatingManager
 import com.shilapi.xcertplay.hud.BydAdbAccess
 import com.shilapi.xcertplay.hud.BydOutputSettings
 
@@ -327,17 +326,11 @@ class DiPlayActivity : ComponentActivity() {
         content.addView(label(getString(R.string.your_drive_your_way), 34, TEXT, true))
         content.addView(label(getString(R.string.apply_reconnects_carplay_for_size_resolution_music_buffer), 17, MUTED).apply { setPadding(0, dp(8), 0, dp(24)) })
         if (CarPlayBackgroundSession.hasSession()) {
-            val quickRow = row().apply {
-                gravity = Gravity.CENTER_VERTICAL
-                setPadding(0, 0, 0, dp(16))
-            }
-            quickRow.addView(button("📺 " + getString(R.string.return_to_carplay), true) {
+            content.addView(button("📺 " + getString(R.string.return_to_carplay), true) {
                 openProjection()
-            }, LinearLayout.LayoutParams(0, dp(52), 1f).apply { marginEnd = dp(8) })
-            quickRow.addView(button("🖼️ " + getString(R.string.enter_floating_window), false) {
-                CarPlayFloatingManager.show(this@DiPlayActivity)
-            }, LinearLayout.LayoutParams(0, dp(52), 1f))
-            content.addView(quickRow)
+            }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(52)).apply {
+                bottomMargin = dp(16)
+            })
         }
         section(content, getString(R.string.connection_setup), R.drawable.ic_dp_connection) { card ->
             card.addView(label(getString(R.string.choose_how_to_connect_follow_the_setup_steps_and_save_your), 16, MUTED))
@@ -375,12 +368,6 @@ class DiPlayActivity : ComponentActivity() {
             toggle(card, getString(R.string.right_hand_drive), getString(R.string.place_carplay_s_controls_closer_to_the_driver), AirPlayPersistence.loadRightHandDrive(this)) { AirPlayPersistence.saveRightHandDrive(this, it) }
             toggle(card, getString(R.string.full_screen), getString(R.string.hide_the_car_s_system_bars_while_carplay_is_open), AirPlayPersistence.loadHideTopBar(this) && AirPlayPersistence.loadHideBottomBar(this)) {
                 AirPlayPersistence.saveHideTopBar(this, it); AirPlayPersistence.saveHideBottomBar(this, it)
-            }
-            toggle(card, getString(R.string.auto_floating_on_leave), getString(R.string.auto_floating_on_leave_desc), AirPlayPersistence.loadAutoFloatingOnLeave(this)) {
-                AirPlayPersistence.saveAutoFloatingOnLeave(this, it)
-                if (it && !CarPlayFloatingManager.hasOverlayPermission(this)) {
-                    CarPlayFloatingManager.requestOverlayPermission(this)
-                }
             }
         }
         section(content, getString(R.string.audio_routing)) { card ->
