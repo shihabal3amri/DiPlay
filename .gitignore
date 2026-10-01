@@ -8,6 +8,7 @@
 .kotlin/
 build/
 local.properties
+.android-sdk/
 
 # Native build output
 .cxx/

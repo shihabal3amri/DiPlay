@@ -768,6 +768,7 @@ class CarPlayHostActivity : ComponentActivity() {
 
     // The steering-wheel voice key reaches the focused window; while CarPlay is on screen it opens Siri.
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        if (consumeSwcBinding(event)) return true
         if (!CarPlayMediaButton.opensSiri(event.keyCode)) return super.dispatchKeyEvent(event)
         if (event.action == KeyEvent.ACTION_UP) {
             val sent = controller?.requestSiri() == true
@@ -1063,6 +1064,21 @@ class CarPlayHostActivity : ComponentActivity() {
                 ).apply { topMargin = dp(12) },
             )
         }
+
+        content.addView(
+            settingsCategoryHeader(getString(R.string.swc_category)),
+            LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+            ).apply { topMargin = dp(36) },
+        )
+        content.addView(
+            buildSwcBindingSection(),
+            LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+            ).apply { topMargin = dp(12) },
+        )
 
         content.addView(
             settingsCategoryHeader(getString(R.string.identity_appearance)),
@@ -2052,6 +2068,142 @@ class CarPlayHostActivity : ComponentActivity() {
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT,
             ).apply { topMargin = dp(8) },
+        )
+        return section
+    }
+
+    // ── SWC custom key binding ──────────────────────────────────────────────
+
+    /** True while we are waiting for the next hardware key to bind to [swcBindingTarget]. */
+    private var swcBindingActive = false
+    private var swcBindingTarget: SwcCustomBindings.Action? = null
+    private var swcBindingRows: Map<SwcCustomBindings.Action, TextView> = emptyMap()
+
+    private fun swcActionLabel(action: SwcCustomBindings.Action): String = when (action) {
+        SwcCustomBindings.Action.PLAY_PAUSE -> getString(R.string.swc_action_play_pause)
+        SwcCustomBindings.Action.NEXT       -> getString(R.string.swc_action_next)
+        SwcCustomBindings.Action.PREVIOUS   -> getString(R.string.swc_action_previous)
+        SwcCustomBindings.Action.PLAY       -> getString(R.string.swc_action_play)
+        SwcCustomBindings.Action.PAUSE      -> getString(R.string.swc_action_pause)
+    }
+
+    private fun swcKeyLabel(keyCode: Int): String =
+        if (keyCode == 0) getString(R.string.swc_not_bound)
+        else "KEY ${KeyEvent.keyCodeToString(keyCode)} ($keyCode)"
+
+    private fun updateSwcRow(action: SwcCustomBindings.Action) {
+        val keyCode = SwcCustomBindings.loadBinding(this, action)
+        swcBindingRows[action]?.text = swcKeyLabel(keyCode)
+    }
+
+    /**
+     * Intercepts the next KeyEvent while [swcBindingActive] is true and saves the binding.
+     * Called from [dispatchKeyEvent] before any other handling.
+     */
+    fun consumeSwcBinding(event: KeyEvent): Boolean {
+        if (!swcBindingActive) return false
+        val target = swcBindingTarget ?: run { swcBindingActive = false; return false }
+        if (event.action != KeyEvent.ACTION_DOWN) return true   // consume both down and up
+        val keyCode = event.keyCode
+        if (keyCode == KeyEvent.KEYCODE_BACK || keyCode == KeyEvent.KEYCODE_ESCAPE) {
+            swcBindingActive = false
+            swcBindingTarget = null
+            appendLog("SWC binding cancelled")
+            return true
+        }
+        SwcCustomBindings.saveBinding(this, target, keyCode)
+        swcBindingActive = false
+        swcBindingTarget = null
+        // Refresh all rows (a keyCode moved between actions)
+        SwcCustomBindings.Action.entries.forEach { updateSwcRow(it) }
+        appendLog("SWC bound ${swcActionLabel(target)} → keyCode $keyCode (${KeyEvent.keyCodeToString(keyCode)})")
+        return true
+    }
+
+    private fun buildSwcBindingSection(): View {
+        val section = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        section.addView(
+            menuText(getString(R.string.swc_section_title), 20f, MENU_SECONDARY),
+            LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT),
+        )
+        section.addView(
+            menuText(getString(R.string.swc_section_desc), 14f, MENU_DIM),
+            LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(4) },
+        )
+
+        val rows = mutableMapOf<SwcCustomBindings.Action, TextView>()
+        SwcCustomBindings.Action.entries.forEach { action ->
+            val row = LinearLayout(this).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = android.view.Gravity.CENTER_VERTICAL
+                setPadding(0, dp(6), 0, dp(6))
+            }
+            row.addView(
+                menuText(swcActionLabel(action), 17f, Color.WHITE),
+                LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f),
+            )
+            val keyLabel = menuText(swcKeyLabel(SwcCustomBindings.loadBinding(this, action)), 14f, MENU_ACCENT)
+            rows[action] = keyLabel
+            row.addView(keyLabel, LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+                marginEnd = dp(10)
+            })
+            // Bind button
+            val bindBtn = Button(this).apply {
+                text = getString(R.string.swc_bind)
+                isAllCaps = false; textSize = 14f
+                setTextColor(MENU_BUTTON_TEXT)
+                backgroundTintList = ColorStateList.valueOf(MENU_ACCENT)
+                setOnClickListener {
+                    swcBindingActive = true
+                    swcBindingTarget = action
+                    appendLog("SWC: waiting for key press to bind to ${swcActionLabel(action)}…")
+                    android.widget.Toast.makeText(
+                        this@CarPlayHostActivity,
+                        getString(R.string.swc_press_key_now),
+                        android.widget.Toast.LENGTH_SHORT,
+                    ).show()
+                }
+            }
+            row.addView(bindBtn, LinearLayout.LayoutParams(dp(72), dp(40)))
+            // Clear button
+            val clearBtn = Button(this).apply {
+                text = getString(R.string.swc_clear)
+                isAllCaps = false; textSize = 14f
+                setTextColor(Color.WHITE)
+                backgroundTintList = ColorStateList.valueOf(Color.rgb(80, 80, 100))
+                setOnClickListener {
+                    SwcCustomBindings.clearBinding(this@CarPlayHostActivity, action)
+                    updateSwcRow(action)
+                    appendLog("SWC cleared binding for ${swcActionLabel(action)}")
+                }
+            }
+            row.addView(clearBtn, LinearLayout.LayoutParams(dp(72), dp(40)).apply { marginStart = dp(6) })
+            section.addView(row, LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+                topMargin = dp(4)
+            })
+        }
+        swcBindingRows = rows
+
+        // Clear-all button
+        section.addView(
+            Button(this).apply {
+                text = getString(R.string.swc_clear_all)
+                isAllCaps = false; textSize = 14f
+                setTextColor(Color.WHITE)
+                backgroundTintList = ColorStateList.valueOf(Color.rgb(80, 40, 40))
+                setOnClickListener {
+                    SwcCustomBindings.clearAll(this@CarPlayHostActivity)
+                    SwcCustomBindings.Action.entries.forEach { updateSwcRow(it) }
+                    appendLog("SWC cleared all custom bindings")
+                }
+            },
+            LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(44)).apply {
+                topMargin = dp(12)
+            },
         )
         return section
     }

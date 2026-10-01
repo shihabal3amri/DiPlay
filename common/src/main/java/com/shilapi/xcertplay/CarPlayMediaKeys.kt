@@ -48,6 +48,10 @@ internal object CarPlayMediaKeys {
     private var artwork: Bitmap? = null
     private val artworkCache = LinkedHashMap<Int, Bitmap?>()
 
+    /** Resolves a keyCode to a CarPlay button index: checks custom SWC bindings first, then the static map. */
+    fun resolveKeyCode(context: Context, keyCode: Int): Int? =
+        SwcCustomBindings.resolveKeyCode(context, keyCode)
+
     @Synchronized
     fun attach(context: Context, next: CarPlayController) {
         if (controller !== next) releaseLocked()
@@ -211,7 +215,7 @@ internal object CarPlayMediaKeys {
         Log.i(TAG, "media key $source -> CarPlay $index sent=$sent")
     }
 
-    private val callback = CarPlayMediaCallback(::send)
+    private val callback = CarPlayMediaCallback(::send) { appContext }
 
     internal fun androidMetadata(info: CarPlayNowPlaying, artwork: Bitmap? = null): MediaMetadata =
         MediaMetadata.Builder().apply {
@@ -266,12 +270,24 @@ internal object CarPlayMediaKeys {
 /**
  * Media-session input → CarPlay presses. Hardware keys arrive as button events and keep the toggle;
  * media controllers (not hardware keys) call [onPlay] and [onPause] with an explicit intent.
+ *
+ * [contextProvider] supplies the application context used to look up custom SWC bindings from
+ * [SwcCustomBindings]. It is a lambda so that the (singleton) callback can capture the live
+ * [CarPlayMediaKeys.appContext] without a static reference.
  */
-internal class CarPlayMediaCallback(private val send: (index: Int, source: String) -> Unit) : MediaSession.Callback() {
+internal class CarPlayMediaCallback(
+    private val send: (index: Int, source: String) -> Unit,
+    private val contextProvider: (() -> android.content.Context?)? = null,
+) : MediaSession.Callback() {
     override fun onMediaButtonEvent(mediaButtonIntent: Intent): Boolean {
         @Suppress("DEPRECATION")
         val event = mediaButtonIntent.getParcelableExtra<KeyEvent>(Intent.EXTRA_KEY_EVENT) ?: return false
-        val index = CarPlayMediaButton.forKeyCode(event.keyCode) ?: return super.onMediaButtonEvent(mediaButtonIntent)
+        val ctx = contextProvider?.invoke()
+        val index = if (ctx != null) {
+            SwcCustomBindings.resolveKeyCode(ctx, event.keyCode)
+        } else {
+            CarPlayMediaButton.forKeyCode(event.keyCode)
+        } ?: return super.onMediaButtonEvent(mediaButtonIntent)
         if (event.action == KeyEvent.ACTION_DOWN && event.repeatCount == 0) {
             send(index, KeyEvent.keyCodeToString(event.keyCode))
         }

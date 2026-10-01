@@ -465,4 +465,19 @@
     <string name="floating_size">Floating window size</string>
     <string name="expand_fullscreen">Expand to full screen</string>
     <string name="close_window">Close</string>
+
+    <!-- Steering wheel control key bindings -->
+    <string name="swc_category">Steering Wheel</string>
+    <string name="swc_section_title">Custom key bindings</string>
+    <string name="swc_section_desc">Bind steering wheel or hardware media keys to CarPlay actions. Tap Bind and press the button on the steering wheel.</string>
+    <string name="swc_action_play_pause">Play / Pause</string>
+    <string name="swc_action_next">Next track</string>
+    <string name="swc_action_previous">Previous track</string>
+    <string name="swc_action_play">Play</string>
+    <string name="swc_action_pause">Pause</string>
+    <string name="swc_not_bound">Not set (default)</string>
+    <string name="swc_bind">Bind</string>
+    <string name="swc_clear">Clear</string>
+    <string name="swc_clear_all">Reset all bindings</string>
+    <string name="swc_press_key_now">Press the steering wheel button now…</string>
 </resources>

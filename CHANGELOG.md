@@ -18,6 +18,7 @@
 
 # Unreleased
 
+- Customizable steering-wheel (SWC) and hardware media key bindings: map physical keys on the steering wheel to CarPlay actions (Play/Pause, Next, Previous, Play, Pause) with an in-session binding interface.
 - Music buffer adds a 1500 ms option for the weakest Wi-Fi links.
 - The chosen music buffer is advertised to the iPhone as `media` output latency; other streams still report 0.
 - Audio receive and playback threads run at urgent-audio priority.

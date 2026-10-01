@@ -465,4 +465,19 @@
     <string name="floating_size">小窗尺寸</string>
     <string name="expand_fullscreen">放大至全屏</string>
     <string name="close_window">关闭</string>
+
+    <!-- 方向盘按键绑定 -->
+    <string name="swc_category">方向盘控制</string>
+    <string name="swc_section_title">自定义按键绑定</string>
+    <string name="swc_section_desc">将方向盘实体键或多功能键绑定到 CarPlay 动作。点按“绑定”后直接按下方向盘按键即可。</string>
+    <string name="swc_action_play_pause">播放 / 暂停</string>
+    <string name="swc_action_next">下一首</string>
+    <string name="swc_action_previous">上一首</string>
+    <string name="swc_action_play">播放</string>
+    <string name="swc_action_pause">暂停</string>
+    <string name="swc_not_bound">未设置（系统默认）</string>
+    <string name="swc_bind">绑定</string>
+    <string name="swc_clear">清除</string>
+    <string name="swc_clear_all">重置所有按键</string>
+    <string name="swc_press_key_now">请按下方向盘按键…</string>
 </resources>
