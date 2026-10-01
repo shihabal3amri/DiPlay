@@ -339,11 +339,11 @@ object CarPlayFloatingManager {
     }
 
     private fun expandToFullscreen(context: Context) {
-        dismiss()
         val intent = Intent(context, CarPlayHostActivity::class.java).apply {
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_REORDER_TO_FRONT)
         }
         context.startActivity(intent)
+        dismiss()
     }
 
     private fun updateTextureAspect(

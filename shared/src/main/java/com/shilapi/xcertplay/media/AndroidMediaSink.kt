@@ -170,7 +170,7 @@ class AndroidMediaSink(
     }
 
     fun requestVideoRecovery(type: Int) {
-        if (!recoveryPending.compareAndSet(false, true)) return
+        recoveryPending.set(false)
         try {
             recoveryExecutor.execute {
                 try { videoRecoveryHandlers[type]?.invoke() }
@@ -520,13 +520,22 @@ private class VideoDecoder(
             try {
                 codec.setOutputSurface(surface)
                 Log.i(TAG, "video decoder output surface updated")
+                referenceChain.reset()
+                forceKeyFrame()
                 return
             } catch (error: Exception) {
                 Log.w(TAG, "video decoder output surface update failed; reconfiguring", error)
             }
         }
         releaseDecoder()
+        referenceChain.reset()
+        forceKeyFrame()
         lastConfig?.let(::configureDecoder)
+    }
+
+    private fun forceKeyFrame() {
+        lastKeyFrameRequestNs = 0L
+        requestKeyFrame()
     }
 
     private fun feed(nalus: ByteArray) {

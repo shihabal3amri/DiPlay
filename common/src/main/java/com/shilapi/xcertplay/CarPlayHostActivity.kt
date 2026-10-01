@@ -592,6 +592,10 @@ class CarPlayHostActivity : ComponentActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
+        if (CarPlayFloatingManager.isFloating) {
+            CarPlayFloatingManager.dismiss()
+        }
+        ensureHostSurfaceAttached()
         if (intent.action == "android.hardware.usb.action.USB_DEVICE_ATTACHED" && wirelessEnabled) {
             shutdown(false, "switching to USB") {
                 AirPlayPersistence.saveWirelessEnabled(this, false)
@@ -633,6 +637,7 @@ class CarPlayHostActivity : ComponentActivity() {
         if (CarPlayFloatingManager.isFloating) {
             CarPlayFloatingManager.dismiss()
         }
+        ensureHostSurfaceAttached()
         loadPersistedSettings()
         maybeStartCarPlay()
         applyFullscreenMode()
@@ -785,6 +790,7 @@ class CarPlayHostActivity : ComponentActivity() {
         if (hasFocus) {
             refreshConfiguration()
             applyFullscreenMode()
+            ensureHostSurfaceAttached()
         }
     }
 
@@ -3955,6 +3961,12 @@ class CarPlayHostActivity : ComponentActivity() {
     }
 
     private fun attachSurface(surface: Surface) {
+        if (sink == null) {
+            CarPlayBackgroundSession.snapshot()?.let { snapshot ->
+                sink = snapshot.sink
+                controller = snapshot.controller
+            }
+        }
         sink?.setSurface(SCREEN_TYPE_MAIN, surface)
         sink?.requestVideoRecovery(SCREEN_TYPE_MAIN)
         if (AirPlayPersistence.loadClusterMapEnabled(this)) {
@@ -3962,6 +3974,30 @@ class CarPlayHostActivity : ComponentActivity() {
         } else {
             sink?.setSurface(SCREEN_TYPE_ALT, surface)
         }
+    }
+
+    private fun ensureHostSurfaceAttached() {
+        val view = videoView ?: return
+        val attach = {
+            val st = view.surfaceTexture
+            if (st != null) {
+                val existing = currentSurface
+                val surface = if (existing != null && existing.isValid && currentSurfaceTexture === st) {
+                    existing
+                } else {
+                    existing?.release()
+                    Surface(st).also {
+                        currentSurface = it
+                        currentSurfaceTexture = st
+                    }
+                }
+                attachSurface(surface)
+                updateVideoLayout(view.width, view.height)
+                sink?.requestVideoRecovery(SCREEN_TYPE_MAIN)
+            }
+        }
+        attach()
+        view.post { attach() }
     }
 
     private fun onHostTouch(view: View, event: MotionEvent): Boolean {
