@@ -315,6 +315,7 @@ class CarPlayHostActivity : ComponentActivity() {
     private var rightHandDrive = false
     private var hideTopBar = true
     private var hideBottomBar = true
+    private var fillScreen = false
     private var autoFloatingOnLeave = false
     private var safeAreaDrawOutside = true
     private var locationReportingEnabled = false
@@ -496,6 +497,7 @@ class CarPlayHostActivity : ComponentActivity() {
         rightHandDrive = AirPlayPersistence.loadRightHandDrive(this)
         hideTopBar = AirPlayPersistence.loadHideTopBar(this)
         hideBottomBar = AirPlayPersistence.loadHideBottomBar(this)
+        fillScreen = AirPlayPersistence.loadFillScreen(this)
         autoFloatingOnLeave = AirPlayPersistence.loadAutoFloatingOnLeave(this)
         safeAreaDrawOutside = AirPlayPersistence.loadSafeAreaDrawOutside(this)
         locationReportingEnabled = AirPlayPersistence.loadLocationReportingEnabled(this)
@@ -1542,6 +1544,7 @@ class CarPlayHostActivity : ComponentActivity() {
         AirPlayPersistence.saveRightHandDrive(this, rightHandDrive)
         AirPlayPersistence.saveHideTopBar(this, hideTopBar)
         AirPlayPersistence.saveHideBottomBar(this, hideBottomBar)
+        AirPlayPersistence.saveFillScreen(this, fillScreen)
         AirPlayPersistence.saveSafeAreaDrawOutside(this, safeAreaDrawOutside)
     }
 
@@ -2243,6 +2246,20 @@ class CarPlayHostActivity : ComponentActivity() {
                 hideBottomBar = checked
                 applyFullscreenMode()
                 refreshDisplaySizeAfterLayout()
+            },
+            LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+            ).apply { topMargin = dp(10) },
+        )
+        section.addView(
+            settingsSwitchRow(
+                label = getString(R.string.fill_screen),
+                checked = fillScreen,
+                description = getString(R.string.fill_screen_desc),
+            ) { checked ->
+                fillScreen = checked
+                videoView?.let { updateVideoLayout(it.width, it.height) }
             },
             LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
@@ -3588,10 +3605,12 @@ class CarPlayHostActivity : ComponentActivity() {
             AirPlayPersistence.loadResolutionBase(this, resolutionBaseKey(size)),
         )
 
-    private fun contentRect(viewWidth: Int, viewHeight: Int): ContentRect =
-        ContentRect.fit(sessionCanvas, viewWidth, viewHeight)
+    private fun contentRect(viewWidth: Int, viewHeight: Int): ContentRect {
+        if (fillScreen) return ContentRect(0f, 0f, viewWidth.toFloat(), viewHeight.toFloat())
+        return ContentRect.fit(sessionCanvas, viewWidth, viewHeight)
+    }
 
-    /** Draws the fixed canvas without distortion; the view itself stays full size. */
+    /** Draws the fixed canvas without distortion; when fillScreen is true, fills the whole view. */
     private fun updateVideoLayout(viewWidth: Int, viewHeight: Int) {
         val view = videoView ?: return
         if (viewWidth <= 0 || viewHeight <= 0) return

@@ -37,7 +37,7 @@ import kotlin.math.roundToInt
 @SuppressLint("StaticFieldLeak")
 object CarPlayFloatingManager {
     private const val TAG = "CarPlayFloating"
-    private const val SCREEN_TYPE_MAIN = 1
+    private const val SCREEN_TYPE_MAIN = 110
 
     private var windowManager: WindowManager? = null
     private var floatingView: View? = null

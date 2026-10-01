@@ -353,6 +353,15 @@ class DiPlayActivity : ComponentActivity() {
             toggle(card, getString(R.string.full_screen), getString(R.string.hide_the_car_s_system_bars_while_carplay_is_open), AirPlayPersistence.loadHideTopBar(this) && AirPlayPersistence.loadHideBottomBar(this)) {
                 AirPlayPersistence.saveHideTopBar(this, it); AirPlayPersistence.saveHideBottomBar(this, it)
             }
+            toggle(card, getString(R.string.fill_screen), getString(R.string.fill_screen_desc), AirPlayPersistence.loadFillScreen(this)) {
+                AirPlayPersistence.saveFillScreen(this, it)
+            }
+            toggle(card, getString(R.string.auto_floating_on_leave), getString(R.string.auto_floating_on_leave_desc), AirPlayPersistence.loadAutoFloatingOnLeave(this)) {
+                AirPlayPersistence.saveAutoFloatingOnLeave(this, it)
+                if (it && !CarPlayFloatingManager.hasOverlayPermission(this)) {
+                    CarPlayFloatingManager.requestOverlayPermission(this)
+                }
+            }
         }
         section(content, getString(R.string.audio_routing)) { card ->
             toggle(card, getString(R.string.contrib_audio_home_toggle_audio_focus), getString(R.string.contrib_audio_home_toggle_audio_focus_desc), AirPlayPersistence.loadAudioFocusEnabled(this)) { AirPlayPersistence.saveAudioFocusEnabled(this, it) }
@@ -365,6 +374,38 @@ class DiPlayActivity : ComponentActivity() {
             }
             mediaChannelControl(card)
             navigationChannelControl(card)
+        }
+        section(content, getString(R.string.swc_category)) { card ->
+            card.addView(label(getString(R.string.swc_section_desc), 15, MUTED).apply {
+                setPadding(0, 0, 0, dp(12))
+            })
+            SwcCustomBindings.Action.entries.forEach { action ->
+                val actionName = when (action) {
+                    SwcCustomBindings.Action.PLAY_PAUSE -> getString(R.string.swc_action_play_pause)
+                    SwcCustomBindings.Action.NEXT -> getString(R.string.swc_action_next)
+                    SwcCustomBindings.Action.PREVIOUS -> getString(R.string.swc_action_previous)
+                    SwcCustomBindings.Action.PLAY -> getString(R.string.swc_action_play)
+                    SwcCustomBindings.Action.PAUSE -> getString(R.string.swc_action_pause)
+                }
+                val boundCode = SwcCustomBindings.loadBinding(this, action)
+                val statusText = if (boundCode == 0) getString(R.string.swc_not_bound) else "KEY ${KeyEvent.keyCodeToString(boundCode)} ($boundCode)"
+                val r = row().apply {
+                    gravity = Gravity.CENTER_VERTICAL
+                    setPadding(0, dp(4), 0, dp(4))
+                }
+                r.addView(label(actionName, 16, TEXT, true), LinearLayout.LayoutParams(0, -2, 1f))
+                r.addView(label(statusText, 14, ACCENT), LinearLayout.LayoutParams(-2, -2).apply { marginEnd = dp(8) })
+                val clearBtn = button(getString(R.string.swc_clear), false) {
+                    SwcCustomBindings.clearBinding(this, action)
+                    render()
+                }
+                r.addView(clearBtn, LinearLayout.LayoutParams(dp(70), dp(40)))
+                card.addView(r)
+            }
+            card.addView(button(getString(R.string.swc_clear_all), false) {
+                SwcCustomBindings.clearAll(this)
+                render()
+            }, matchButton(12, 48))
         }
         section(content, getString(R.string.location), R.drawable.ic_dp_navigation) { card ->
             toggle(card, getString(R.string.report_location_to_iphone),

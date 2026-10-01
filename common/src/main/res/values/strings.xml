@@ -480,4 +480,6 @@
     <string name="swc_clear">Clear</string>
     <string name="swc_clear_all">Reset all bindings</string>
     <string name="swc_press_key_now">Press the steering wheel button now…</string>
+    <string name="fill_screen">Fill and stretch screen</string>
+    <string name="fill_screen_desc">Stretch CarPlay to fill the entire screen, eliminating side black bars.</string>
 </resources>
