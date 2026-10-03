@@ -110,7 +110,10 @@ class CarPlayHostActivity : ComponentActivity() {
     private var connectionPanel: View? = null
     private var wifiRecoveryButton: View? = null
     private var reconnectAttempts = 0
-    private lateinit var airPlayIdentity: AirPlayIdentity
+    private var airPlayIdentityOrNull: AirPlayIdentity? = null
+    private var airPlayIdentity: AirPlayIdentity
+        get() = airPlayIdentityOrNull ?: AirPlayPersistence.loadIdentity(this).also { airPlayIdentityOrNull = it }
+        set(value) { airPlayIdentityOrNull = value }
     private var languagePreferenceAtCreate = AppLocale.SYSTEM
 
     override fun attachBaseContext(newBase: Context) {
@@ -373,6 +376,8 @@ class CarPlayHostActivity : ComponentActivity() {
         pendingDisplaySize = null
         applyDisplaySize(size)
     }
+    @Volatile private var fastStreamRestartInProgress = false
+    private val fastStreamRestartTimeout = Runnable { onFastStreamRestartTimedOut() }
 
     private val textureListener = object : TextureView.SurfaceTextureListener {
         override fun onSurfaceTextureAvailable(texture: SurfaceTexture, width: Int, height: Int) {
@@ -3095,6 +3100,11 @@ class CarPlayHostActivity : ComponentActivity() {
                     if (controllerGeneration != restartGeneration) {
                         return@runOnUiThread
                     }
+                    if (fastStreamRestartInProgress) {
+                        fastStreamRestartInProgress = false
+                        mainHandler.removeCallbacks(fastStreamRestartTimeout)
+                        appendLog("Fast stream restart connected successfully")
+                    }
                     activeAirPlaySession = session
                     CarPlayBackgroundSession.active = true
                     reconnectAttempts = 0
@@ -3112,6 +3122,10 @@ class CarPlayHostActivity : ComponentActivity() {
                         return@runOnUiThread
                     }
                     activeScreenStreamTypes.clear()
+                    if (fastStreamRestartInProgress) {
+                        appendLog("AirPlay stream ended (fast restart in progress); awaiting new stream")
+                        return@runOnUiThread
+                    }
                     setConnectionStage(getString(R.string.carplay_session_ended_reconnecting))
                     appendLog("AirPlay session ended; reconnecting from scratch")
                     reconnectAfterLoss("AirPlay session ended")
@@ -3385,11 +3399,65 @@ class CarPlayHostActivity : ComponentActivity() {
             appendLog(message)
             Log.i(TAG, message)
             videoView?.let { updateVideoLayout(it.width, it.height) }
+        } else if (canFastRestartAirPlayStream()) {
+            fastRestartAirPlayStream(
+                size,
+                "Display changed ${previous.width}x${previous.height} -> ${size.width}x${size.height}",
+            )
         } else {
             restartCarPlay(
                 "Display changed ${previous.width}x${previous.height} -> ${size.width}x${size.height}",
             )
         }
+    }
+
+    private fun canFastRestartAirPlayStream(): Boolean {
+        val currentController = controller ?: return false
+        val currentSink = sink ?: return false
+        if (shuttingDown.get() || menuOpen || handshakeResetInProgress) return false
+        return currentController.canFastRestartStream()
+    }
+
+    private fun fastRestartAirPlayStream(size: DisplaySize, reason: String) {
+        val currentController = controller ?: return
+        val currentSink = sink ?: return
+        appendLog(reason)
+        setConnectionStage(reason)
+        Log.i(TAG, "fastRestartAirPlayStream: $reason at ${size.width}x${size.height}")
+
+        val newAirPlayConfig = createAirPlayConfig(size)
+        val newDisplay = CarPlaySessionDisplay(
+            newAirPlayConfig.main.widthPixels,
+            newAirPlayConfig.main.heightPixels,
+            displayRotation(),
+            hideTopBar,
+            hideBottomBar,
+            size.width,
+            size.height,
+        )
+        sessionDisplay = newDisplay
+        currentSink.updateVideoDimensions(newAirPlayConfig.main.widthPixels, newAirPlayConfig.main.heightPixels)
+        videoView?.let { updateVideoLayout(it.width, it.height) }
+        CarPlayBackgroundSession.updateDisplay(size.width, size.height, newDisplay)
+
+        fastStreamRestartInProgress = true
+        mainHandler.removeCallbacks(fastStreamRestartTimeout)
+        mainHandler.postDelayed(fastStreamRestartTimeout, FAST_STREAM_RESTART_TIMEOUT_MILLIS)
+
+        val started = currentController.fastRestartAirPlayStream(newAirPlayConfig)
+        if (!started) {
+            appendLog("Fast stream restart unsupported, falling back to full restart")
+            fastStreamRestartInProgress = false
+            mainHandler.removeCallbacks(fastStreamRestartTimeout)
+            restartCarPlay(reason)
+        }
+    }
+
+    private fun onFastStreamRestartTimedOut() {
+        if (!fastStreamRestartInProgress || shuttingDown.get()) return
+        appendLog("Fast stream restart timed out; falling back to full restart")
+        fastStreamRestartInProgress = false
+        restartCarPlay("Fast stream restart timed out")
     }
 
     @Suppress("DEPRECATION")
@@ -3485,6 +3553,8 @@ class CarPlayHostActivity : ComponentActivity() {
         if (!CarPlayBackgroundSession.isOwner(this)) return
         if (shuttingDown.get() || menuOpen || handshakeResetInProgress) return
         val size = activeDisplaySize ?: return
+        fastStreamRestartInProgress = false
+        mainHandler.removeCallbacks(fastStreamRestartTimeout)
         appendLog(reason)
         activeScreenStreamTypes.clear()
         setConnectionStage(reason)
@@ -3572,6 +3642,8 @@ class CarPlayHostActivity : ComponentActivity() {
 
     private fun shutdown(terminateProcess: Boolean, reason: String, completion: () -> Unit = {}) {
         if (!shuttingDown.compareAndSet(false, true)) { completion(); return }
+        fastStreamRestartInProgress = false
+        mainHandler.removeCallbacks(fastStreamRestartTimeout)
         restartGeneration += 1
         mainHandler.removeCallbacks(applyDisplaySize)
         val oldController = controller
@@ -3857,6 +3929,7 @@ class CarPlayHostActivity : ComponentActivity() {
         const val RECONNECT_DELAY_MILLIS = 2_000L
         const val IAP_TUNNEL_RECONNECT_DELAY_MILLIS = 15_000L
         const val CONTROLLER_CLOSE_TIMEOUT_MILLIS = 4_000L
+        const val FAST_STREAM_RESTART_TIMEOUT_MILLIS = 4_000L
         const val AUDIO_CAPTURE_MARKER = "audio-capture.enabled"
         const val AUDIO_CAPTURE_DIRECTORY = "audio-captures"
         const val PROTOCOL_TRACE_PREFIX = "TRACE "
@@ -3952,6 +4025,13 @@ internal object CarPlayBackgroundSession {
         this.owner = owner
         this.controller = controller
         this.sink = sink
+        this.width = width
+        this.height = height
+        this.display = display
+    }
+
+    @Synchronized
+    fun updateDisplay(width: Int, height: Int, display: CarPlaySessionDisplay) {
         this.width = width
         this.height = height
         this.display = display
