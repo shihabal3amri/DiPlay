@@ -320,6 +320,11 @@ class DiPlayActivity : ComponentActivity() {
             toggle(card, getString(R.string.navigation_on_hud_and_instrument_cluster),
                 getString(R.string.show_phone_navigation_arrows_distance_and_street_names_on),
                 com.shilapi.xcertplay.hud.BydOutputSettings.enabled(this)) { com.shilapi.xcertplay.hud.BydOutputSettings.setEnabled(this, it) }
+            toggle(card, getString(R.string.song_on_hud),
+                getString(R.string.song_on_hud_description),
+                com.shilapi.xcertplay.hud.BydOutputSettings.hudSong(this)) {
+                com.shilapi.xcertplay.hud.BydOutputSettings.setHudSong(this, it)
+            }
             if (ClusterMapPresentation.findDisplay(this) != null) {
                 toggle(card, getString(R.string.carplay_map_on_instrument_cluster_experimental),
                     getString(R.string.shows_the_iphone_s_cluster_map_on_the_instrument_cluster_c),

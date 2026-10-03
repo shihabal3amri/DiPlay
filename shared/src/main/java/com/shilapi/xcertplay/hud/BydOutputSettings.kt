@@ -17,6 +17,7 @@ object BydOutputSettings {
     private const val KEY_WHEEL_SPEED_TO_IPHONE = "wheel_speed_to_iphone"
     private const val KEY_VIDEO_WHILE_PARKED = "video_while_parked"
     private const val KEY_CLUSTER_SONG = "cluster_song"
+    private const val KEY_HUD_SONG = "hud_song"
     const val DEFAULT_LOW_CHARGE_PERCENT = 20
     val lowChargePresets = listOf(10, 15, 20, 25, 30)
 
@@ -61,6 +62,18 @@ object BydOutputSettings {
 
     fun setClusterSong(context: Context, enabled: Boolean) =
         prefs(context).edit().putBoolean(KEY_CLUSTER_SONG, enabled).apply()
+
+    /**
+     * Show on the HUD what the CarPlay music reports as the track line, once there is no guidance.
+     * Many third-party players advance that line with the lyrics, Apple Music leaves it at the title.
+     * Needs no ADB: it goes through the same clusterdebug broadcast as the navigation.
+     * The line is sent whole; the cluster's own marquee scrolls whatever does not fit, exactly as it
+     * does for road names, so the app never scrolls it a second time.
+     */
+    fun hudSong(context: Context): Boolean = prefs(context).getBoolean(KEY_HUD_SONG, false)
+
+    fun setHudSong(context: Context, enabled: Boolean) =
+        prefs(context).edit().putBoolean(KEY_HUD_SONG, enabled).apply()
 
     /** At or below this charge the iPhone gets the low-range warning. */
     fun lowChargePercent(context: Context): Int = prefs(context).getInt(KEY_LOW_CHARGE_PERCENT, DEFAULT_LOW_CHARGE_PERCENT)

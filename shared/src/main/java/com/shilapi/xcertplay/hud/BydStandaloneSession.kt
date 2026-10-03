@@ -16,6 +16,20 @@ internal class BydStandaloneSession(
         if (recovering) clear()
         val packet = BydStandalonePackets.guidance(icon, exit, distanceMeters, road)
         if (packet == null) { clear(); return }
+        publish(packet)
+    }
+
+    /**
+     * Writes one plain line, such as the lyrics line CarPlay reports, with no maneuver records.
+     * Navigation owns its own records, so both can share the HUD without overwriting each other.
+     */
+    fun showText(text: String) {
+        if (recovering) clear()
+        publish(BydStandalonePackets.text(text))
+    }
+
+    /** Writes one packet, starting the HUD once and keeping it alive about once a second. */
+    private fun publish(packet: String) {
         try {
             if (!showing) {
                 // Commit before publishing a start, so the next app launch can recover a crash.
