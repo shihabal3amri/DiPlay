@@ -129,14 +129,14 @@ internal object SettingsInformationArchitecture {
             SettingsSection.BYD_NAVIGATION,
             SettingsSection.WHEEL_KEYS,
             SettingsSection.CAR_BUTTON,
+            SettingsSection.NAVIGATION_WHEEL,
+            SettingsSection.AMBIENT_LIGHTING,
         ),
         SettingsCategory.ADVANCED to setOf(
             SettingsSection.EXPERIMENTAL_DISPLAY,
             SettingsSection.ADVANCED_MEDIA,
             SettingsSection.LOCATION,
             SettingsSection.DIAGNOSTICS,
-            SettingsSection.NAVIGATION_WHEEL,
-            SettingsSection.AMBIENT_LIGHTING,
         ),
     )
 }

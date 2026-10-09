@@ -33,7 +33,7 @@ The Settings UI organizes categories into two modes:
 | Display | everyday appearance and layout on head unit | day/night mode, picture, size, resolution, frame rate, dock, system bars, driving side |
 | Audio | everyday sound routing | media and navigation streams, call stream |
 | About | version, Geek Mode toggle, and app language | version tap easter egg, language choice, updates |
-| DiLink (Geek Mode) | all BYD vehicle hardware and platform profiles | steering wheel keys (Siri, call keys, zoom, joystick), car button, cluster map, HUD navi, BYD hotspot, vehicle data |
+| DiLink (Geek Mode) | all BYD vehicle hardware and platform profiles | steering wheel keys (Siri, call keys, zoom, joystick, navigation wheel volume), car button, cluster map, HUD navi, ambient lighting, BYD hotspot, vehicle data |
 | Advanced (Geek Mode) | experimental behavior and diagnostics | lab display (split screen, rotation, side panel), advanced media (HEVC, smooth video, echo cancellation, voice filter), GPS location to iPhone, diagnostics |
 | Overview | landing page for compact layout | quick links and readiness |
 
