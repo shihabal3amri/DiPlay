@@ -707,6 +707,43 @@ class AdaptiveSettingsUiTest {
         assertEquals(Math.round(18 * screen.resources.displayMetrics.density), (card.layoutParams as LinearLayout.LayoutParams).bottomMargin)
     }
 
+    @Test fun dilinkPlatformProfilesCanBeExpandedInParallelAndToggledIndependently() {
+        GeekModeManager.setEnabled(context, true)
+        val screen = openSettings()
+        ReflectionHelpers.setField(screen, "settingsCategory", SettingsCategory.DILINK)
+        ReflectionHelpers.callInstanceMethod<Unit>(screen, "render")
+
+        fun buttons() = descendants(screen.window.decorView).filterIsInstance<android.widget.Button>()
+        val title150 = screen.getString(R.string.settings_dilink_150_title)
+
+        // Initially both profiles are expanded in parallel
+        assertTrue(texts(screen).any { it.text == screen.getString(R.string.follow_instrument_theme_and_map_card) })
+        assertTrue(descendants(screen.window.decorView).filterIsInstance<Switch>().any {
+            it.contentDescription == screen.getString(R.string.adb_cluster_activity_mode)
+        })
+
+        // Collapse DiLink 150 only
+        val btn150 = buttons().single { it.text.startsWith(title150) }
+        btn150.performClick()
+        shadowOf(Looper.getMainLooper()).idle()
+
+        // 150 content is now collapsed, but 50·4 content remains expanded in parallel
+        assertFalse(texts(screen).any { it.text == screen.getString(R.string.follow_instrument_theme_and_map_card) })
+        assertTrue(descendants(screen.window.decorView).filterIsInstance<Switch>().any {
+            it.contentDescription == screen.getString(R.string.adb_cluster_activity_mode)
+        })
+
+        // Expand DiLink 150 again
+        buttons().single { it.text.startsWith(title150) }.performClick()
+        shadowOf(Looper.getMainLooper()).idle()
+
+        // Both are expanded again simultaneously
+        assertTrue(texts(screen).any { it.text == screen.getString(R.string.follow_instrument_theme_and_map_card) })
+        assertTrue(descendants(screen.window.decorView).filterIsInstance<Switch>().any {
+            it.contentDescription == screen.getString(R.string.adb_cluster_activity_mode)
+        })
+    }
+
     private fun installBydSettingsPackage() {
         shadowOf(context.packageManager).installPackage(PackageInfo().apply {
             packageName = "com.byd.carsettings"

@@ -56,4 +56,9 @@
     <string name="settings_dilink_universal_title">Універсальні функції BYD</string>
     <string name="settings_dilink_universal_summary">Функції, які підтримуються на всіх пристроях DiLink за наявності необхідних дозволів</string>
     <string name="settings_dilink_20_summary">Захист малопотужних пристроїв: фіксує 30 кадрів/с та вимикає додатковий екран для запобігання перегріву.</string>
+    <string name="settings_dilink_collapse">Згорнути</string>
+    <string name="settings_dilink_expand">Розгорнути</string>
+    <string name="settings_dilink_matched_badge">Збіг</string>
+    <string name="settings_dilink_parallel_hint">Профілі платформ нижче розгортаються незалежно для паралельного перегляду та налаштування.</string>
+    <string name="settings_dilink_profiles_header">Налаштування для платформи</string>
 </resources>

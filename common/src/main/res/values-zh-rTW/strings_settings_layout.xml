@@ -56,4 +56,9 @@
     <string name="settings_dilink_universal_title">通用 DiLink 擴展</string>
     <string name="settings_dilink_universal_summary">所有比亞迪 DiLink 車機在具備必要權限時均可使用的擴展特性</string>
     <string name="settings_dilink_20_summary">弱算力硬體保護：鎖定 30 幀並停用副屏渲染開銷，防止發熱卡頓。</string>
+    <string name="settings_dilink_collapse">收起</string>
+    <string name="settings_dilink_expand">展開</string>
+    <string name="settings_dilink_matched_badge">已匹配</string>
+    <string name="settings_dilink_parallel_hint">下方所有代際配置均可平行展開，支持跨版本獨立查看或調試。</string>
+    <string name="settings_dilink_profiles_header">代際專屬硬體調優</string>
 </resources>

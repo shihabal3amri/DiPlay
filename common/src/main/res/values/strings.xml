@@ -415,6 +415,11 @@
     <string name="settings_dilink_universal_title">Universal BYD features</string>
     <string name="settings_dilink_universal_summary">Features supported across all DiLink head units with necessary permissions</string>
     <string name="settings_dilink_20_summary">Low-power hardware protection: locks 30 fps and disables secondary screen load to prevent overheating.</string>
+    <string name="settings_dilink_collapse">Collapse</string>
+    <string name="settings_dilink_expand">Expand</string>
+    <string name="settings_dilink_matched_badge">Matched</string>
+    <string name="settings_dilink_parallel_hint">Platform profiles below are independently expandable for parallel inspection and tuning.</string>
+    <string name="settings_dilink_profiles_header">Platform specific tuning</string>
     <string name="setup_needs_attention">Setup needs attention</string>
     <string name="share">Share</string>
     <string name="show_on_screen_debug_logs">Show on-screen debug logs</string>

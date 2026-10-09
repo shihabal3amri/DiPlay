@@ -56,4 +56,9 @@
     <string name="settings_dilink_universal_title">Универсальные функции BYD</string>
     <string name="settings_dilink_universal_summary">Функции, поддерживаемые на всех устройствах DiLink при наличии необходимых разрешений</string>
     <string name="settings_dilink_20_summary">Защита устройств с низкой производительностью: фиксирует 30 кадров/с и отключает второй экран для защиты от перегрева.</string>
+    <string name="settings_dilink_collapse">Свернуть</string>
+    <string name="settings_dilink_expand">Развернуть</string>
+    <string name="settings_dilink_matched_badge">Совпадение</string>
+    <string name="settings_dilink_parallel_hint">Профили платформ ниже раскрываются независимо для параллельного просмотра и настройки.</string>
+    <string name="settings_dilink_profiles_header">Настройка для платформы</string>
 </resources>

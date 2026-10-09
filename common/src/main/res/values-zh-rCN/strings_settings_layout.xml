@@ -56,4 +56,9 @@
     <string name="settings_dilink_universal_title">通用 DiLink 扩展</string>
     <string name="settings_dilink_universal_summary">所有比亚迪 DiLink 车机在具备必要权限时均可使用的扩展特性</string>
     <string name="settings_dilink_20_summary">弱算力硬件保护：锁定 30 帧并禁用副屏渲染开销，防止发热卡顿。</string>
+    <string name="settings_dilink_collapse">收起</string>
+    <string name="settings_dilink_expand">展开</string>
+    <string name="settings_dilink_matched_badge">已匹配</string>
+    <string name="settings_dilink_parallel_hint">下方所有代际配置均可平行展开，支持跨版本独立查看或调试。</string>
+    <string name="settings_dilink_profiles_header">代际专属硬件调优</string>
 </resources>

@@ -56,4 +56,9 @@
     <string name="settings_dilink_universal_title">Funciones universales BYD</string>
     <string name="settings_dilink_universal_summary">Funciones compatibles en todas las unidades principales DiLink con los permisos necesarios</string>
     <string name="settings_dilink_20_summary">Protección de hardware de baja potencia: bloquea a 30 fps y desactiva la pantalla secundaria para evitar el sobrecalentamiento.</string>
+    <string name="settings_dilink_collapse">Contraer</string>
+    <string name="settings_dilink_expand">Expandir</string>
+    <string name="settings_dilink_matched_badge">Coincidente</string>
+    <string name="settings_dilink_parallel_hint">Los perfiles de plataforma a continuación se pueden expandir de forma independiente para inspección y ajuste en paralelo.</string>
+    <string name="settings_dilink_profiles_header">Ajuste específico de plataforma</string>
 </resources>

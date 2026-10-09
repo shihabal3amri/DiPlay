@@ -56,4 +56,9 @@
     <string name="settings_dilink_universal_title">ميزات BYD العامة</string>
     <string name="settings_dilink_universal_summary">الميزات المدعومة عبر جميع أجهزة DiLink مع الأذونات اللازمة</string>
     <string name="settings_dilink_20_summary">حماية الأجهزة منخفضة الطاقة: قفل معدل الإطارات عند 30 وتعطيل الشاشة الثانوية لمنع ارتفاع الحرارة.</string>
+    <string name="settings_dilink_collapse">طي</string>
+    <string name="settings_dilink_expand">توسيع</string>
+    <string name="settings_dilink_matched_badge">متطابق</string>
+    <string name="settings_dilink_parallel_hint">الملفات الشخصية للمنصة أدناه قابلة للتوسيع بشكل مستقل للفحص والضبط بالتوازي.</string>
+    <string name="settings_dilink_profiles_header">ضبط خاص بالمنصة</string>
 </resources>
