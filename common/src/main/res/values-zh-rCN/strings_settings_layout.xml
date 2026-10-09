@@ -7,8 +7,10 @@
     <string name="settings_display">显示</string>
     <string name="settings_navigation">导航</string>
     <string name="settings_vehicle">车辆</string>
-    <string name="settings_advanced">高级</string>
-    <string name="settings_advanced_subtitle">面向有经验用户的实验性及车型专用设置</string>
+    <string name="settings_dilink_category">DiLink 专区</string>
+    <string name="settings_dilink_category_summary">比亚迪控制器与车身特性</string>
+    <string name="settings_advanced">实验室/排障</string>
+    <string name="settings_advanced_subtitle">实验性功能、高级媒体与诊断报告</string>
     <string name="settings_advanced_caution_title">请谨慎更改</string>
     <string name="settings_advanced_caution_description">这些功能可能取决于车辆固件、ADB 权限或 CarPlay 的实验性行为。日常设置位于上方各类别中。</string>
     <string name="settings_search">搜索</string>
@@ -37,4 +39,21 @@
     <string name="settings_choose_iphone_title">选择你的 iPhone</string>
     <string name="settings_choose_iphone_description">无线 CarPlay 需要先配对 iPhone 才能连接。</string>
     <string name="settings_choose_iphone_action">选择 iPhone</string>
+    <string name="settings_geek_mode">极客模式</string>
+    <string name="settings_geek_mode_summary">显示所有 DiLink 版本专属设置与底层调试参数</string>
+    <string name="settings_geek_mode_enabled">已开启极客模式</string>
+    <string name="settings_geek_mode_disabled">已关闭极客模式</string>
+    <string name="settings_geek_mode_countdown">再点击 %1$d 次开启极客模式</string>
+    <string name="settings_dilink_platform">DiLink 车机硬件平台</string>
+    <string name="settings_dilink_platform_description">选择当前车机的控制器代际平台，默认根据硬件自动识别。</string>
+    <string name="settings_dilink_platform_auto">自动检测 (%1$s)</string>
+    <string name="settings_dilink_150_title">DiLink 150 (31.x / 34.x)</string>
+    <string name="settings_dilink_100_title">DiLink 100 (23.x)</string>
+    <string name="settings_dilink_50_4_title">DiLink 50 · 4.0 (16.x / 17.x / 21.x)</string>
+    <string name="settings_dilink_50_3_title">DiLink 50 · 3.0 (13.x / 15.x / 18.x)</string>
+    <string name="settings_dilink_20_title">DiLink 20 (2.x / 4.x / 5.x / 8.x / 26.x)</string>
+    <string name="settings_dilink_generic_title">通用车载 Android</string>
+    <string name="settings_dilink_universal_title">通用 DiLink 扩展</string>
+    <string name="settings_dilink_universal_summary">所有比亚迪 DiLink 车机在具备必要权限时均可使用的扩展特性</string>
+    <string name="settings_dilink_20_summary">弱算力硬件保护：锁定 30 帧并禁用副屏渲染开销，防止发热卡顿。</string>
 </resources>

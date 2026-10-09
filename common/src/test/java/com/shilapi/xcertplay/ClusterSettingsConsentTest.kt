@@ -47,10 +47,11 @@ class ClusterSettingsConsentTest {
         activity = Robolectric.buildActivity(DiPlayActivity::class.java)
         screen = activity.get()
         screen.setTheme(android.R.style.Theme_Material_NoActionBar)
+        GeekModeManager.setEnabled(screen, true)
         activity.setup().visible()
         ReflectionHelpers.setField(screen, "setupError", null)
         ReflectionHelpers.setField(screen, "page", "settings")
-        ReflectionHelpers.setField(screen, "settingsCategory", SettingsCategory.ADVANCED)
+        ReflectionHelpers.setField(screen, "settingsCategory", SettingsCategory.DILINK)
         AirPlayPersistence.saveWirelessEnabled(screen, false)
         session = mock(CarPlayController::class.java)
         CarPlayBackgroundSession.store(session, mock(AndroidMediaSink::class.java), 800, 480,
@@ -73,6 +74,7 @@ class ClusterSettingsConsentTest {
         PendingReconnect.clear()
         activity.pause().stop().destroy()
         val app = RuntimeEnvironment.getApplication()
+        GeekModeManager.setEnabled(app, false)
         app.getSharedPreferences("xcertplay_airplay", 0).edit().clear().commit()
         app.getSharedPreferences("diplay", 0).edit().clear().commit()
     }

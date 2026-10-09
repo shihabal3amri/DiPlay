@@ -7,8 +7,10 @@
     <string name="settings_display">Екран</string>
     <string name="settings_navigation">Навігація</string>
     <string name="settings_vehicle">Автомобіль</string>
-    <string name="settings_advanced">Додатково</string>
-    <string name="settings_advanced_subtitle">Експериментальні та залежні від автомобіля параметри для досвідчених користувачів</string>
+    <string name="settings_dilink_category">Зона DiLink</string>
+    <string name="settings_dilink_category_summary">Контролер та функції автомобіля BYD</string>
+    <string name="settings_advanced">Лабораторія та діагностика</string>
+    <string name="settings_advanced_subtitle">Експериментальні функції, розширені медіа та діагностика</string>
     <string name="settings_advanced_caution_title">Змінюйте обережно</string>
     <string name="settings_advanced_caution_description">Ці функції можуть залежати від прошивки автомобіля, доступу ADB або експериментальної поведінки CarPlay. Повсякденні налаштування розміщено в категоріях вище.</string>
     <string name="settings_search">Пошук</string>
@@ -37,4 +39,21 @@
     <string name="settings_choose_iphone_title">Виберіть iPhone</string>
     <string name="settings_choose_iphone_description">Для бездротового CarPlay потрібен спарений iPhone.</string>
     <string name="settings_choose_iphone_action">Вибрати iPhone</string>
+    <string name="settings_geek_mode">Режим гіка</string>
+    <string name="settings_geek_mode_summary">Показувати параметри всіх версій DiLink та розширені експериментальні налаштування</string>
+    <string name="settings_geek_mode_enabled">Режим гіка увімкнено</string>
+    <string name="settings_geek_mode_disabled">Режим гіка вимкнено</string>
+    <string name="settings_geek_mode_countdown">Натисніть ще %1$d разів, щоб увімкнути режим гіка</string>
+    <string name="settings_dilink_platform">Апаратна платформа DiLink</string>
+    <string name="settings_dilink_platform_description">Виберіть платформу контролера головного пристрою. За замовчуванням визначається автоматично.</string>
+    <string name="settings_dilink_platform_auto">Автовизначення (%1$s)</string>
+    <string name="settings_dilink_150_title">DiLink 150 (31.x / 34.x)</string>
+    <string name="settings_dilink_100_title">DiLink 100 (23.x)</string>
+    <string name="settings_dilink_50_4_title">DiLink 50 · 4.0 (16.x / 17.x / 21.x)</string>
+    <string name="settings_dilink_50_3_title">DiLink 50 · 3.0 (13.x / 15.x / 18.x)</string>
+    <string name="settings_dilink_20_title">DiLink 20 (2.x / 4.x / 5.x / 8.x / 26.x)</string>
+    <string name="settings_dilink_generic_title">Універсальний Android</string>
+    <string name="settings_dilink_universal_title">Універсальні функції BYD</string>
+    <string name="settings_dilink_universal_summary">Функції, які підтримуються на всіх пристроях DiLink за наявності необхідних дозволів</string>
+    <string name="settings_dilink_20_summary">Захист малопотужних пристроїв: фіксує 30 кадрів/с та вимикає додатковий екран для запобігання перегріву.</string>
 </resources>

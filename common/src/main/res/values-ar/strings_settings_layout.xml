@@ -7,8 +7,10 @@
     <string name="settings_display">الشاشة</string>
     <string name="settings_navigation">الملاحة</string>
     <string name="settings_vehicle">السيارة</string>
-    <string name="settings_advanced">متقدم</string>
-    <string name="settings_advanced_subtitle">عناصر تحكم تجريبية وخاصة بالسيارة للمستخدمين ذوي الخبرة</string>
+    <string name="settings_dilink_category">منطقة DiLink</string>
+    <string name="settings_dilink_category_summary">وحدة تحكم وميزات سيارات BYD</string>
+    <string name="settings_advanced">المختبر والتشخيص</string>
+    <string name="settings_advanced_subtitle">الميزات التجريبية والوسائط المتقدمة والتشخيص</string>
     <string name="settings_advanced_caution_title">غيّر بحذر</string>
     <string name="settings_advanced_caution_description">قد تعتمد هذه الميزات على برنامج السيارة الثابت أو الوصول عبر ADB أو سلوك تجريبي في CarPlay. الإعدادات اليومية موجودة في الفئات أعلاه.</string>
     <string name="settings_search">بحث</string>
@@ -37,4 +39,21 @@
     <string name="settings_choose_iphone_title">اختر iPhone</string>
     <string name="settings_choose_iphone_description">يحتاج CarPlay اللاسلكي إلى iPhone مقترن قبل الاتصال.</string>
     <string name="settings_choose_iphone_action">اختيار iPhone</string>
+    <string name="settings_geek_mode">وضع المهووسين</string>
+    <string name="settings_geek_mode_summary">إظهار جميع خيارات إصدارات DiLink والمعلمات التجريبية المتقدمة</string>
+    <string name="settings_geek_mode_enabled">تم تفعيل وضع المهووسين</string>
+    <string name="settings_geek_mode_disabled">تم تعطيل وضع المهووسين</string>
+    <string name="settings_geek_mode_countdown">انقر %1$d مرات إضافية لتفعيل وضع المهووسين</string>
+    <string name="settings_dilink_platform">منصة أجهزة DiLink</string>
+    <string name="settings_dilink_platform_description">حدد منصة وحدة التحكم لجهازك. يحدد الكشف التلقائي افتراضيًا.</string>
+    <string name="settings_dilink_platform_auto">الكشف التلقائي (%1$s)</string>
+    <string name="settings_dilink_150_title">DiLink 150 (31.x / 34.x)</string>
+    <string name="settings_dilink_100_title">DiLink 100 (23.x)</string>
+    <string name="settings_dilink_50_4_title">DiLink 50 · 4.0 (16.x / 17.x / 21.x)</string>
+    <string name="settings_dilink_50_3_title">DiLink 50 · 3.0 (13.x / 15.x / 18.x)</string>
+    <string name="settings_dilink_20_title">DiLink 20 (2.x / 4.x / 5.x / 8.x / 26.x)</string>
+    <string name="settings_dilink_generic_title">Android عام للسيارات</string>
+    <string name="settings_dilink_universal_title">ميزات BYD العامة</string>
+    <string name="settings_dilink_universal_summary">الميزات المدعومة عبر جميع أجهزة DiLink مع الأذونات اللازمة</string>
+    <string name="settings_dilink_20_summary">حماية الأجهزة منخفضة الطاقة: قفل معدل الإطارات عند 30 وتعطيل الشاشة الثانوية لمنع ارتفاع الحرارة.</string>
 </resources>

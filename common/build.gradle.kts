@@ -11,6 +11,19 @@ android {
 
     defaultConfig {
         minSdk = 25
+        val buildProfile = providers.gradleProperty("dilink.profile")
+            .orElse(providers.environmentVariable("DILINK_PROFILE"))
+            .getOrElse("")
+        val buildGeek = providers.gradleProperty("dilink.geek")
+            .orElse(providers.environmentVariable("DILINK_GEEK"))
+            .getOrElse("false")
+        val buildAutoSettings = providers.gradleProperty("dilink.autoSettings")
+            .orElse(providers.environmentVariable("DILINK_AUTO_SETTINGS"))
+            .getOrElse("false")
+
+        resValue("string", "build_dilink_profile", buildProfile)
+        resValue("string", "build_dilink_geek", buildGeek)
+        resValue("string", "build_dilink_auto_settings", buildAutoSettings)
     }
 
     compileOptions {
@@ -20,6 +33,7 @@ android {
 
     buildFeatures {
         compose = true
+        resValues = true
     }
 
     testOptions {

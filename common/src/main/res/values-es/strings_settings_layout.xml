@@ -7,8 +7,10 @@
     <string name="settings_display">Pantalla</string>
     <string name="settings_navigation">Navegación</string>
     <string name="settings_vehicle">Vehículo</string>
-    <string name="settings_advanced">Avanzado</string>
-    <string name="settings_advanced_subtitle">Controles experimentales y específicos del vehículo para usuarios con experiencia</string>
+    <string name="settings_dilink_category">Zona DiLink</string>
+    <string name="settings_dilink_category_summary">Controlador y funciones del vehículo BYD</string>
+    <string name="settings_advanced">Laboratorio y diagnósticos</string>
+    <string name="settings_advanced_subtitle">Funciones experimentales, medios avanzados y diagnósticos</string>
     <string name="settings_advanced_caution_title">Cambia con cuidado</string>
     <string name="settings_advanced_caution_description">Estas funciones pueden depender del firmware del vehículo, del acceso ADB o de un comportamiento experimental de CarPlay. Los ajustes habituales están en las categorías anteriores.</string>
     <string name="settings_search">Buscar</string>
@@ -37,4 +39,21 @@
     <string name="settings_choose_iphone_title">Elige tu iPhone</string>
     <string name="settings_choose_iphone_description">CarPlay inalámbrico necesita un iPhone emparejado para conectarse.</string>
     <string name="settings_choose_iphone_action">Elegir iPhone</string>
+    <string name="settings_geek_mode">Modo geek</string>
+    <string name="settings_geek_mode_summary">Mostrar todas las opciones de versión de DiLink y parámetros experimentales avanzados</string>
+    <string name="settings_geek_mode_enabled">Modo geek activado</string>
+    <string name="settings_geek_mode_disabled">Modo geek desactivado</string>
+    <string name="settings_geek_mode_countdown">Toca %1$d veces más para activar el modo geek</string>
+    <string name="settings_dilink_platform">Plataforma de hardware DiLink</string>
+    <string name="settings_dilink_platform_description">Selecciona la plataforma de tu unidad principal. La autodetección identifica por defecto.</string>
+    <string name="settings_dilink_platform_auto">Detección automática (%1$s)</string>
+    <string name="settings_dilink_150_title">DiLink 150 (31.x / 34.x)</string>
+    <string name="settings_dilink_100_title">DiLink 100 (23.x)</string>
+    <string name="settings_dilink_50_4_title">DiLink 50 · 4.0 (16.x / 17.x / 21.x)</string>
+    <string name="settings_dilink_50_3_title">DiLink 50 · 3.0 (13.x / 15.x / 18.x)</string>
+    <string name="settings_dilink_20_title">DiLink 20 (2.x / 4.x / 5.x / 8.x / 26.x)</string>
+    <string name="settings_dilink_generic_title">Android genérico</string>
+    <string name="settings_dilink_universal_title">Funciones universales BYD</string>
+    <string name="settings_dilink_universal_summary">Funciones compatibles en todas las unidades principales DiLink con los permisos necesarios</string>
+    <string name="settings_dilink_20_summary">Protección de hardware de baja potencia: bloquea a 30 fps y desactiva la pantalla secundaria para evitar el sobrecalentamiento.</string>
 </resources>

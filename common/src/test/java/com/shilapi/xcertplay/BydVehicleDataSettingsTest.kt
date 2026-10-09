@@ -50,6 +50,7 @@ class BydVehicleDataSettingsTest {
     private var reconnects = 0
 
     @Before fun setUp() {
+        GeekModeManager.setEnabled(context, true)
         backend = FakeVehicleSettingsBackend()
         BydVehicleSettingsBackendProvider.current = backend
         shadowOf(context.packageManager).removePackage("com.byd.amapservice")
@@ -59,6 +60,7 @@ class BydVehicleDataSettingsTest {
     }
 
     @After fun tearDown() {
+        GeekModeManager.setEnabled(context, false)
         CarPlayBackgroundSession.clear()
         controller?.pause()?.stop()?.destroy()
         BydVehicleSettingsBackendProvider.reset()
@@ -191,13 +193,11 @@ class BydVehicleDataSettingsTest {
     @Test fun clusterSongSwitchStaysInTheBydNavigationSectionOnly() {
         shadowOf(context.packageManager).installPackage(PackageInfo().apply { packageName = "com.byd.amapservice" })
         openSettings()
-        openCategory(R.string.settings_navigation)
 
         assertTrue(texts().any { it.text == activity.getString(R.string.byd_navigation) })
         assertEquals(1, switches().count { it.contentDescription == activity.getString(R.string.cluster_song) })
-        openCategory(R.string.settings_advanced)
         texts().single { it.text == activity.getString(R.string.advanced_vehicle_data) }.performClick()
-        assertEquals(0, switches().count { it.contentDescription == activity.getString(R.string.cluster_song) })
+        assertEquals(1, switches().count { it.contentDescription == activity.getString(R.string.cluster_song) })
     }
 
     @Test fun withoutBydNavigationTheClusterSongSwitchIsUnderAdvancedVehicleData() {
@@ -721,7 +721,7 @@ class BydVehicleDataSettingsTest {
             DiPlayActivity::class.java,
             Intent(context, DiPlayActivity::class.java).putExtra("page", "settings"),
         ).setup()
-        openCategory(R.string.settings_advanced)
+        openCategory(R.string.settings_dilink_category)
     }
 
     private fun openCategory(title: Int) {

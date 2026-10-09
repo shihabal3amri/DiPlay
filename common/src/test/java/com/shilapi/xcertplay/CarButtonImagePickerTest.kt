@@ -176,7 +176,7 @@ class CarButtonImagePickerTest {
         PendingReconnect.clear()
         try {
             ReflectionHelpers.setField(activity, "page", "settings")
-            ReflectionHelpers.setField(activity, "settingsCategory", SettingsCategory.VEHICLE)
+            ReflectionHelpers.setField(activity, "settingsCategory", SettingsCategory.DILINK)
             ReflectionHelpers.callInstanceMethod<Unit>(activity, "render")
             val bar = ReflectionHelpers.getField<View>(activity, "reconnectBar")
             assertEquals(View.GONE, bar.visibility)
