@@ -44,6 +44,10 @@
     <string name="settings_geek_mode_enabled">Modo geek activado</string>
     <string name="settings_geek_mode_disabled">Modo geek desactivado</string>
     <string name="settings_geek_mode_countdown">Toca %1$d veces más para activar el modo geek</string>
+    <string name="settings_debug_ui_mode">Modo de depuración de interfaz</string>
+    <string name="settings_debug_ui_mode_summary">Forzar la visualización de todos los menús e interfaz del vehículo en cualquier dispositivo</string>
+    <string name="settings_debug_ui_mode_enabled">Modo de depuración de interfaz activado</string>
+    <string name="settings_debug_ui_mode_disabled">Modo de depuración de interfaz desactivado</string>
     <string name="settings_dilink_platform">Plataforma de hardware DiLink</string>
     <string name="settings_dilink_platform_description">Selecciona la plataforma de tu unidad principal. La autodetección identifica por defecto.</string>
     <string name="settings_dilink_platform_auto">Detección automática (%1$s)</string>

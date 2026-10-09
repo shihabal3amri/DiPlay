@@ -112,6 +112,7 @@ object AirPlayPersistence {
     private const val KEY_REMOTE_MFI_TOKEN = "remote_mfi_token"
     private const val SAFE_AREA_KEY_PREFIX = "safe_area_"
     private const val CUSTOM_ICON_FILE = "airplay-icon.png"
+    private const val KEY_DEBUG_UI_MODE = "debug_ui_mode"
 
     const val DEFAULT_MANUFACTURER = "DiPlay"
     const val DEFAULT_MODEL = "DiPlay"
@@ -599,6 +600,13 @@ object AirPlayPersistence {
 
     fun saveFpsCounter(context: Context, enabled: Boolean) {
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putBoolean(KEY_FPS_COUNTER, enabled).apply()
+    }
+
+    fun loadDebugUiMode(context: Context): Boolean =
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getBoolean(KEY_DEBUG_UI_MODE, false)
+
+    fun saveDebugUiMode(context: Context, enabled: Boolean) {
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putBoolean(KEY_DEBUG_UI_MODE, enabled).apply()
     }
 
     fun loadLowLatencyDecoder(context: Context): Boolean =

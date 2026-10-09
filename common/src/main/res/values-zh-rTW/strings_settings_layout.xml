@@ -44,6 +44,10 @@
     <string name="settings_geek_mode_enabled">已開啟極客模式</string>
     <string name="settings_geek_mode_disabled">已關閉極客模式</string>
     <string name="settings_geek_mode_countdown">再點擊 %1$d 次開啟極客模式</string>
+    <string name="settings_debug_ui_mode">UI 調試模式</string>
+    <string name="settings_debug_ui_mode_summary">在任何設備上強制顯示所有車載硬件選單與介面</string>
+    <string name="settings_debug_ui_mode_enabled">已開啟 UI 調試模式</string>
+    <string name="settings_debug_ui_mode_disabled">已關閉 UI 調試模式</string>
     <string name="settings_dilink_platform">DiLink 車機硬體平台</string>
     <string name="settings_dilink_platform_description">選擇當前車機的控制器代際平台，預設根據硬體自動識別。</string>
     <string name="settings_dilink_platform_auto">自動檢測 (%1$s)</string>

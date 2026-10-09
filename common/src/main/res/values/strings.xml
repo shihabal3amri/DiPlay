@@ -403,6 +403,10 @@
     <string name="settings_geek_mode_enabled">Geek mode enabled</string>
     <string name="settings_geek_mode_disabled">Geek mode disabled</string>
     <string name="settings_geek_mode_countdown">Tap %1$d more times to enable Geek mode</string>
+    <string name="settings_debug_ui_mode">UI debug mode</string>
+    <string name="settings_debug_ui_mode_summary">Force display of all vehicle hardware menus and UI on any device</string>
+    <string name="settings_debug_ui_mode_enabled">UI debug mode enabled</string>
+    <string name="settings_debug_ui_mode_disabled">UI debug mode disabled</string>
     <string name="settings_dilink_platform">DiLink hardware platform</string>
     <string name="settings_dilink_platform_description">Select your head unit\'s controller platform. Auto-detect identifies by default.</string>
     <string name="settings_dilink_platform_auto">Auto-detect (%1$s)</string>

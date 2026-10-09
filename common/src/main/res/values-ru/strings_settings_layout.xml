@@ -44,6 +44,10 @@
     <string name="settings_geek_mode_enabled">Режим гика включён</string>
     <string name="settings_geek_mode_disabled">Режим гика выключен</string>
     <string name="settings_geek_mode_countdown">Нажмите ещё %1$d раз для включения режима гика</string>
+    <string name="settings_debug_ui_mode">Режим отладки интерфейса</string>
+    <string name="settings_debug_ui_mode_summary">Принудительно отображать все меню и интерфейс оборудования автомобиля на любом устройстве</string>
+    <string name="settings_debug_ui_mode_enabled">Режим отладки интерфейса включён</string>
+    <string name="settings_debug_ui_mode_disabled">Режим отладки интерфейса выключен</string>
     <string name="settings_dilink_platform">Аппаратная платформа DiLink</string>
     <string name="settings_dilink_platform_description">Выберите платформу контроллера головного устройства. По умолчанию используется автоопределение.</string>
     <string name="settings_dilink_platform_auto">Автоопределение (%1$s)</string>

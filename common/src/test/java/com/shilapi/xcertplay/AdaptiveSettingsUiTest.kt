@@ -886,6 +886,23 @@ class AdaptiveSettingsUiTest {
         }
     }
 
+    @Test fun geekModeExposesUiDebugModeToggleAndBypassesDeviceChecks() {
+        GeekModeManager.setEnabled(context, true)
+        val screen = openSettings()
+        fun open(title: Int) {
+            descendants(screen.window.decorView).first {
+                it.contentDescription == screen.getString(R.string.settings_open_category, screen.getString(title))
+            }.performClick()
+        }
+        open(R.string.about)
+        assertTrue(texts(screen).any { it.text == screen.getString(R.string.settings_debug_ui_mode) })
+
+        AirPlayPersistence.saveDebugUiMode(context, true)
+        screen.onBackPressedDispatcher.onBackPressed()
+        open(R.string.settings_dilink_category)
+        assertTrue(texts(screen).any { it.text == screen.getString(R.string.byd_navigation) })
+    }
+
     private fun openSettings(): DiPlayActivity = Robolectric.buildActivity(
         DiPlayActivity::class.java,
         Intent(context, DiPlayActivity::class.java).putExtra("page", "settings"),

@@ -44,6 +44,10 @@
     <string name="settings_geek_mode_enabled">Режим гіка увімкнено</string>
     <string name="settings_geek_mode_disabled">Режим гіка вимкнено</string>
     <string name="settings_geek_mode_countdown">Натисніть ще %1$d разів, щоб увімкнути режим гіка</string>
+    <string name="settings_debug_ui_mode">Режим налагодження інтерфейсу</string>
+    <string name="settings_debug_ui_mode_summary">Примусово показувати всі меню та інтерфейс обладнання автомобіля на будь-якому пристрої</string>
+    <string name="settings_debug_ui_mode_enabled">Режим налагодження інтерфейсу увімкнено</string>
+    <string name="settings_debug_ui_mode_disabled">Режим налагодження інтерфейсу вимкнено</string>
     <string name="settings_dilink_platform">Апаратна платформа DiLink</string>
     <string name="settings_dilink_platform_description">Виберіть платформу контролера головного пристрою. За замовчуванням визначається автоматично.</string>
     <string name="settings_dilink_platform_auto">Автовизначення (%1$s)</string>

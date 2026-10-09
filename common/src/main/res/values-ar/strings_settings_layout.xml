@@ -44,6 +44,10 @@
     <string name="settings_geek_mode_enabled">تم تفعيل وضع المهووسين</string>
     <string name="settings_geek_mode_disabled">تم تعطيل وضع المهووسين</string>
     <string name="settings_geek_mode_countdown">انقر %1$d مرات إضافية لتفعيل وضع المهووسين</string>
+    <string name="settings_debug_ui_mode">وضع تصحيح واجهة المستخدم</string>
+    <string name="settings_debug_ui_mode_summary">فرض عرض جميع قوائم وواجهات أجهزة السيارة على أي جهاز</string>
+    <string name="settings_debug_ui_mode_enabled">تم تفعيل وضع تصحيح واجهة المستخدم</string>
+    <string name="settings_debug_ui_mode_disabled">تم تعطيل وضع تصحيح واجهة المستخدم</string>
     <string name="settings_dilink_platform">منصة أجهزة DiLink</string>
     <string name="settings_dilink_platform_description">حدد منصة وحدة التحكم لجهازك. يحدد الكشف التلقائي افتراضيًا.</string>
     <string name="settings_dilink_platform_auto">الكشف التلقائي (%1$s)</string>
