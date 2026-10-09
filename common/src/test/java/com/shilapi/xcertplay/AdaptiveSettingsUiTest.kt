@@ -62,7 +62,7 @@ class AdaptiveSettingsUiTest {
         val screen = openSettings()
 
         assertTrue(texts(screen).any { it.text == screen.getString(R.string.settings_overview) })
-        assertTrue(texts(screen).any { it.text == screen.getString(R.string.settings_quick_settings) })
+        assertTrue(texts(screen).any { it.text == screen.getString(R.string.settings_your_setup) })
     }
 
     @Test fun savedLightAppearanceThemesTheSettingsCanvasAndSystemBars() {
@@ -377,12 +377,16 @@ class AdaptiveSettingsUiTest {
         AirPlayPersistence.saveHideTopBar(context, false)
         AirPlayPersistence.saveHideBottomBar(context, false)
         val screen = openSettings()
-        val fullScreen = descendants(screen.window.decorView).filterIsInstance<Switch>()
-            .single { it.contentDescription == screen.getString(R.string.full_screen) }
+        descendants(screen.window.decorView)
+            .single { it.contentDescription == screen.getString(R.string.settings_open_category,
+                screen.getString(R.string.settings_display)) }
+            .performClick()
+        val statusBar = descendants(screen.window.decorView).filterIsInstance<Switch>()
+            .single { it.contentDescription == screen.getString(R.string.hide_the_status_bar) }
 
-        (fullScreen.parent as View).performClick()
+        (statusBar.parent as View).performClick()
 
-        assertTrue(fullScreen.isChecked)
+        assertTrue(statusBar.isChecked)
         assertTrue(AirPlayPersistence.loadHideTopBar(context))
     }
 
@@ -396,7 +400,7 @@ class AdaptiveSettingsUiTest {
 
         screen.onBackPressedDispatcher.onBackPressed()
 
-        assertTrue(texts(screen).any { it.text == screen.getString(R.string.settings_quick_settings) })
+        assertTrue(texts(screen).any { it.text == screen.getString(R.string.settings_overview) })
     }
 
     @Test fun openingACompactCategoryAlwaysStartsAtTheTop() {
@@ -419,18 +423,13 @@ class AdaptiveSettingsUiTest {
         assertEquals(0, detailScroll.scrollY)
     }
 
-    @Test fun quickFullScreenChangesBothExistingPreferencesTogether() {
-        AirPlayPersistence.saveHideTopBar(context, false)
-        AirPlayPersistence.saveHideBottomBar(context, false)
+    @Test
+    @Config(sdk = [29], qualifiers = "en-w1000dp-h700dp")
+    fun expandedSettingsOpenDirectlyOnConnection() {
         val screen = openSettings()
-        val fullScreen = descendants(screen.window.decorView).filterIsInstance<Switch>()
-            .single { it.contentDescription == screen.getString(R.string.full_screen) }
 
-        fullScreen.performClick()
-
-        assertTrue(AirPlayPersistence.loadHideTopBar(context))
-        assertTrue(AirPlayPersistence.loadHideBottomBar(context))
-        assertEquals(true, fullScreen.isChecked)
+        assertEquals(SettingsCategory.CONNECTION, ReflectionHelpers.getField<SettingsCategory>(screen, "settingsCategory"))
+        assertTrue(texts(screen).any { it.text == screen.getString(R.string.connection_setup) })
     }
 
     @Test fun systemBackFromConnectionSetupReturnsToConnectionSettings() {
@@ -440,7 +439,7 @@ class AdaptiveSettingsUiTest {
 
         assertEquals("settings", ReflectionHelpers.getField<String>(screen, "page"))
         assertTrue(texts(screen).any { it.text == screen.getString(R.string.connection_setup) })
-        assertFalse(texts(screen).any { it.text == screen.getString(R.string.settings_quick_settings) })
+        assertFalse(texts(screen).any { it.text == screen.getString(R.string.settings_overview) })
     }
 
     @Test fun toolbarBackFromConnectionSetupReturnsToConnectionSettings() {
@@ -471,7 +470,7 @@ class AdaptiveSettingsUiTest {
                 candidate.contentDescription == screen.getString(
                     R.string.settings_open_category,
                     screen.getString(R.string.settings_advanced),
-                ) && descendants(candidate).filterIsInstance<ImageView>().count() == 2
+                )
             }
             .performClick()
 
@@ -575,7 +574,7 @@ class AdaptiveSettingsUiTest {
                 descendants(it).filterIsInstance<ImageView>().count() == 1
         }
 
-        assertTrue(texts(screen).any { it.text == screen.getString(R.string.settings_quick_settings) && isInside(it, categoryScroll) })
+        assertTrue(texts(screen).any { it.text == screen.getString(R.string.connection_setup) && isInside(it, categoryScroll) })
         assertFalse(isInside(railDestination, categoryScroll))
     }
 
@@ -690,21 +689,16 @@ class AdaptiveSettingsUiTest {
             ReflectionHelpers.getField<ScrollView>(screen, "rootScroll").scrollY)
     }
 
-    @Test fun overviewUtilitiesAreOneGroupedCardWithSectionSpacing() {
+    @Test fun geekModeRevealsDiLinkAndAdvancedCategoriesOnOverview() {
         GeekModeManager.setEnabled(context, true)
         val screen = openSettings()
-        fun utilityRow(category: Int) = descendants(screen.window.decorView).single { candidate ->
-            candidate.contentDescription == screen.getString(
-                R.string.settings_open_category,
-                screen.getString(category),
-            ) && descendants(candidate).filterIsInstance<ImageView>().count() == 2
-        }
+        val dilinkTitle = screen.getString(R.string.settings_dilink_category)
+        val advancedTitle = screen.getString(R.string.settings_advanced)
+        val dilinkDesc = screen.getString(R.string.settings_open_category, dilinkTitle)
+        val advancedDesc = screen.getString(R.string.settings_open_category, advancedTitle)
 
-        val dilink = utilityRow(R.string.settings_dilink_category)
-        val advanced = utilityRow(R.string.settings_advanced)
-        assertSame(dilink.parent, advanced.parent)
-        val card = dilink.parent as View
-        assertEquals(Math.round(18 * screen.resources.displayMetrics.density), (card.layoutParams as LinearLayout.LayoutParams).bottomMargin)
+        assertTrue(descendants(screen.window.decorView).any { it.contentDescription == dilinkDesc })
+        assertTrue(descendants(screen.window.decorView).any { it.contentDescription == advancedDesc })
     }
 
     @Test fun dilinkPlatformProfilesCanBeExpandedInParallelAndToggledIndependently() {
