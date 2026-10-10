@@ -202,6 +202,9 @@
     <string name="done">Done</string>
     <string name="drag_to_move_pinch_to_zoom">Drag to move, pinch to zoom</string>
     <string name="draw_outside_safe_area">Draw outside safe area</string>
+    <string name="rect_fill_disable_safe_area">Center display rectangular fill, disable safe area</string>
+    <string name="rect_fill_disable_safe_area_description">Do not declare safeArea in center display AirPlay info to avoid conflict with cornerMasks</string>
+    <string name="safe_area_disabled_rect_fill_summary">Center display safe area: disabled (rectangular full display)</string>
     <string name="driving_side">Driving side</string>
     <string name="efficient_video">Efficient video</string>
     <string name="enable_the_car_s_bluetooth_and_pair_your_iphone_first">Enable the car’s Bluetooth and pair your iPhone first.</string>

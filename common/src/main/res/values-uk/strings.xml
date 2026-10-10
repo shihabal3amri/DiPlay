@@ -200,6 +200,9 @@
     <string name="done">Готово</string>
     <string name="drag_to_move_pinch_to_zoom">Перетягніть, щоб перемістити; зведіть або розведіть пальці, щоб змінити масштаб</string>
     <string name="draw_outside_safe_area">Показувати поза безпечною областю</string>
+    <string name="rect_fill_disable_safe_area">Заповнення центрального екрана, вимкнути безпечну область</string>
+    <string name="rect_fill_disable_safe_area_description">Не оголошувати safeArea в AirPlay info центрального екрана для уникнення конфлікту з cornerMasks</string>
+    <string name="safe_area_disabled_rect_fill_summary">Безпечна область центр. екрана: вимкнена (прямокутне заповнення)</string>
     <string name="driving_side">Розташування керма</string>
     <string name="efficient_video">Ефективне відео</string>
     <string name="enable_the_car_s_bluetooth_and_pair_your_iphone_first">Увімкніть Bluetooth автомобіля та спочатку спарте iPhone.</string>

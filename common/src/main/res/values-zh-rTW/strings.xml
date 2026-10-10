@@ -195,6 +195,9 @@
     <string name="done">完成</string>
     <string name="drag_to_move_pinch_to_zoom">拖曳以移動，雙指縮放</string>
     <string name="draw_outside_safe_area">允許繪製到安全區域外</string>
+    <string name="rect_fill_disable_safe_area">中控直角鋪滿顯示，停用安全區域</string>
+    <string name="rect_fill_disable_safe_area_description">不在中控 AirPlay 宣告中包含 safeArea，避免與 cornerMasks 衝突</string>
+    <string name="safe_area_disabled_rect_fill_summary">中控安全區域：已停用（直角鋪滿顯示）</string>
     <string name="driving_side">駕駛座位置</string>
     <string name="efficient_video">高效率影片</string>
     <string name="enable_the_car_s_bluetooth_and_pair_your_iphone_first">請先開啟車機藍牙並配對 iPhone。</string>

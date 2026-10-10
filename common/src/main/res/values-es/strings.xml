@@ -195,6 +195,9 @@
     <string name="done">Listo</string>
     <string name="drag_to_move_pinch_to_zoom">Arrastra para mover, pellizca para ampliar</string>
     <string name="draw_outside_safe_area">Dibujar fuera de la zona segura</string>
+    <string name="rect_fill_disable_safe_area">Llenado rectangular de pantalla central, desactivar zona segura</string>
+    <string name="rect_fill_disable_safe_area_description">No declarar safeArea en AirPlay info de la pantalla central para evitar conflicto con cornerMasks</string>
+    <string name="safe_area_disabled_rect_fill_summary">Zona segura de pantalla central: desactivada (pantalla rectangular completa)</string>
     <string name="driving_side">Lado de conducción</string>
     <string name="efficient_video">Vídeo eficiente</string>
     <string name="enable_the_car_s_bluetooth_and_pair_your_iphone_first">Activa primero el Bluetooth del coche y empareja tu iPhone.</string>

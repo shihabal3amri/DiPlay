@@ -215,14 +215,20 @@ object AirPlayInfoPlist {
         // Several areas let the car move CarPlay between them (another dock edge, the head unit's split
         // screen) with updateViewArea, without reconnecting.
         val areas = display.viewAreas?.takeIf { it.isNotEmpty() }
-        entry["viewAreas"] = areas?.map { areaDict(display, it) } ?: listOf(areaDict(display))
+        val disableSafeArea = uuid == MAIN_UUID && display.mainDisplayDisableSafeArea
+        entry["viewAreas"] = areas?.map { areaDict(display, it, disableSafeArea) } ?: listOf(areaDict(display, null, disableSafeArea))
         entry["initialViewArea"] = if (areas == null) 0 else display.initialViewArea.coerceIn(0, areas.lastIndex)
+        if (uuid == MAIN_UUID && display.mainDisplayCornerMasks != null) entry["cornerMasks"] = display.mainDisplayCornerMasks
         if (areas != null && areas.size > 1) entry["viewAreaTransitionControl"] = true
         if (display.initialUrl != null) entry["initialURL"] = display.initialUrl
         return entry
     }
 
-    private fun areaDict(display: AirPlayDisplayConfig, area: AirPlayViewArea? = null): Map<String, Any?> {
+    private fun areaDict(
+        display: AirPlayDisplayConfig,
+        area: AirPlayViewArea? = null,
+        disableSafeArea: Boolean = false,
+    ): Map<String, Any?> {
         // The session SETUP response enables "viewAreas", so /info must always describe one.
         // A display without custom insets uses the full panel for both the view and safe areas; an
         // explicit area replaces the display's view insets and clips its safe area.
@@ -239,26 +245,28 @@ object AirPlayInfoPlist {
             "originYPixels" to view.top,
         )
         area?.dockEdge?.let { result["viewAreaStatusBarEdge"] = it }
-        val displaySafe = display.safeArea ?: AirPlayInsets()
-        val clipped = if (area == null) displaySafe else AirPlayInsets(
-            top = maxOf(displaySafe.top, view.top),
-            bottom = maxOf(displaySafe.bottom, view.bottom),
-            left = maxOf(displaySafe.left, view.left),
-            right = maxOf(displaySafe.right, view.right),
-        )
-        // A valid saved mapping can lie wholly outside a smaller view area. In that case the
-        // intersection is empty: use this area's bounds instead of advertising negative/zero sizes.
-        val safe = if (area != null &&
-            (clipped.left + clipped.right >= width || clipped.top + clipped.bottom >= height)
-        ) view else clipped
-        val safeArea = linkedMapOf<String, Any?>(
-            "widthPixels" to (width - safe.left - safe.right),
-            "heightPixels" to (height - safe.top - safe.bottom),
-            "originXPixels" to safe.left,
-            "originYPixels" to safe.top,
-            "drawUIOutsideSafeArea" to (display.safeAreaDrawOutside ?: true),
-        )
-        result["safeArea"] = safeArea
+        if (!disableSafeArea) {
+            val displaySafe = display.safeArea ?: AirPlayInsets()
+            val clipped = if (area == null) displaySafe else AirPlayInsets(
+                top = maxOf(displaySafe.top, view.top),
+                bottom = maxOf(displaySafe.bottom, view.bottom),
+                left = maxOf(displaySafe.left, view.left),
+                right = maxOf(displaySafe.right, view.right),
+            )
+            // A valid saved mapping can lie wholly outside a smaller view area. In that case the
+            // intersection is empty: use this area's bounds instead of advertising negative/zero sizes.
+            val safe = if (area != null &&
+                (clipped.left + clipped.right >= width || clipped.top + clipped.bottom >= height)
+            ) view else clipped
+            val safeArea = linkedMapOf<String, Any?>(
+                "widthPixels" to (width - safe.left - safe.right),
+                "heightPixels" to (height - safe.top - safe.bottom),
+                "originXPixels" to safe.left,
+                "originYPixels" to safe.top,
+                "drawUIOutsideSafeArea" to (display.safeAreaDrawOutside ?: true),
+            )
+            result["safeArea"] = safeArea
+        }
         return result
     }
 }
