@@ -101,6 +101,7 @@ object AirPlayPersistence {
     private const val KEY_HIDE_TOP_BAR = "hide_top_bar"
     private const val KEY_HIDE_BOTTOM_BAR = "hide_bottom_bar"
     private const val KEY_SAFE_AREA_DRAW_OUTSIDE = "safe_area_draw_outside"
+    private const val KEY_MAIN_DISPLAY_DISABLE_SAFE_AREA = "main_display_disable_safe_area"
     private const val KEY_ADAPT_PIP_RESOLUTION = "adapt_pip_resolution"
     private const val KEY_AUTO_START_ON_BOOT = "auto_start_on_boot"
     private const val KEY_BT_SUSPEND_DURING_CARPLAY = "bt_suspend_during_carplay"
@@ -1172,6 +1173,21 @@ object AirPlayPersistence {
     fun saveSafeAreaDrawOutside(context: Context, drawOutside: Boolean) {
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
             .putBoolean(KEY_SAFE_AREA_DRAW_OUTSIDE, drawOutside)
+            .apply()
+    }
+
+    fun loadMainDisplayDisableSafeArea(context: Context): Boolean =
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).let { prefs ->
+            if (prefs.contains(KEY_MAIN_DISPLAY_DISABLE_SAFE_AREA)) {
+                prefs.getBoolean(KEY_MAIN_DISPLAY_DISABLE_SAFE_AREA, true)
+            } else {
+                prefs.getBoolean("disable_safe_area", true)
+            }
+        }
+
+    fun saveMainDisplayDisableSafeArea(context: Context, disable: Boolean) {
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
+            .putBoolean(KEY_MAIN_DISPLAY_DISABLE_SAFE_AREA, disable)
             .apply()
     }
 

@@ -43,6 +43,7 @@ class AirPlayInfoPlistTest {
         val view = (display["viewAreas"] as List<*>).single() as Map<*, *>
         val safe = view["safeArea"] as Map<*, *>
         assertEquals(0, display["initialViewArea"])
+        assertFalse(display.containsKey("cornerMasks"))
         assertEquals(1280, view["widthPixels"])
         assertEquals(720, view["heightPixels"])
         assertEquals(0, view["originXPixels"])
@@ -370,5 +371,53 @@ class AirPlayInfoPlistTest {
             assertEquals(split.originX, splitSafe["originXPixels"])
             assertEquals(split.originY, splitSafe["originYPixels"])
         }
+    }
+
+    @Test
+    fun cornerMasksIsAdvertisedWhenConfigured() {
+        fun displayWithMasks(enabled: Boolean?): Map<*, *> {
+            val info = AirPlayInfoPlist.build(
+                AirPlayConfig(
+                    deviceName = "test",
+                    deviceId = "02:00:00:00:00:02",
+                    btMac = "02:00:00:00:00:02",
+                    sourceVersion = "366.0",
+                    main = AirPlayDisplayConfig(widthPixels = 1280, heightPixels = 720, mainDisplayCornerMasks = enabled),
+                    cluster = AirPlayDisplayConfig(widthPixels = 960, heightPixels = 360, mainDisplayCornerMasks = true),
+                ),
+            )
+            val displays = (info["displays"] as List<*>).map { it as Map<*, *> }
+            val mainDisplay = displays.single { it["uuid"] == AirPlayInfoPlist.MAIN_UUID }
+            val clusterDisplay = displays.single { it["uuid"] == AirPlayInfoPlist.ALT_UUID }
+            assertFalse(clusterDisplay.containsKey("cornerMasks"))
+            return mainDisplay
+        }
+
+        assertEquals(true, displayWithMasks(true)["cornerMasks"])
+        assertEquals(false, displayWithMasks(false)["cornerMasks"])
+        assertFalse(displayWithMasks(null).containsKey("cornerMasks"))
+    }
+
+    @Test
+    fun mainDisplayDisableSafeAreaOmitsSafeAreaFromViewAreasWhileKeepingClusterIntact() {
+        val config = AirPlayConfig(
+            deviceName = "test",
+            deviceId = "02:00:00:00:00:02",
+            btMac = "02:00:00:00:00:02",
+            sourceVersion = "366.0",
+            main = AirPlayDisplayConfig(widthPixels = 1280, heightPixels = 720, mainDisplayCornerMasks = true),
+            cluster = AirPlayDisplayConfig(widthPixels = 960, heightPixels = 360, mainDisplayDisableSafeArea = true),
+        )
+        val info = AirPlayInfoPlist.build(config)
+        val displays = (info["displays"] as List<*>).map { it as Map<*, *> }
+        val mainDisplay = displays.single { it["uuid"] == AirPlayInfoPlist.MAIN_UUID }
+        val clusterDisplay = displays.single { it["uuid"] == AirPlayInfoPlist.ALT_UUID }
+
+        val mainView = (mainDisplay["viewAreas"] as List<*>).single() as Map<*, *>
+        assertFalse(mainView.containsKey("safeArea"))
+
+        // AltScreen (cluster) must keep its safeArea even if mainDisplayDisableSafeArea was passed
+        val clusterView = (clusterDisplay["viewAreas"] as List<*>).single() as Map<*, *>
+        assertTrue(clusterView.containsKey("safeArea"))
     }
 }

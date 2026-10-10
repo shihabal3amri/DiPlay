@@ -195,6 +195,9 @@
     <string name="done">Готово</string>
     <string name="drag_to_move_pinch_to_zoom">Перетаскивайте для перемещения, щипайте для масштабирования</string>
     <string name="draw_outside_safe_area">Рисовать за пределами безопасной области</string>
+    <string name="rect_fill_disable_safe_area">Заполнение центрального экрана, отключить безопасную область</string>
+    <string name="rect_fill_disable_safe_area_description">Не объявлять safeArea в AirPlay info центрального экрана во избежание конфликта с cornerMasks</string>
+    <string name="safe_area_disabled_rect_fill_summary">Безопасная область центр. экрана: отключена (прямоугольное заполнение)</string>
     <string name="driving_side">Сторона управления</string>
     <string name="efficient_video">Энергоэффективное видео</string>
     <string name="enable_the_car_s_bluetooth_and_pair_your_iphone_first">Сначала включите Bluetooth автомобиля и свяжите iPhone.</string>

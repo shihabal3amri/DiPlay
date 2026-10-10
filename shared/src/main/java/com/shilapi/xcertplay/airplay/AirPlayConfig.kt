@@ -29,6 +29,15 @@ data class AirPlayDisplayConfig(
     val viewAreas: List<AirPlayViewArea>? = null,
     /** The area CarPlay starts in, an index into [viewAreas]. */
     val initialViewArea: Int = 0,
+    /**
+     * When true, CarPlay video stream fills the entire display with right-angled corners.
+     * With corner masks advertised, iOS sends an unclipped rectangular video stream alongside
+     * corner mask PNG assets for blending. On rectangular vehicle screens, advertising true allows
+     * the video stream to fill the entire display as right angles without requiring additional clipping.
+     */
+    val mainDisplayCornerMasks: Boolean? = null,
+    /** When true, do not declare safeArea in viewAreas dictionary to avoid conflict with cornerMasks. */
+    val mainDisplayDisableSafeArea: Boolean = (mainDisplayCornerMasks == true),
 )
 
 /**
