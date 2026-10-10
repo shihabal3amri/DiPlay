@@ -44,6 +44,7 @@ If a problem remains, reproduce it on **0.2.16**, then use **Settings → Diagno
 on an external router. See the guide for setup, build requirements and the
 BYD DiLink 4.0 / Android 10 clean-install validation result.
 
+- [Contributing](CONTRIBUTING.md)
 - [Install and connect](docs/INSTALL.md)
 - [Compatibility and troubleshooting](docs/COMPATIBILITY.md)
 - [Smooth wireless CarPlay](docs/SMOOTH_WIRELESS.md)
