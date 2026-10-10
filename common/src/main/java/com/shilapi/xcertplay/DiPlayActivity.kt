@@ -952,14 +952,13 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
         val split = row().apply { gravity = Gravity.TOP }
         // The rail scrolls on its own only when the window is too short for every destination.
         split.addView(ScrollView(this@DiPlayActivity).apply {
-            isFillViewport = true
             addView(column().apply {
                 setPadding(0, 0, 0, dp(12))
-                addView(settingsRail(), LinearLayout.LayoutParams(-1, -1))
-            }, LinearLayout.LayoutParams(-1, -1))
+                addView(settingsRail())
+            })
             settingsRailScroll = this
         },
-            LinearLayout.LayoutParams(dp(SettingsLayoutPolicy.railWidthDp(resources.configuration.fontScale)), -1))
+            LinearLayout.LayoutParams(dp(SettingsLayoutPolicy.railWidthDp(resources.configuration.fontScale)), -2))
         split.addView(space(24), LinearLayout.LayoutParams(dp(24), 1))
         split.addView(categoryScroll, LinearLayout.LayoutParams(0, -1, 1f))
         addView(split, LinearLayout.LayoutParams(-1, 0, 1f))
@@ -988,24 +987,18 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
         background = rounded(SURFACE, BORDER)
         setPadding(dp(12), dp(12), dp(12), dp(12))
         val categories = visibleRailCategories()
-        val topCategories = categories.filter { it != SettingsCategory.ABOUT }
-        val hasAbout = categories.contains(SettingsCategory.ABOUT)
-        topCategories.forEach { category ->
-            addView(settingsRailDestination(category), matchButton(0, 52).apply {
-                bottomMargin = dp(8)
+        val itemHeight = if (categories.size <= 4) 64 else 56
+        categories.forEachIndexed { index, category ->
+            addView(settingsRailDestination(category, itemHeight), matchButton(0, itemHeight).apply {
+                bottomMargin = if (index == categories.lastIndex) 0 else dp(8)
             })
-        }
-        if (hasAbout) {
-            addView(View(this@DiPlayActivity).apply {
-                minimumHeight = dp(8)
-            }, LinearLayout.LayoutParams(-1, 0, 1f))
-            addView(settingsRailDestination(SettingsCategory.ABOUT), matchButton(0, 52))
         }
     }
 
-    private fun settingsRailDestination(category: SettingsCategory): View {
+    private fun settingsRailDestination(category: SettingsCategory, itemHeight: Int = 56): View {
         val selected = settingsCategory == category
         val title = settingsCategoryTitle(category)
+        val subtitle = settingsRailSubtitle(category)
         return row().apply {
             gravity = Gravity.CENTER_VERTICAL
             isClickable = true
@@ -1029,19 +1022,40 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
                     cornerRadius = dp(2).toFloat()
                 }
                 importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
-            }, LinearLayout.LayoutParams(dp(4), dp(34)).apply { marginEnd = dp(10) })
+            }, LinearLayout.LayoutParams(dp(4), dp(if (itemHeight >= 64) 40 else 32)).apply { marginEnd = dp(10) })
             addView(ImageView(this@DiPlayActivity).apply {
                 setImageResource(settingsCategoryIcon(category))
                 imageTintList = ColorStateList.valueOf(if (selected) ACCENT else TEXT)
                 importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
             }, LinearLayout.LayoutParams(dp(26), dp(26)).apply { marginEnd = dp(12) })
-            addView(label(title, 16, if (selected) ACCENT else TEXT, true,
-                centreGlyphs = usesChineseGlyphAlignment(resources.configuration.locales[0].language, title)),
-                LinearLayout.LayoutParams(0, -1, 1f))
+            addView(column().apply {
+                gravity = Gravity.CENTER_VERTICAL
+                addView(label(title, 16, if (selected) ACCENT else TEXT, true,
+                    centreGlyphs = usesChineseGlyphAlignment(resources.configuration.locales[0].language, title)))
+                if (subtitle.isNotEmpty()) {
+                    addView(label(subtitle, 12, if (selected) ACCENT else MUTED).apply {
+                        maxLines = 1
+                        ellipsize = android.text.TextUtils.TruncateAt.END
+                        setPadding(0, dp(2), 0, 0)
+                    })
+                }
+            }, LinearLayout.LayoutParams(0, -2, 1f))
             setOnClickListener {
                 openSettingsCategory(category)
             }
         }
+    }
+
+    private fun settingsRailSubtitle(category: SettingsCategory): String = when (category) {
+        SettingsCategory.CONNECTION ->
+            if (CarPlayBackgroundSession.active) getString(R.string.carplay_connected)
+            else getString(R.string.settings_connection_summary)
+        SettingsCategory.DISPLAY -> getString(R.string.settings_display_summary)
+        SettingsCategory.AUDIO -> getString(R.string.settings_audio_summary)
+        SettingsCategory.DILINK -> getString(R.string.settings_dilink_category_summary)
+        SettingsCategory.ADVANCED -> getString(R.string.settings_advanced_subtitle)
+        SettingsCategory.ABOUT -> getString(R.string.about_public_preview_prefix, version())
+        SettingsCategory.OVERVIEW -> getString(R.string.settings_overview_subtitle)
     }
 
     private fun settingsCategoryIcon(category: SettingsCategory): Int = when (category) {
