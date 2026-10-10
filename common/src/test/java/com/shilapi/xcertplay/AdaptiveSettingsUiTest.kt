@@ -750,6 +750,35 @@ class AdaptiveSettingsUiTest {
         verifyAboutDestination()
     }
 
+    @Test
+    @Config(qualifiers = "en-w1000dp-h700dp")
+    fun expandedSettingsRailDocksAboutToTheBottomWithSpacer() {
+        val screen = openSettings()
+        val density = screen.resources.displayMetrics.density
+        val root = screen.findViewById<ViewGroup>(android.R.id.content).getChildAt(0)
+        val width = Math.round(1000 * density)
+        val height = Math.round(700 * density)
+        root.measure(
+            View.MeasureSpec.makeMeasureSpec(width, View.MeasureSpec.EXACTLY),
+            View.MeasureSpec.makeMeasureSpec(height, View.MeasureSpec.EXACTLY),
+        )
+        root.layout(0, 0, width, height)
+
+        val railScroll = ReflectionHelpers.getField<ScrollView>(screen, "settingsRailScroll")
+        val railColumn = railScroll.getChildAt(0) as ViewGroup
+        val rail = railColumn.getChildAt(0) as ViewGroup
+        val aboutDestination = descendants(rail).single {
+            it.contentDescription == screen.getString(R.string.settings_open_category, screen.getString(R.string.about))
+        }
+        val audioDestination = descendants(rail).single {
+            it.contentDescription == screen.getString(R.string.settings_open_category, screen.getString(R.string.audio))
+        }
+        assertTrue("About should be docked below audio with a flexible spacer",
+            aboutDestination.top > audioDestination.bottom + Math.round(20 * density))
+        assertEquals("About should align to the bottom of the rail card",
+            rail.height - rail.paddingBottom, aboutDestination.bottom)
+    }
+
     private fun verifyAboutDestination() {
         val screen = openSettings()
         fun open(title: Int) {

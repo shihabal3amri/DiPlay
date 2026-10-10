@@ -952,13 +952,14 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
         val split = row().apply { gravity = Gravity.TOP }
         // The rail scrolls on its own only when the window is too short for every destination.
         split.addView(ScrollView(this@DiPlayActivity).apply {
+            isFillViewport = true
             addView(column().apply {
                 setPadding(0, 0, 0, dp(12))
-                addView(settingsRail())
-            })
+                addView(settingsRail(), LinearLayout.LayoutParams(-1, -1))
+            }, LinearLayout.LayoutParams(-1, -1))
             settingsRailScroll = this
         },
-            LinearLayout.LayoutParams(dp(SettingsLayoutPolicy.railWidthDp(resources.configuration.fontScale)), -2))
+            LinearLayout.LayoutParams(dp(SettingsLayoutPolicy.railWidthDp(resources.configuration.fontScale)), -1))
         split.addView(space(24), LinearLayout.LayoutParams(dp(24), 1))
         split.addView(categoryScroll, LinearLayout.LayoutParams(0, -1, 1f))
         addView(split, LinearLayout.LayoutParams(-1, 0, 1f))
@@ -986,10 +987,19 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
     private fun settingsRail(): LinearLayout = column().apply {
         background = rounded(SURFACE, BORDER)
         setPadding(dp(12), dp(12), dp(12), dp(12))
-        visibleRailCategories().forEach { category ->
+        val categories = visibleRailCategories()
+        val topCategories = categories.filter { it != SettingsCategory.ABOUT }
+        val hasAbout = categories.contains(SettingsCategory.ABOUT)
+        topCategories.forEach { category ->
             addView(settingsRailDestination(category), matchButton(0, 52).apply {
-                bottomMargin = if (category == SettingsCategory.entries.last()) 0 else dp(8)
+                bottomMargin = dp(8)
             })
+        }
+        if (hasAbout) {
+            addView(View(this@DiPlayActivity).apply {
+                minimumHeight = dp(8)
+            }, LinearLayout.LayoutParams(-1, 0, 1f))
+            addView(settingsRailDestination(SettingsCategory.ABOUT), matchButton(0, 52))
         }
     }
 
