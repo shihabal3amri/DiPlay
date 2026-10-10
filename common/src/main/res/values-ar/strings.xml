@@ -652,6 +652,10 @@
     <string name="call_echo_cancellation_description">يحاول تقليل صدى السماعات المرسل إلى الطرف الآخر أثناء مكالمات CarPlay. تعتمد النتيجة على وحدة السيارة. يُطبَّق عند الاتصال التالي بـ CarPlay.</string>
     <string name="call_voice_filter">أصوات مكالمات أوضح (تجريبي)</string>
     <string name="call_voice_filter_description">يخفض الجهير في صوت مكالمات CarPlay. قد يغيّر صوت المتحدثين. يُطبَّق عند الاتصال التالي بـ CarPlay.</string>
+    <string name="phone_audio_route">صوت الهاتف في السيارة لمكالمات CarPlay (تجريبي)</string>
+    <string name="phone_audio_route_description">يُبقي مكالمة Telecom مفتوحة أثناء مكالمات CarPlay ليتحول صوت السيارة إلى وضع الهاتف وتعمل خاصية إلغاء الصدى الخاصة بها. لا يعمل مُلغي الصدى في DiPlay في هذه المكالمات. قد يخرج صوتك أعلى أو مشوّهاً. متوقف افتراضياً، ويُطبَّق في المكالمة التالية.</string>
+    <string name="phone_audio_route_apps">صوت الهاتف في السيارة لمكالمات VoIP في التطبيقات الأخرى (تجريبي)</string>
+    <string name="phone_audio_route_apps_description">يفعل الشيء نفسه أثناء مكالمة صوتية أو مرئية في تطبيق آخر مثل WhatsApp أو Telegram أو Zoom. لا تتأثر الرسائل الصوتية والتسجيلات العادية لأن السيارة تكتم الميكروفون العادي في هذا الوضع. يتطلب تشغيل DiPlay، لذا يفعّل أيضاً خدمة إمكانية الوصول لأزرار المقود. متوقف افتراضياً.</string>
     <string name="smooth_video">فيديو سلس (تجريبي)</string>
     <string name="smooth_video_description">يعرض كل إطار من الشاشة الرئيسية لـ CarPlay في الوقت الذي وسمه به iPhone مع تأخير قصير، بدلًا من عرضه فور فك ترميزه. يضبط التأخير نفسه تلقائيًا حتى يُفك ترميز معظم الإطارات في الوقت المناسب، وتُعرض الإطارات غير الجاهزة في وقتها رغم ذلك فورًا. قد يبدو التمرير أكثر انتظامًا، لكن الاستجابة للمس تتأخر. لا تنطبق إعدادات الصورة. يعيد توصيل CarPlay.</string>
     <string name="settings_direct_video_output">إخراج الفيديو المباشر (تجريبي)</string>

@@ -710,6 +710,10 @@
     <string name="call_echo_cancellation_description">嘗試減少 CarPlay 通話中傳送給對方的喇叭回音。效果取決於車用主機。下次連線至 CarPlay 時生效。</string>
     <string name="call_voice_filter">更清晰的通話人聲（實驗性）</string>
     <string name="call_voice_filter_description">削減 CarPlay 通話音訊的低音。這可能改變人聲的音色。下次連線至 CarPlay 時生效。</string>
+    <string name="phone_audio_route">CarPlay 通話使用車機電話音訊（實驗性）</string>
+    <string name="phone_audio_route_description">CarPlay 通話期間保持一個 Telecom 通話，讓車機切換到電話音訊狀態並啟用內建的回音消除。這些通話中 DiPlay 自己的回音消除不會運作。你的聲音可能變大或失真。預設關閉，下一次通話生效。</string>
+    <string name="phone_audio_route_apps">其他應用程式的 VoIP 通話使用車機電話音訊（實驗性）</string>
+    <string name="phone_audio_route_apps_description">當 WhatsApp、Telegram、Zoom 等其他應用程式處於語音或視訊通話時執行相同操作。語音訊息和一般錄音不受影響，因為車機在此狀態下會靜音一般麥克風。需要 DiPlay 保持執行，因此同時會開啟方向盤按鍵無障礙服務。預設關閉。</string>
     <string name="smooth_video">流暢影片（實驗性）</string>
     <string name="smooth_video_description">依 iPhone 為每一幀標記的時間加上一段短延遲顯示 CarPlay 主畫面，而不是解碼後立即顯示。延遲會自動調整，讓大多數畫面能及時解碼；仍未按時準備好的畫面會立即顯示。捲動可能更平順，但觸控反應會變慢。畫面調整不適用。變更後會重新連線至 CarPlay。</string>
     <string name="settings_direct_video_output">直接影片輸出（實驗性）</string>

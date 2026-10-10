@@ -21,6 +21,8 @@ object BydOutputSettings {
     private const val KEY_HUD_SONG = "hud_song"
     private const val KEY_CARPLAY_CALLS = "carplay_calls"
     private const val KEY_CARPLAY_CALL_CONTROLS = "carplay_call_controls_experimental"
+    private const val KEY_PHONE_AUDIO_ROUTE = "phone_audio_route_experimental"
+    private const val KEY_PHONE_AUDIO_ROUTE_APPS = "phone_audio_route_apps_experimental"
     private const val KEY_OEM_CLUSTER_HOLD = "oem_cluster_hold"
     private const val KEY_LEGACY_VEHICLE_PROBE = "legacy_vehicle_probe"
     const val DEFAULT_LOW_CHARGE_PERCENT = 20
@@ -91,6 +93,21 @@ object BydOutputSettings {
 
     fun setCarPlayCallControls(context: Context, enabled: Boolean) =
         prefs(context).edit().putBoolean(KEY_CARPLAY_CALL_CONTROLS, enabled).apply()
+
+    /**
+     * Hold a Telecom call during CarPlay calls so the car's own phone audio state, and its echo canceller,
+     * handle the call. Replaces DiPlay's own canceller for those calls; applies at the next call.
+     */
+    fun phoneAudioRoute(context: Context): Boolean = prefs(context).getBoolean(KEY_PHONE_AUDIO_ROUTE, false)
+
+    fun setPhoneAudioRoute(context: Context, enabled: Boolean) =
+        prefs(context).edit().putBoolean(KEY_PHONE_AUDIO_ROUTE, enabled).apply()
+
+    /** The same for voice-over-IP calls in other apps; only calls that record from VOICE_COMMUNICATION qualify. */
+    fun phoneAudioRouteApps(context: Context): Boolean = prefs(context).getBoolean(KEY_PHONE_AUDIO_ROUTE_APPS, false)
+
+    fun setPhoneAudioRouteApps(context: Context, enabled: Boolean) =
+        prefs(context).edit().putBoolean(KEY_PHONE_AUDIO_ROUTE_APPS, enabled).apply()
 
     /** Show a new song on the dashboard for a few seconds only, then an empty card. */
     fun clusterSongOnChange(context: Context): Boolean = prefs(context).getBoolean(KEY_CLUSTER_SONG_ON_CHANGE, false)

@@ -53,6 +53,7 @@ import com.shilapi.xcertplay.hud.BydNavigationOutputs
 import com.shilapi.xcertplay.hud.BydFieldSource
 import com.shilapi.xcertplay.hud.BydOutputSettings
 import com.shilapi.xcertplay.hud.BydVehicleCapabilities
+import com.shilapi.xcertplay.telecom.PhoneAudioRoute
 import com.shilapi.xcertplay.hud.BydVehicleField
 import com.shilapi.xcertplay.hud.BydVehicleFieldStore
 import com.shilapi.xcertplay.hud.BydVehicleProbeOutcome
@@ -349,6 +350,7 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
         rememberLaunchAppearance()
         languagePreferenceAtCreate = AppLocale.preference(this)
         com.shilapi.xcertplay.hud.BydNavigationOutputs.onAppOpened(applicationContext)
+        PhoneAudioRoute.attach(applicationContext)
         WheelKeyService.restoreIfNeeded(this)
         WindowCompat.setDecorFitsSystemWindows(window, false)
         if (Build.VERSION.SDK_INT >= 28) {
@@ -1810,6 +1812,21 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
                 AirPlayPersistence.loadCallVoiceFilter(this)) {
                 AirPlayPersistence.saveCallVoiceFilter(this, it)
                 markReconnectNeeded()
+            }
+            toggle(card, getString(R.string.phone_audio_route), getString(R.string.phone_audio_route_description),
+                BydOutputSettings.phoneAudioRoute(this)) {
+                BydOutputSettings.setPhoneAudioRoute(this, it)
+                PhoneAudioRoute.settingsChanged(this)
+            }
+            toggle(card, getString(R.string.phone_audio_route_apps), getString(R.string.phone_audio_route_apps_description),
+                BydOutputSettings.phoneAudioRouteApps(this)) {
+                BydOutputSettings.setPhoneAudioRouteApps(this, it)
+                PhoneAudioRoute.settingsChanged(this)
+                // The watcher for other apps' calls needs DiPlay running outside a CarPlay session too, which
+                // the accessibility service provides.
+                if (it && !WheelKeyService.connected()) {
+                    Thread({ WheelKeyService.enableOverAdb(this) }, "diplay-phone-audio-enable").start()
+                }
             }
             audioFocusControls(card)
             if (resources.getBoolean(R.bool.config_advanced_audio_channel_mapping)) {

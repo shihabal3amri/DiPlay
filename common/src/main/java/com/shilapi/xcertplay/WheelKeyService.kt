@@ -16,6 +16,7 @@ import android.widget.Toast
 import java.util.concurrent.atomic.AtomicBoolean
 import com.shilapi.xcertplay.adb.AdbKeys
 import com.shilapi.xcertplay.adb.LocalAdb
+import com.shilapi.xcertplay.telecom.PhoneAudioRoute
 import com.shilapi.xcertplay.airplay.AirPlayKnobState
 import com.shilapi.xcertplay.airplay.CarPlayMediaButton
 import com.shilapi.xcertplay.glance.CarPlayGlance
@@ -90,6 +91,8 @@ class WheelKeyService : AccessibilityService() {
         running = this
         NavigationWheelSettings.recordAuthorization(this)
         CarPlayCallKeys.install(this)
+        // Lets the watcher for other apps' calls run whenever this accessibility service does.
+        PhoneAudioRoute.attach(this)
         refreshEligibility()
         handler.removeCallbacks(pollEligibility)
         handler.postDelayed(pollEligibility, ELIGIBILITY_POLL_MILLIS)
