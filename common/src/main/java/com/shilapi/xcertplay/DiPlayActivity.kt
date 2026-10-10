@@ -4841,6 +4841,11 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
     }
 
     private fun refreshStatus() {
+        if (setupError != null) {
+            setupError = runCatching { DiPlayBootstrap.ensure(this, AirPlayPersistence.loadMfiTarget(this)) }.exceptionOrNull()?.let {
+                getString(R.string.setup_error_auth)
+            }
+        }
         val running = CarPlayBackgroundSession.hasSession()
         status?.text = when {
             setupError != null -> getString(R.string.setup_needs_attention)
