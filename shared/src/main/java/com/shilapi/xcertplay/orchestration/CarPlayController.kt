@@ -2426,20 +2426,48 @@ class CarPlayController(
             if (service != null && owner != null) closeBestEffort("AirPlay service") { service.detachWireless(owner) }
         }
 
-    private fun isBluetoothDeviceConnected(device: BluetoothDevice): Boolean = try {
-        val method = BluetoothDevice::class.java.getMethod("isConnected")
-        method.invoke(device) as? Boolean == true
-    } catch (error: ReflectiveOperationException) {
-        false
-    } catch (error: RuntimeException) {
-        Log.w(IphoneCarPlayConfiguration.TAG, "Could not read Bluetooth connection state", error)
-        false
+    private fun isBluetoothDeviceConnected(device: BluetoothDevice): Boolean {
+        val reflectionConnected = try {
+            val method = BluetoothDevice::class.java.getMethod("isConnected")
+            method.invoke(device) as? Boolean == true
+        } catch (_: ReflectiveOperationException) {
+            false
+        } catch (error: RuntimeException) {
+            Log.w(IphoneCarPlayConfiguration.TAG, "Could not read Bluetooth connection state via reflection", error)
+            false
+        }
+        if (reflectionConnected) return true
+
+        val adapter = bluetoothAdapter ?: return false
+        val sinkProfiles = intArrayOf(
+            BluetoothProfile.HEADSET,
+            BluetoothProfile.A2DP,
+            11, // BluetoothProfile.A2DP_SINK
+            16, // BluetoothProfile.HEADSET_CLIENT
+        )
+        for (profile in sinkProfiles) {
+            try {
+                if (adapter.getProfileConnectionState(profile) == BluetoothProfile.STATE_CONNECTED) {
+                    val connected = connectedBluetoothDevices(adapter, profile, BluetoothProfile::class.java)
+                    if (connected.any { it.address.equals(device.address, ignoreCase = true) }) {
+                        return true
+                    }
+                }
+            } catch (error: SecurityException) {
+                Log.w(IphoneCarPlayConfiguration.TAG, "Permission denied reading profile connection state ", error)
+            } catch (error: RuntimeException) {
+                Log.w(IphoneCarPlayConfiguration.TAG, "Error reading profile connection state ", error)
+            }
+        }
+        return false
     }
 
     private fun connectedBluetoothDevices(adapter: BluetoothAdapter): Set<BluetoothDevice> =
         buildSet {
             addAll(connectedBluetoothDevices(adapter, BluetoothProfile.HEADSET, BluetoothHeadset::class.java))
             addAll(connectedBluetoothDevices(adapter, BluetoothProfile.A2DP, BluetoothA2dp::class.java))
+            addAll(connectedBluetoothDevices(adapter, 11, BluetoothProfile::class.java)) // BluetoothProfile.A2DP_SINK
+            addAll(connectedBluetoothDevices(adapter, 16, BluetoothProfile::class.java)) // BluetoothProfile.HEADSET_CLIENT
         }
 
     private fun <T : BluetoothProfile> connectedBluetoothDevices(

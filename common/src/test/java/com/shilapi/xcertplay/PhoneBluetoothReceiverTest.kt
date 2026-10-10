@@ -53,4 +53,11 @@ class PhoneBluetoothReceiverTest {
         assertTrue(launches.single().getBooleanExtra(PhoneBluetoothReceiver.EXTRA_AUTO_CONNECT, false))
         assertTrue(PhoneWakeDiagnostics.report(app).contains("result=startActivity-returned"))
     }
+
+    @Test fun phoneAddressMatchesCaseInsensitively() {
+        assertEquals(selected.lowercase(), DiPlayPreferences.phoneAddress(app))
+        val device = BluetoothAdapter.getDefaultAdapter().getRemoteDevice(selected)
+        assertEquals(selected, device.address)
+        assertTrue(selected.equals(DiPlayPreferences.phoneAddress(app), ignoreCase = true))
+    }
 }
