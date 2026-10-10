@@ -23,18 +23,19 @@ The Settings screen is grouped by driver goal, not by implementation.
 
 ### Choose the category
 
-Ask which goal the driver has when they look for the setting. Use the first row that fits.
+The Settings UI organizes categories into two modes:
+- **Everyday Mode (Default)**: 4 clean categories visible out of the box (Connection, Display, Audio, About). Fits in one screen without rail scrolling.
+- **Geek Mode (5 taps on version in About)**: reveals 2 dedicated power-user categories (DiLink and Advanced / Lab & Diagnostics).
 
 | Category | Put a setting here when it controls… | Examples |
 | --- | --- | --- |
-| Connection | how the iPhone connects and how DiPlay starts | connection setup, connect on open, start with the car, USB permissions, car hotspot automation, iPhone choice, Android permissions |
-| Display | how CarPlay looks on the head-unit screen | day/night mode, picture, size, resolution, frame rate, dock, system bars, multi-window resolution |
-| Audio | what the driver hears | media and navigation streams, music buffer |
-| Navigation | location and turn-by-turn guidance | location to iPhone, BYD HUD and cluster guidance |
-| Vehicle | how CarPlay fits this car and its driver | driving side, wheel keys (Siri, BYD joystick and map zoom), car button, gestures that conflict with the head unit |
-| Diagnostics | troubleshooting evidence | diagnostic reports |
-| Advanced | experimental, firmware-specific or risky behavior | dashboard map, split screen, screen rotation, side panel, HEVC video, audio focus, audio channel mapping, buffered music, vehicle data |
-| Overview | nothing new | see "Overview" below |
+| Connection | everyday iPhone connectivity and receiver lifecycle | connection setup, connect on open, USB permissions, iPhone choice, Android permissions |
+| Display | everyday appearance and layout on head unit | day/night mode, picture, size, resolution, frame rate, dock, system bars, driving side |
+| Audio | everyday sound routing | media and navigation streams, call stream |
+| About | version, Geek Mode toggle, and app language | version tap easter egg, language choice, updates |
+| DiLink (Geek Mode) | all BYD vehicle hardware and platform profiles | steering wheel keys (Siri, call keys, zoom, joystick, navigation wheel volume), car button, cluster map, HUD navi, ambient lighting, BYD hotspot, vehicle data |
+| Advanced (Geek Mode) | experimental behavior and diagnostics | lab display (split screen, rotation, side panel), advanced media (HEVC, smooth video, echo cancellation, voice filter), GPS location to iPhone, diagnostics |
+| Overview | landing page for compact layout | quick links and readiness |
 
 A setting goes to Advanced when it is experimental, depends on specific firmware, or is an opt-in that can break sound, video or the connection on some head units.
 A control that fixes a common problem and is safe at its default (for example the audio stream choice) stays in its category.
@@ -82,3 +83,16 @@ Spacing, size and shape in the Settings screen MUST come from one place.
    `AdaptiveSettingsUiTest.overviewLinksToEveryOtherCategory` checks this.
 5. A layout change MUST include compact and full screenshots with a large font scale.
    Add an Arabic (right-to-left) screenshot when the change touches row alignment.
+
+### DiLink Hardware Platforms & PR Guidelines
+
+When introducing or modifying BYD vehicle features, identify which DiLink platform the feature applies to:
+- `DiLinkProfile.DILINK_150` (31.x / 34.x, Android 13+, BYD 9000 / 8295 / 8+ Gen1, DiLink 5.1 / 6.0)
+- `DiLinkProfile.DILINK_100` (23.x, Android 12, Snapdragon 778G / 782G, DiLink 5.0)
+- `DiLinkProfile.DILINK_50_4` (16.x / 17.x / 21.x, Android 10, Snapdragon 690 / 665, DiLink 4.0)
+- `DiLinkProfile.DILINK_50_3` (13.x / 15.x / 18.x, Android 9 / 10, Snapdragon 665 / 6125, DiLink 3.0)
+- `DiLinkProfile.DILINK_20` (2.x / 4.x / 5.x / 8.x / 26.x, MTK P35 / Snapdragon 625, DiLink 2.0 / 2.1)
+- `GENERIC` (Non-BYD or universal features)
+
+Ensure universal features (wheel call answer/hangup, wheel zoom, joystick, Siri key, hotspot, song, battery SOC) are available across all platforms.
+When submitting a Pull Request, complete the checklist in `.github/pull_request_template.md` with the verified DiLink platform and vehicle controller version.

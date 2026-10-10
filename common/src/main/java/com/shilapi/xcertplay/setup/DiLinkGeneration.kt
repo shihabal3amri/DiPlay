@@ -46,13 +46,20 @@ enum class DiLinkGeneration(val key: String) {
 
         private fun prefs(context: Context) = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
 
-        fun confirmed(context: Context): DiLinkGeneration? = fromKey(prefs(context).getString(KEY, null))
+        fun confirmed(context: Context): DiLinkGeneration? =
+            DiLinkProfile.manualOverride(context)?.let(DiLinkProfile::toGeneration)
+                ?: fromKey(prefs(context).getString(KEY, null))
 
         /** The driver's confirmed choice, or the detected generation when they have not picked one. */
         fun current(context: Context): DiLinkGeneration = confirmed(context) ?: detect().generation
 
         fun save(context: Context, generation: DiLinkGeneration) {
             prefs(context).edit().putString(KEY, generation.key).apply()
+            DiLinkProfile.setManualOverride(context, DiLinkProfile.fromGeneration(generation))
+        }
+
+        fun clear(context: Context) {
+            prefs(context).edit().remove(KEY).apply()
         }
     }
 }

@@ -200,7 +200,7 @@ class NightModeSettingsTest {
 
     private fun renderOverview() {
         ReflectionHelpers.setField(activity, "page", "settings")
-        ReflectionHelpers.setField(activity, "settingsCategory", SettingsCategory.OVERVIEW)
+        ReflectionHelpers.setField(activity, "settingsCategory", SettingsCategory.DISPLAY)
         ReflectionHelpers.callInstanceMethod<Unit>(activity, "render")
         page = ReflectionHelpers.getField<ScrollView>(activity, "rootScroll").getChildAt(0) as LinearLayout
     }
