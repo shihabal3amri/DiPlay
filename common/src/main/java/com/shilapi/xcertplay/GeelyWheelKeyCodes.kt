@@ -10,10 +10,13 @@ internal object GeelyWheelKeyCodes {
     const val KEY_PLAY_PAUSE = 200085
     const val KEY_NEXT = 200087
     const val KEY_PREVIOUS = 200088
+    // KEYCODE_R_SEEK_*: long-press fast-forward / rewind on firmware that reports them separately.
+    const val KEY_SEEK_NEXT = 210005
+    const val KEY_SEEK_PREVIOUS = 210006
     // KEYCODE_R_VOICE_ASSIST: the steering-wheel microphone key (long press used to open HiCar).
     const val KEY_VOICE_ASSIST = 200231
 
-    val ALL = intArrayOf(KEY_PLAY_PAUSE, KEY_NEXT, KEY_PREVIOUS, KEY_VOICE_ASSIST)
+    val ALL = intArrayOf(KEY_PLAY_PAUSE, KEY_NEXT, KEY_PREVIOUS, KEY_SEEK_NEXT, KEY_SEEK_PREVIOUS, KEY_VOICE_ASSIST)
     val SIRI_ONLY = intArrayOf(KEY_VOICE_ASSIST)
 
     /**

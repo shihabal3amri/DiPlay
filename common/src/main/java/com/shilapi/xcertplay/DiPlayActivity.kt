@@ -2413,6 +2413,39 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
             }
             if (bydNavigation) clusterSongSwitch(card)
         }
+        // Universal secondary-display HUD (DisplayManager + Presentation) for Geely/Lynk and Meizu Flyme.
+        val universalHudDisplays = GeelyHudProjection.availableDisplays(this)
+        filteredSection(content, SettingsSection.BYD_NAVIGATION,
+            getString(R.string.universal_hud_title), R.drawable.ic_dp_navigation) { card ->
+            if (universalHudDisplays.isEmpty()) {
+                card.addView(label(getString(R.string.universal_hud_no_displays), 14, WARNING))
+            } else {
+                toggle(card, getString(R.string.universal_hud_title),
+                    getString(R.string.universal_hud_description),
+                    AirPlayPersistence.loadGeelyHudEnabled(this)) {
+                    AirPlayPersistence.saveGeelyHudEnabled(this, it)
+                    GeelyHudProjection.setEnabled(this, it)
+                    render()
+                }
+                if (AirPlayPersistence.loadGeelyHudEnabled(this)) {
+                    choice(card, getString(R.string.universal_hud_select_display),
+                        universalHudDisplays.map { "${it.name} (${it.id}, ${it.width}x${it.height})" },
+                        universalHudDisplays.indexOfFirst {
+                            it.id == AirPlayPersistence.loadGeelyHudDisplayId(this)
+                        }.coerceAtLeast(0)) { index ->
+                        GeelyHudProjection.selectDisplay(this, universalHudDisplays[index])
+                        render()
+                    }
+                    choice(card, getString(R.string.universal_hud_scale),
+                        AirPlayPersistence.GEELY_HUD_SCALE_PERCENTS.map { "$it%" },
+                        AirPlayPersistence.GEELY_HUD_SCALE_PERCENTS.indexOf(
+                            AirPlayPersistence.loadGeelyHudScalePercent(this)
+                        ).coerceAtLeast(0)) { index ->
+                        GeelyHudProjection.setScale(this, AirPlayPersistence.GEELY_HUD_SCALE_PERCENTS[index])
+                    }
+                }
+            }
+        }
         filteredSection(content, SettingsSection.PERMISSIONS_AND_HELP,
             getString(R.string.permissions_and_connection_help), R.drawable.ic_dp_permissions) { card ->
             card.addView(label(getString(R.string.nearby_devices_connects_your_iphone_microphone_enables_sir), 16, MUTED))

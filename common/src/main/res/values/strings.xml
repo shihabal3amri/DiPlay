@@ -728,6 +728,11 @@
     <string name="oem_cluster_hold_package">Disable the whole stock map</string>
     <string name="song_on_hud">Song or lyrics on the HUD</string>
     <string name="song_on_hud_description">Show the title or lyrics supplied by the phone while no navigation guidance is active. Navigation directions and road names take priority.</string>
+    <string name="universal_hud_title">Navigation on secondary display (HUD)</string>
+    <string name="universal_hud_description">Project the next CarPlay turn, distance and road name onto a secondary display through the standard Android DisplayManager. Works on head units that expose the HUD as a display, including Geely/Lynk and Meizu Flyme.</string>
+    <string name="universal_hud_select_display">HUD display</string>
+    <string name="universal_hud_scale">HUD scale</string>
+    <string name="universal_hud_no_displays">No secondary display found. Connect the HUD or check that the head unit exposes it to Android.</string>
     <string name="hotspot_network_not_ready">Hotspot network is not ready</string>
     <string name="first_tcp_timeout">The iPhone did not connect to CarPlay in time</string>
     <string name="wireless_startup_retries_exhausted">Automatic retries stopped. Check the connection and retry manually.</string>

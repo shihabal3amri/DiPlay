@@ -1507,4 +1507,52 @@ object AirPlayPersistence {
 
     private fun safeAreaKey(widthPixels: Int, heightPixels: Int): String =
         "$SAFE_AREA_KEY_PREFIX${widthPixels}x$heightPixels"
+
+    // -----------------------------------------------------------------------
+    // Geely / universal secondary-display HUD (DisplayManager + Presentation)
+    // -----------------------------------------------------------------------
+
+    private const val KEY_GEELY_HUD_ENABLED = "geely_hud_enabled"
+    private const val KEY_GEELY_HUD_DISPLAY_ID = "geely_hud_display_id"
+    private const val KEY_GEELY_HUD_DISPLAY_NAME = "geely_hud_display_name"
+    private const val KEY_GEELY_HUD_SCALE_PERCENT = "geely_hud_scale_percent"
+
+    val GEELY_HUD_SCALE_PERCENTS = listOf(60, 70, 80, 90, 100, 110, 120)
+
+    fun loadGeelyHudEnabled(context: Context): Boolean =
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .getBoolean(KEY_GEELY_HUD_ENABLED, false)
+
+    fun saveGeelyHudEnabled(context: Context, value: Boolean) {
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .edit().putBoolean(KEY_GEELY_HUD_ENABLED, value).apply()
+    }
+
+    fun loadGeelyHudDisplayId(context: Context): Int =
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .getInt(KEY_GEELY_HUD_DISPLAY_ID, -1)
+
+    fun loadGeelyHudDisplayName(context: Context): String? =
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .getString(KEY_GEELY_HUD_DISPLAY_NAME, null)
+
+    fun saveGeelyHudDisplay(context: Context, displayId: Int, displayName: String?) {
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
+            .putInt(KEY_GEELY_HUD_DISPLAY_ID, displayId)
+            .apply {
+                if (displayName != null) putString(KEY_GEELY_HUD_DISPLAY_NAME, displayName)
+                else remove(KEY_GEELY_HUD_DISPLAY_NAME)
+            }
+            .apply()
+    }
+
+    fun loadGeelyHudScalePercent(context: Context): Int =
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .getInt(KEY_GEELY_HUD_SCALE_PERCENT, 100)
+
+    fun saveGeelyHudScalePercent(context: Context, percent: Int) {
+        require(percent in GEELY_HUD_SCALE_PERCENTS) { "scale percent must be one of $GEELY_HUD_SCALE_PERCENTS" }
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .edit().putInt(KEY_GEELY_HUD_SCALE_PERCENT, percent).apply()
+    }
 }
