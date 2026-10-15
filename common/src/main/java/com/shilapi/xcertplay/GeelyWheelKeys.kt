@@ -34,8 +34,10 @@ import com.shilapi.xcertplay.network.GeelyHeadUnit
  */
 internal object GeelyWheelKeys {
     private const val TAG = "DiPlay-GeelyWheel"
-    private const val INPUT_PACKAGE = "com.geely.inputservice"
-    private const val INPUT_CLASS = "com.geely.inputservice.InputService"
+    private val INPUT_BINDINGS = listOf(
+        "com.geely.inputservice" to "com.geely.inputservice.InputService",
+        "com.geely.service.oneosapi" to "com.geely.service.oneosapi.OneOSApiService",
+    )
 
     private const val RETRY_MILLIS = 3_000L
 
@@ -71,10 +73,14 @@ internal object GeelyWheelKeys {
 
     private fun bindLocked() {
         val context = appContext ?: return
-        val intent = Intent().setComponent(ComponentName(INPUT_PACKAGE, INPUT_CLASS))
-        bound = runCatching { context.bindService(intent, connection, Context.BIND_AUTO_CREATE) }
-            .getOrDefault(false)
-        Log.i(TAG, "bind geely input service requested=$bound")
+        for ((packageName, className) in INPUT_BINDINGS) {
+            val intent = Intent().setComponent(ComponentName(packageName, className))
+            bound = runCatching { context.bindService(intent, connection, Context.BIND_AUTO_CREATE) }
+                .getOrDefault(false)
+            Log.i(TAG, "bind $className requested=$bound")
+            if (bound) return
+        }
+        Log.w(TAG, "no Geely input service available on this firmware")
     }
 
     private val connection = object : ServiceConnection {

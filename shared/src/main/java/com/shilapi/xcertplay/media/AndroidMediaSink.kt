@@ -542,6 +542,8 @@ class AndroidMediaSink(
             val uplink = microphoneUplinks.computeIfAbsent(id) {
                 MicrophoneUplink(config, onAudioDiagnostic,
                     speakerphoneCall = speakerphoneCall,
+                    microphoneSourceOverride = com.shilapi.xcertplay.vehicle.GeelyFactoryCarPlay
+                        .microphoneSource(config.audioType, wireless = false),
                     echoReference = if (config.audioType == TELEPHONY_AUDIO_TYPE) callEchoReferences[id] else null)
             }
             if (!uplink.start()) {
@@ -2175,15 +2177,19 @@ private class AudioRenderer(
     }
 
     private fun usageFor(channel: AudioChannel): Int = when (channel) {
-        AudioChannel.MEDIA -> AudioAttributes.USAGE_MEDIA
-        AudioChannel.PHONE -> AudioAttributes.USAGE_VOICE_COMMUNICATION
+        AudioChannel.MEDIA -> com.shilapi.xcertplay.vehicle.GeelyFactoryCarPlay
+            .audioUsage("MEDIA", AudioAttributes.USAGE_MEDIA)
+        AudioChannel.PHONE -> com.shilapi.xcertplay.vehicle.GeelyFactoryCarPlay
+            .audioUsage("PHONE", AudioAttributes.USAGE_VOICE_COMMUNICATION)
         // Android 7.x has no assistant usage and would record the track as an unknown usage.
-        AudioChannel.ASSISTANT -> if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            AudioAttributes.USAGE_ASSISTANT
-        } else {
-            AudioAttributes.USAGE_MEDIA
-        }
-        AudioChannel.NAVIGATION -> AudioAttributes.USAGE_ASSISTANCE_NAVIGATION_GUIDANCE
+        AudioChannel.ASSISTANT -> com.shilapi.xcertplay.vehicle.GeelyFactoryCarPlay
+            .audioUsage("SIRI", if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                AudioAttributes.USAGE_ASSISTANT
+            } else {
+                AudioAttributes.USAGE_MEDIA
+            })
+        AudioChannel.NAVIGATION -> com.shilapi.xcertplay.vehicle.GeelyFactoryCarPlay
+            .audioUsage("GUIDANCE", AudioAttributes.USAGE_ASSISTANCE_NAVIGATION_GUIDANCE)
     }
 
     private fun contentTypeFor(contentType: AudioContentType): Int = when (contentType) {

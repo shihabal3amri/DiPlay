@@ -29,6 +29,8 @@ internal class MicrophoneUplink(
     private val config: MicrophoneConfig,
     private val onDiagnostic: (String) -> Unit = {},
     private val speakerphoneCall: Boolean = false,
+    /** Vendor-specific audio source override; when null the standard Android source is used. */
+    private val microphoneSourceOverride: Int? = null,
     /** The call's far-end audio; when set, telephony capture runs DiPlay's own echo canceller. */
     private val echoReference: EchoReference? = null,
     private val echoCancellerFactory: (Int, Int, Int) -> CallEchoCanceller? = { frame, rate, tail ->
@@ -77,6 +79,7 @@ internal class MicrophoneUplink(
         }
 
         val source = when {
+            microphoneSourceOverride != null -> microphoneSourceOverride
             config.audioType == "telephony" -> telephonyMicrophoneSource(
                 speakerphoneCall = speakerphoneCall,
                 carPhoneState = PhoneAudioRoute.carPlayCallsUseCarAudio(),

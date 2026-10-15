@@ -1,4 +1,4 @@
-package com.shilapi.xcertplay
+package com.shilapi.xcertplay.vehicle
 
 import android.media.AudioAttributes
 import android.media.MediaRecorder
@@ -14,14 +14,20 @@ import java.util.Locale
  * the values fill in the experimental accessory identity without requiring a separately
  * provisioned MFi certificate.
  */
-internal object GeelyFactoryCarPlay {
-    private const val TAG = "GeelyFactoryCarPlay"
+object GeelyFactoryCarPlay {
     private const val CONFIG_FILE = "/vendor/etc/carplay/carplay.json"
+
+    /** True when the head unit ships its own CarPlay configuration. */
+    val available: Boolean by lazy { load() != null }
 
     val manufacturer: String? by lazy { load()?.optJSONObject("ManufacturerInfo")?.optString("Manufacturer")?.takeIf { it.isNotBlank() } }
     val model: String? by lazy { load()?.optJSONObject("ManufacturerInfo")?.optString("Model")?.takeIf { it.isNotBlank() } }
     val iconLabel: String? by lazy { load()?.optJSONObject("OemIconInfo")?.optString("OemIconLabel")?.takeIf { it.isNotBlank() } }
 
+    /**
+     * Resolves a vendor-defined `AudioAttributes` usage constant (`AUDIO_USAGE_CP_*`) for
+     * the given CarPlay audio channel. Returns [fallback] when no vendor constant exists.
+     */
     fun audioUsage(kind: String, fallback: Int): Int {
         val key = "AUDIO_USAGE_CP_$kind"
         val frameworkValue = try {
@@ -38,6 +44,10 @@ internal object GeelyFactoryCarPlay {
         return fallback
     }
 
+    /**
+     * Resolves a vendor-defined `MediaRecorder.AudioSource` constant (`AUDIO_SOURCE_*CP_*`)
+     * for the given microphone type. Returns null when the standard source should be used.
+     */
     fun microphoneSource(audioType: String, wireless: Boolean): Int? {
         val prefix = if (wireless) "WIRELESS_" else ""
         val category = when (audioType.lowercase(Locale.ROOT)) {

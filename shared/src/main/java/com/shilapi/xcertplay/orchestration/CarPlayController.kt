@@ -2639,6 +2639,17 @@ class CarPlayController(
                 }
                 if (connected) addAll(connectedBluetoothDevices(adapter, profile, BluetoothProfile::class.java))
             }
+            // Geely/Lynk firmware also reports the phone under vendor profiles 11 and 16;
+            // only asked when the factory CarPlay configuration exists (see GeelyFactoryCarPlay).
+            if (com.shilapi.xcertplay.vehicle.GeelyFactoryCarPlay.available) {
+                for (profile in intArrayOf(11, 16)) {
+                    try {
+                        addAll(connectedBluetoothDevices(adapter, profile, BluetoothProfile::class.java))
+                    } catch (error: SecurityException) {
+                        Log.w(IphoneCarPlayConfiguration.TAG, "Could not read Geely Bluetooth profile $profile", error)
+                    }
+                }
+            }
         }
 
     private fun <T : BluetoothProfile> connectedBluetoothDevices(

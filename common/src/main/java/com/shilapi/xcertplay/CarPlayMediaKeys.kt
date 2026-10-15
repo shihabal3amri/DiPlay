@@ -406,8 +406,15 @@ internal object CarPlayMediaKeys {
     /** The steering-wheel microphone key captured outside the Android key stream (Geely/Lynk). */
     internal fun onExternalSiriKey(): Boolean {
         val active = synchronized(this) { controller } ?: return false
+        // Geely firmware can double-fire the voice key within a few milliseconds; debounce like GePlay.
+        val now = android.os.SystemClock.elapsedRealtime()
+        val last = synchronized(this) { lastSiriKeyAt }
+        if (last != null && now - last < 180) return false
+        synchronized(this) { lastSiriKeyAt = now }
         return runCatching { active.requestSiri() }.getOrDefault(false)
     }
+
+    private var lastSiriKeyAt: Long? = null
 
     private val callback = CarPlayMediaCallback(
         experimentalDiLink3Keys = { appContext?.let(BydOutputSettings::carPlayCallControls) == true },
