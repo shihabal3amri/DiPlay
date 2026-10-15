@@ -1,10 +1,13 @@
-name: Build DiPlay Android TV source APK
+name: Build GeelyPlay source APK
 
 on:
   workflow_dispatch:
+  push:
+    tags:
+      - 'v*'
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   build:
@@ -26,7 +29,24 @@ jobs:
         run: ./gradlew :shared:testDebugUnitTest :common:testDebugUnitTest :mobile:lintDebug :mobile:assembleDebug --stacktrace
       - uses: actions/upload-artifact@v4
         with:
-          name: DiPlay-Android-TV-source-only
+          name: GeelyPlay-source-only
           path: mobile/build/outputs/apk/debug/*.apk
           if-no-files-found: error
           retention-days: 7
+      - name: Publish APK to the tag release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag="${GITHUB_REF_NAME//\//-}"
+          apk="GeelyPlay-${tag}.apk"
+          checksum="${apk}.sha256"
+          cp mobile/build/outputs/apk/debug/mobile-debug.apk "$apk"
+          shasum -a 256 "$apk" > "$checksum"
+          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            gh release upload "$GITHUB_REF_NAME" "$apk" "$checksum" --clobber
+          else
+            gh release create "$GITHUB_REF_NAME" "$apk" "$checksum" \
+              --title "GeelyPlay ${GITHUB_REF_NAME}" \
+              --notes "Automated source-only APK build. This package does not include offline MFi authentication assets."
+          fi
