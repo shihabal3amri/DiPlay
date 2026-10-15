@@ -966,4 +966,9 @@
     <string name="settings_write_settings_allow">アクセスを許可</string>
     <string name="settings_wifi_direct_scan_pause">CarPlay中は車のWi-Fi検索を一時停止 · ADBが必要</string>
     <string name="settings_wifi_direct_scan_pause_description">Wi-Fi Directでは車が数秒ごとにWi-Fiネットワークを検索し、そのたびに音楽と映像が途切れます。オンにすると、CarPlayの実行中はDiPlayがこの検索を止めます。その間、車はスマートフォンのテザリングなど既知のネットワークにも自動では接続しません（車のWi-Fi設定から手動では接続できます）。自動で接続させたい場合はオフにしてください。次の接続から適用されます。</string>
+    <string name="universal_hud_title">セカンダリディスプレイでのナビゲーション (HUD)</string>
+    <string name="universal_hud_description">標準の Android DisplayManager を使用して、CarPlay の次の方向指示、距離、道路名をセカンダリディスプレイに投影します。HUD をディスプレイとして公開するカーオーディオで動作します。</string>
+    <string name="universal_hud_select_display">HUD ディスプレイ</string>
+    <string name="universal_hud_scale">HUD スケール</string>
+    <string name="universal_hud_no_displays">セカンダリディスプレイが見つかりません。HUD を接続するか、カーオーディオが Android に公開しているか確認してください。</string>
 </resources>

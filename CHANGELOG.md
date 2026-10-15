@@ -1,3 +1,11 @@
+# Unreleased — Geely/Lynk and Meizu Flyme support
+
+- Add universal secondary-display HUD navigation: the next CarPlay turn, distance and road name project onto any display exposed through Android `DisplayManager`, including the Geely/Lynk and Meizu Flyme windshield HUD. Settings include a display picker and 60–120% scale.
+- Read the vendor's factory CarPlay configuration from `/vendor/etc/carplay/carplay.json` on Geely/Lynk and Flyme firmware: OEM manufacturer, model, audio usage constants (`AUDIO_USAGE_CP_*`) and microphone source constants (`AUDIO_SOURCE_*CP_*`).
+- Route CarPlay audio through the vendor's `AudioAttributes` usage values when present, and select the factory microphone source for Siri, FaceTime and calls; wireless sessions use the wireless variants.
+- Find a paired iPhone through Geely vendor Bluetooth profiles 11 and 16 when the factory CarPlay configuration exists.
+- Subscribe to Geely/Lynk steering-wheel keys through the direct input service or, as a fallback, through the OneOS service manager with raw Binder transactions; add seek-next/seek-previous key codes and 180 ms Siri-key debouncing.
+
 # DiPlay 0.2.20 — 2026-10-15
 
 - Keep music playing when a head unit's audio clock drifts by adjusting its playback rate, run DiPlay's audio threads at audio priority, and keep separate music buffers for wireless and USB (#788, #740, #746).

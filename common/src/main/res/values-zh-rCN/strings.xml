@@ -924,4 +924,9 @@
     <string name="settings_write_settings_allow">允许权限</string>
     <string name="settings_wifi_direct_scan_pause">CarPlay 期间暂停车机 Wi-Fi 搜索 · 需要 ADB</string>
     <string name="settings_wifi_direct_scan_pause_description">Wi-Fi 直连时，车机每隔几秒搜索一次 Wi-Fi 网络，每次搜索都会让音乐和画面卡顿。开启后，CarPlay 运行期间 DiPlay 会暂停这个搜索。这段时间车机也不会自动连接已知网络（例如手机热点），可以在车机 Wi-Fi 设置里手动连接；CarPlay 结束后恢复。关闭后车机可以自动连接。下次连接时生效。</string>
+    <string name="universal_hud_title">副屏导航投影 (HUD)</string>
+    <string name="universal_hud_description">通过标准 Android DisplayManager 将 CarPlay 下一转向、距离和道路名投射到副屏。适用于将 HUD 作为显示器公开的车机，包括吉利/领克和魅族 Flyme。</string>
+    <string name="universal_hud_select_display">HUD 显示器</string>
+    <string name="universal_hud_scale">HUD 缩放</string>
+    <string name="universal_hud_no_displays">未找到副屏。连接 HUD 或检查车机是否将其暴露给 Android。</string>
 </resources>

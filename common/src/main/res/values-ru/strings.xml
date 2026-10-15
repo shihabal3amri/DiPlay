@@ -864,4 +864,9 @@
     <string name="settings_write_settings_allow">Разрешить доступ</string>
     <string name="settings_wifi_direct_scan_pause">Приостановить поиск Wi-Fi автомобилем при CarPlay · нужен ADB</string>
     <string name="settings_wifi_direct_scan_pause_description">В режиме Wi-Fi Direct автомобиль ищет сети Wi-Fi каждые несколько секунд, и каждый поиск прерывает музыку и видео. Когда параметр включён, DiPlay приостанавливает поиск, пока работает CarPlay. Тогда автомобиль и сам не подключается к известной сети, например к точке доступа телефона, пока CarPlay не завершится; подключиться можно вручную в настройках Wi-Fi автомобиля. Выключите, чтобы автомобиль подключался сам. Применяется при следующем подключении.</string>
+    <string name="universal_hud_title">Навигация на дополнительном экране (HUD)</string>
+    <string name="universal_hud_description">Проецирует следующий поворот, расстояние и название дороги CarPlay на дополнительный экран через стандартный DisplayManager Android. Работает на головных устройствах, предоставляющих HUD как дисплей.</string>
+    <string name="universal_hud_select_display">Дисплей HUD</string>
+    <string name="universal_hud_scale">Масштаб HUD</string>
+    <string name="universal_hud_no_displays">Дополнительный дисплей не найден. Подключите HUD или проверьте, что головное устройство предоставляет его Android.</string>
 </resources>

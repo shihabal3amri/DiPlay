@@ -913,4 +913,9 @@
     <string name="settings_write_settings_allow">السماح بالإذن</string>
     <string name="settings_wifi_direct_scan_pause">إيقاف بحث السيارة عن Wi-Fi أثناء CarPlay · يتطلب ADB</string>
     <string name="settings_wifi_direct_scan_pause_description">مع Wi-Fi Direct تبحث السيارة عن شبكات Wi-Fi كل بضع ثوانٍ، وكل بحث يجعل الموسيقى والفيديو يتقطعان. عند تشغيل هذا الخيار يوقف DiPlay البحث أثناء تشغيل CarPlay. عندها لا تتصل السيارة تلقائيًا بشبكة معروفة، مثل نقطة اتصال هاتفك، حتى ينتهي CarPlay؛ ويمكنك الاتصال بها يدويًا من إعدادات Wi-Fi في السيارة. أوقفه لتتصل السيارة تلقائيًا. يُطبَّق عند الاتصال التالي.</string>
+    <string name="universal_hud_title">التنقل على الشاشة الثانوية (HUD)</string>
+    <string name="universal_hud_description">عرض سهم الانعطاف والمسافة واسم الطريق من CarPlay على شاشة ثانوية عبر DisplayManager القياسي. يعمل مع أنظمة السيارات التي تعرض HUD كشاشة.</string>
+    <string name="universal_hud_select_display">شاشة HUD</string>
+    <string name="universal_hud_scale">مقياس HUD</string>
+    <string name="universal_hud_no_displays">لم يتم العثور على شاشة ثانوية. اربط HUD أو تحقق من أن نظام السيارة يعرضه لـ Android.</string>
 </resources>

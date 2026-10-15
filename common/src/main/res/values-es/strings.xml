@@ -864,4 +864,9 @@
     <string name="settings_write_settings_allow">Permitir acceso</string>
     <string name="settings_wifi_direct_scan_pause">Pausar la búsqueda de Wi-Fi del coche con CarPlay · requiere ADB</string>
     <string name="settings_wifi_direct_scan_pause_description">Con Wi-Fi Direct el coche busca redes Wi-Fi cada pocos segundos, y cada búsqueda hace que la música y el vídeo se corten. Con esta opción, DiPlay pausa la búsqueda mientras CarPlay está activo. Entonces el coche tampoco se conecta solo a una red conocida, como el punto de acceso de tu teléfono, hasta que CarPlay termina; puedes conectarte a mano en los ajustes de Wi-Fi del coche. Desactívala para que el coche se conecte solo. Se aplica en la próxima conexión.</string>
+    <string name="universal_hud_title">Navegación en pantalla secundaria (HUD)</string>
+    <string name="universal_hud_description">Proyecta el próximo giro, distancia y nombre de la vía de CarPlay en una pantalla secundaria mediante el DisplayManager estándar de Android. Funciona en unidades que exponen el HUD como pantalla.</string>
+    <string name="universal_hud_select_display">Pantalla HUD</string>
+    <string name="universal_hud_scale">Escala del HUD</string>
+    <string name="universal_hud_no_displays">No se encontró ninguna pantalla secundaria. Conecta el HUD o verifica que la unidad principal lo expone a Android.</string>
 </resources>

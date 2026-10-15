@@ -32,7 +32,7 @@ object GeelyFactoryCarPlay {
         val key = "AUDIO_USAGE_CP_$kind"
         val frameworkValue = try {
             AudioAttributes::class.java.getField(key).getInt(null)
-        } catch (_: NoSuchFieldException) {
+        } catch (_: ReflectiveOperationException) {
             null
         }
         if (frameworkValue != null && frameworkValue > 0) return frameworkValue
@@ -59,7 +59,7 @@ object GeelyFactoryCarPlay {
         val key = "AUDIO_SOURCE_${prefix}CP_$category"
         val frameworkValue = try {
             MediaRecorder.AudioSource::class.java.getField(key).getInt(null)
-        } catch (_: NoSuchFieldException) {
+        } catch (_: ReflectiveOperationException) {
             null
         }
         if (frameworkValue != null && frameworkValue > 1) return frameworkValue

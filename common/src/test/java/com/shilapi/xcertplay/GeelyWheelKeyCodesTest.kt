@@ -25,6 +25,8 @@ class GeelyWheelKeyCodesTest {
                 GeelyWheelKeyCodes.KEY_PLAY_PAUSE,
                 GeelyWheelKeyCodes.KEY_NEXT,
                 GeelyWheelKeyCodes.KEY_PREVIOUS,
+                GeelyWheelKeyCodes.KEY_SEEK_NEXT,
+                GeelyWheelKeyCodes.KEY_SEEK_PREVIOUS,
                 GeelyWheelKeyCodes.KEY_VOICE_ASSIST,
             ),
             GeelyWheelKeyCodes.registeredCodes(bluetoothAudio = false).toList(),

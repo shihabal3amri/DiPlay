@@ -202,6 +202,8 @@ class AndroidMediaSink(
     private val callEchoCancellation: Boolean = false,
     /** Cut the bass that head units add when they play a call as music. */
     private val callVoiceFilter: Boolean = false,
+    /** True when this sink serves a wireless session; vendor microphone routing differs. */
+    private val wireless: Boolean = false,
     /** Read at each call: a phone or tablet used as the head unit plays calls on its loudspeaker (#701). */
     private val callSpeakerphone: () -> Boolean = { false },
     /**
@@ -543,7 +545,7 @@ class AndroidMediaSink(
                 MicrophoneUplink(config, onAudioDiagnostic,
                     speakerphoneCall = speakerphoneCall,
                     microphoneSourceOverride = com.shilapi.xcertplay.vehicle.GeelyFactoryCarPlay
-                        .microphoneSource(config.audioType, wireless = false),
+                        .microphoneSource(config.audioType, wireless = wireless),
                     echoReference = if (config.audioType == TELEPHONY_AUDIO_TYPE) callEchoReferences[id] else null)
             }
             if (!uplink.start()) {
