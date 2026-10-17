@@ -44,6 +44,7 @@ import com.shilapi.xcertplay.hud.BydOutputSettings
 class WheelKeyService : AccessibilityService() {
     private val keys = WheelZoomKeys()
     private val navigationKeys = NavigationWheelKeyPolicy()
+    // #来源@Hanxu4131：本次新增过滤健康状态；其余滚轮/通话处理沿用上游。
     private val filterHealth = WheelFilterHealthPolicy()
     @Volatile private var filteringHealthy: Boolean? = null
     @Volatile private var filterRecoveryRequired = false
@@ -337,6 +338,7 @@ class WheelKeyService : AccessibilityService() {
     private fun adjustNavigation(delta: Int): Boolean {
         val stream = navigationStream() ?: return false
         val audio = getSystemService(Context.AUDIO_SERVICE) as? AudioManager ?: return false
+        // #来源@Hanxu4131：本次补充写后失败不回落到原车重复调音的处理。
         return NavigationWheelAudioAdjustment.adjust(
             delta = delta,
             eligible = { navigationStream() == stream },
@@ -355,6 +357,7 @@ class WheelKeyService : AccessibilityService() {
     }
 
     /** 已绑定不代表仍有按键过滤权限；先原地修复，连续确认失败后才走原有授权恢复。 */
+    // #来源@Hanxu4131：本次新增低频过滤检查和已有授权内的有限恢复。
     private fun refreshKeyFilter() {
         if (!NavigationWheelSettings.enabled(this)) {
             filteringHealthy = null
@@ -628,6 +631,7 @@ class WheelKeyService : AccessibilityService() {
                 Settings.Secure.getInt(context.contentResolver, Settings.Secure.ACCESSIBILITY_ENABLED, 0) == 1
         }
 
+        // #来源@Hanxu4131：本次仅追加已绑定但过滤失效的恢复条件，并避开通话。
         internal fun needsRestore(context: Context): Boolean =
             (!connected() || (running?.filterRecoveryRequired == true && !inCall(context))) && wanted(context)
 
