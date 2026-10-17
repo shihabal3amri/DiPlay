@@ -4382,6 +4382,11 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
             if (it) checkAdbState(mayAsk = true)
             BydNavigationOutputs.clusterSongChanged(it)
         }
+        toggle(card, getString(R.string.settings_cluster_song_artist), getString(R.string.settings_cluster_song_artist_hint),
+            BydOutputSettings.clusterSongArtist(this)) {
+            BydOutputSettings.setClusterSongArtist(this, it)
+            BydNavigationOutputs.clusterSongOnChangeChanged()
+        }
         toggle(card, getString(R.string.cluster_song_on_change), getString(R.string.cluster_song_on_change_description),
             BydOutputSettings.clusterSongOnChange(this), enabled = !adbSwitchChangePending) {
             BydOutputSettings.setClusterSongOnChange(this, it)

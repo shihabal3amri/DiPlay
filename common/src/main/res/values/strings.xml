@@ -1006,4 +1006,6 @@
     <string name="settings_launcher_bubble_unlocked">Place unlocked</string>
     <string name="settings_launcher_bubble_hold_to_lock">Hold to lock</string>
     <string name="settings_launcher_bubble_hold_to_unlock">Hold to unlock</string>
+    <string name="settings_cluster_song_artist">Show artist in the car song card</string>
+    <string name="settings_cluster_song_artist_hint">Only changes the car song card. Android media information keeps the artist. Applies immediately.</string>
 </resources>

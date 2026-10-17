@@ -1005,4 +1005,6 @@
     <string name="settings_launcher_bubble_unlocked">位置のロックを解除</string>
     <string name="settings_launcher_bubble_hold_to_lock">長押しでロック</string>
     <string name="settings_launcher_bubble_hold_to_unlock">長押しで解除</string>
+    <string name="settings_cluster_song_artist">車両の曲表示にアーティストを表示</string>
+    <string name="settings_cluster_song_artist_hint">車両の曲表示だけに反映します。Android のメディア情報にはアーティストを保持します。すぐに反映されます。</string>
 </resources>
