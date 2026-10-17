@@ -875,6 +875,13 @@
     <string name="update_failed">更新に失敗しました</string>
     <string name="update_available_home">更新が利用できます</string>
     <string name="update_saved_to">%1$sに保存しました</string>
+    <string name="update_installed_version">インストール済みバージョン: %1$s</string>
+    <string name="update_latest_version">利用可能な最新バージョン: %1$s</string>
+    <string name="update_release_notes">リリースノート:</string>
+    <string name="update_no_release_notes">リリースノートはありません。</string>
+    <string name="update_release_notes_more">リリースノートをすべて表示</string>
+    <string name="update_release_notes_less">折りたたむ</string>
+    <string name="update_no_internet">インターネット接続がありません。ネットワークを確認してやり直してください。</string>
     <string name="backup_title">設定をバックアップ</string>
     <string name="backup_open">スマートフォンからバックアップ／復元</string>
     <string name="backup_open_description">QRコードを表示します。同じネットワーク上のスマートフォンからブラウザーでDiPlayの設定を書き出したり、取り込んだりできます。この画面を離れるとサービスは停止します。</string>

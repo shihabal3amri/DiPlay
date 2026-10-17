@@ -776,6 +776,13 @@
     <string name="update_failed">更新失敗</string>
     <string name="update_available_home">有可用更新</string>
     <string name="update_saved_to">已儲存至 %1$s</string>
+    <string name="update_installed_version">已安裝版本：%1$s</string>
+    <string name="update_latest_version">最新可用版本：%1$s</string>
+    <string name="update_release_notes">更新說明：</string>
+    <string name="update_no_release_notes">暫無更新說明。</string>
+    <string name="update_release_notes_more">顯示完整更新說明</string>
+    <string name="update_release_notes_less">收起</string>
+    <string name="update_no_internet">無網路連線。請檢查網路後重試。</string>
     <string name="backup_title">備份設定</string>
     <string name="backup_open">在手機上備份或還原</string>
     <string name="backup_open_description">顯示 QR 碼，同一網路內的手機瀏覽器即可匯出或匯入 DiPlay 設定。離開頁面後服務自動停止。</string>

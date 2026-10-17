@@ -712,6 +712,13 @@
     <string name="update_failed">Error de actualización</string>
     <string name="update_available_home">Actualización disponible</string>
     <string name="update_saved_to">Guardado en %1$s</string>
+    <string name="update_installed_version">Versión instalada: %1$s</string>
+    <string name="update_latest_version">Última versión disponible: %1$s</string>
+    <string name="update_release_notes">Notas de la versión:</string>
+    <string name="update_no_release_notes">No hay notas de la versión disponibles.</string>
+    <string name="update_release_notes_more">Mostrar notas completas</string>
+    <string name="update_release_notes_less">Mostrar menos</string>
+    <string name="update_no_internet">Sin conexión a Internet. Comprueba tu red e inténtalo de nuevo.</string>
     <string name="backup_title">Copia de seguridad de ajustes</string>
     <string name="backup_open">Copiar o restaurar en un teléfono</string>
     <string name="backup_open_description">Muestra un código QR para exportar o importar los ajustes de DiPlay desde el navegador de un teléfono en la misma red. El servicio se detiene al salir de la página.</string>

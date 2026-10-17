@@ -876,6 +876,13 @@
     <string name="update_failed">Update failed</string>
     <string name="update_available_home">Update available</string>
     <string name="update_saved_to">Saved to %1$s</string>
+    <string name="update_installed_version">Installed version: %1$s</string>
+    <string name="update_latest_version">Latest available version: %1$s</string>
+    <string name="update_release_notes">Release notes:</string>
+    <string name="update_no_release_notes">No release notes available.</string>
+    <string name="update_release_notes_more">Show full release notes</string>
+    <string name="update_release_notes_less">Show less</string>
+    <string name="update_no_internet">No internet connection. Please check your network and try again.</string>
     <string name="backup_title">Back up settings</string>
     <string name="backup_open">Back up or restore on a phone</string>
     <string name="backup_open_description">Show a QR code so a phone browser on the same network can export or import DiPlay settings. The service stops when you leave the page.</string>
