@@ -963,4 +963,7 @@
     <string name="settings_launcher_bubble_unlocked">位置已解锁</string>
     <string name="settings_launcher_bubble_hold_to_lock">长按 锁定</string>
     <string name="settings_launcher_bubble_hold_to_unlock">长按 解锁</string>
+    <!-- #来源@Hanxu4131：原车歌曲栏歌手显示开关 -->
+    <string name="settings_cluster_song_artist">原车歌曲栏显示歌手</string>
+    <string name="settings_cluster_song_artist_hint">只影响原车歌曲栏，Android 媒体信息仍保留歌手。立即生效。</string>
 </resources>

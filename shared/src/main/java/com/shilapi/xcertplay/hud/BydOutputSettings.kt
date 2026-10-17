@@ -111,6 +111,12 @@ object BydOutputSettings {
         prefs(context).edit().putBoolean(KEY_PHONE_AUDIO_ROUTE_APPS, enabled).apply()
 
     /** Show a new song on the dashboard for a few seconds only, then an empty card. */
+    // #来源@Hanxu4131：本次新增原车歌曲栏歌手显示偏好。
+    fun clusterSongArtist(context: Context): Boolean = prefs(context).getBoolean("cluster_song_artist", true)
+    fun setClusterSongArtist(context: Context, enabled: Boolean) {
+        prefs(context).edit().putBoolean("cluster_song_artist", enabled).apply()
+    }
+
     fun clusterSongOnChange(context: Context): Boolean = prefs(context).getBoolean(KEY_CLUSTER_SONG_ON_CHANGE, false)
 
     fun setClusterSongOnChange(context: Context, enabled: Boolean) =

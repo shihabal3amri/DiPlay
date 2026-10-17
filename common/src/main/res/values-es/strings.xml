@@ -903,4 +903,7 @@
     <string name="settings_launcher_bubble_unlocked">Posición liberada</string>
     <string name="settings_launcher_bubble_hold_to_lock">Mantén para fijar</string>
     <string name="settings_launcher_bubble_hold_to_unlock">Mantén para liberar</string>
+    <!-- #来源@Hanxu4131：原车歌曲栏歌手显示开关 -->
+    <string name="settings_cluster_song_artist">Mostrar artista en la tarjeta del coche</string>
+    <string name="settings_cluster_song_artist_hint">Solo cambia la tarjeta del coche. Android conserva la información del artista. Se aplica al instante.</string>
 </resources>
