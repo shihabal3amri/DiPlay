@@ -248,6 +248,10 @@ class CarPlayController(
         synchronized(albumReplayLock) { initialArtworkReplay?.takeIf { id != null && it.id == id } }
 
 
+    /** 手动媒体操作取消自动静音的待发动作；可从任意调用线程触发。 */
+    // #来源@Hanxu4131：本次新增手动媒体通知，不改变上游指令格式。
+    @Volatile var manualMediaControlListener: (() -> Unit)? = null
+
     /** Told when the iPhone starts or stops playing media; may run on any thread. */
     @Volatile var playbackListener: ((Boolean) -> Unit)? = null
 
@@ -632,9 +636,26 @@ class CarPlayController(
         }
     }
 
+    /** 只向采样时的主屏会话发送；排队期间重连会丢弃旧操作。 */
+    // #来源@Hanxu4131：本次新增按主屏令牌核验的自动媒体指令入口。
+    fun sendMediaButtonForSession(index: Int, expectedToken: Any, shouldSend: () -> Boolean = { true }): Boolean {
+        if (closed) return false
+        val session = activeSession ?: return false
+        if (session.mainScreenSessionToken() !== expectedToken) return false
+        return try {
+            touchExecutor.execute {
+                if (!closed && activeSession === session &&
+                    session.mainScreenSessionToken() === expectedToken && runCatching(shouldSend).getOrDefault(false)) session.sendMedia(index)
+            }
+            true
+        } catch (_: Exception) { false }
+    }
+
     fun sendMediaButton(index: Int): Boolean {
         if (closed) return false
         val session = activeSession ?: return false
+        // #来源@Hanxu4131：本次仅追加手动控制通知，后续发送逻辑沿用上游。
+        runCatching { manualMediaControlListener?.invoke() }
         return try {
             touchExecutor.execute { session.sendMedia(index) }
             true

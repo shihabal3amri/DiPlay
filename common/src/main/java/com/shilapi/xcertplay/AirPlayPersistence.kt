@@ -315,6 +315,16 @@ object AirPlayPersistence {
         return true
     }
 
+    // #来源@Hanxu4131：本次新增静音联动偏好，公开版默认关闭。
+    fun loadVehicleMediaMutePauseEnabled(context: Context): Boolean =
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .getBoolean("vehicle_media_mute_pause_enabled", false)
+
+    fun saveVehicleMediaMutePauseEnabled(context: Context, enabled: Boolean) {
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
+            .putBoolean("vehicle_media_mute_pause_enabled", enabled).apply()
+    }
+
     fun loadWirelessEnabled(context: Context): Boolean =
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
             .getBoolean(KEY_WIRELESS_ENABLED, true)
