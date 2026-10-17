@@ -1006,4 +1006,7 @@
     <string name="settings_launcher_bubble_unlocked">Place unlocked</string>
     <string name="settings_launcher_bubble_hold_to_lock">Hold to lock</string>
     <string name="settings_launcher_bubble_hold_to_unlock">Hold to unlock</string>
+    <!-- #来源@Hanxu4131：本次可选视频交接保护设置文案。 -->
+    <string name="settings_video_lifecycle_guard">Video decoder lifecycle guard (experimental)</string>
+    <string name="settings_video_lifecycle_guard_description">Serializes video decoder startup and cleanup, and defers repeated requests while a native operation is busy. Cannot cancel a stuck driver. Off by default; applies at the next connection.</string>
 </resources>
