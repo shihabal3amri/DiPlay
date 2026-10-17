@@ -200,6 +200,8 @@ Log tag `DiPlay-PhoneAudio` shows when the state is entered and left. If the car
 
 While the CarPlay call holds the state, DiPlay records the call from `VOICE_RECOGNITION` instead of `VOICE_COMMUNICATION`, which clipped. The stock CarPlay service opens its microphone stream without an input preset, which AAudio treats as `VOICE_RECOGNITION`. Geely/Lynk head units, where that source records silence, keep `VOICE_COMMUNICATION`. One Han owner described the call voice with `VOICE_COMMUNICATION` as very bassy with far too much gain; after listening to recordings of each source on a PC, they preferred `VOICE_RECOGNITION`, which they described as clear and natural.
 
+**Calls at the call's own rate** (Settings → Advanced, experimental, off by default, applies at the next connection) changes what DiPlay offers for the call stream. On the same Han the iPhone's SETUP for a call reported `vocoderInfo={sampleRate=8000.0}`, a narrowband call, and DiPlay still chose `audioFormat=0x40000000`, 48 kHz Opus, so the call was decoded and played at 48 kHz. The stock CarPlay service sets up its audio processing for the vocoder rate (8, 16, 24 or 32 kHz) and applies receive-side tuning for it. With the setting on, the call's output offer is PCM mono at those four rates only, so the iPhone picks the call's own rate; the microphone offer and every other stream are unchanged. Whether a wireless iPhone accepts a PCM-only call offer is not established; if a call has no sound, turn the setting off.
+
 ## ADB vehicle-data settings and firmware scope
 
 Settings → Location contains **Advanced vehicle data**, collapsed by default, with two saved modes.

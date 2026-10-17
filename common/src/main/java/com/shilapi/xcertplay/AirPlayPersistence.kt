@@ -76,6 +76,7 @@ object AirPlayPersistence {
     private const val KEY_WIRED_MEDIA_BUFFER_MS = "wired_media_buffer_ms"
     private const val KEY_MAIN_BUFFERED_AUDIO = "main_buffered_audio"
     private const val KEY_SPEECH_WITHOUT_8_16_KHZ = "speech_without_8_16_khz"
+    private const val KEY_CALL_AT_CALL_RATE = "call_at_call_rate"
     private const val KEY_CAR_BLUETOOTH_AUDIO = "car_bluetooth_audio"
     private const val KEY_CALL_ECHO_CANCELLATION = "call_echo_cancellation"
     private const val KEY_CALL_VOICE_FILTER = "call_voice_filter"
@@ -687,6 +688,14 @@ object AirPlayPersistence {
 
     fun saveSpeechWithout8And16Khz(context: Context, enabled: Boolean) {
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putBoolean(KEY_SPEECH_WITHOUT_8_16_KHZ, enabled).apply()
+    }
+
+    /** Offer calls only as PCM at the call's own rate instead of 48 kHz Opus; experimental, applies at reconnect. */
+    fun loadCallAtCallRate(context: Context): Boolean =
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getBoolean(KEY_CALL_AT_CALL_RATE, false)
+
+    fun saveCallAtCallRate(context: Context, enabled: Boolean) {
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putBoolean(KEY_CALL_AT_CALL_RATE, enabled).apply()
     }
 
     /** Offer no CarPlay audio, so the iPhone keeps audio on its Bluetooth link with the car; applies at reconnect. */
