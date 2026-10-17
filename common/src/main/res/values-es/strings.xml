@@ -815,8 +815,9 @@
     <string name="settings_ambient_colors_hint_follow">Toca los colores que pueden usar las luces. Cambian entre tu selección.</string>
     <string name="settings_ambient_colors_hint_fixed">Toca el color que quieres usar. El modo fijo muestra un solo color.</string>
     <string name="settings_ambient_colors_hint_album">Los colores salen de la portada del álbum. Desactiva Seguir la portada del álbum para elegirlos tú.</string>
-    <string name="settings_ambient_swatch">Color %1$d</string>
-    <string name="settings_ambient_swatch_selected">Color %1$d, seleccionado</string>
+    <!-- #来源@Hanxu4131：本次为原有色块描述补充颜色名称参数。 -->
+    <string name="settings_ambient_swatch">Color %1$d · %2$s</string>
+    <string name="settings_ambient_swatch_selected">Color %1$d · %2$s, seleccionado</string>
     <string name="settings_ambient_brightness_value">Nivel %1$d de 6</string>
     <string name="settings_ambient_select_one">Selecciona al menos un color</string>
     <string name="settings_ambient_brightness">Brillo máximo</string>
