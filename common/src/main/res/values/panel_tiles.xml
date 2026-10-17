@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Tile titles on the side panel and in the add drawer. -->
+    <string name="panel_tile_clock">Clock</string>
+    <string name="panel_tile_battery">Battery</string>
+    <string name="panel_tile_tyres">Tyres</string>
+    <string name="panel_tile_system">Head unit</string>
+    <string name="panel_tile_energy">Charge</string>
+    <string name="panel_tile_range">Range</string>
+    <string name="panel_tile_soc">State of charge</string>
+    <string name="panel_tile_kwh">Battery energy</string>
+    <string name="panel_tile_ev_range">EV range</string>
+    <string name="panel_tile_avg_consumption">Average use</string>
+    <string name="panel_tile_soh">Battery health</string>
+    <string name="panel_tile_odometer">Odometer</string>
+    <string name="panel_tile_speed">Speed</string>
+    <string name="panel_tile_gear">Gear</string>
+    <string name="panel_tile_battery_power">Battery power</string>
+    <string name="panel_tile_accelerator">Accelerator</string>
+    <string name="panel_tile_brake">Brake</string>
+    <string name="panel_tile_max_cell">Highest cell</string>
+    <string name="panel_tile_min_cell">Lowest cell</string>
+    <string name="panel_tile_max_batt_temp">Battery max temp</string>
+    <string name="panel_tile_min_batt_temp">Battery min temp</string>
+    <string name="panel_tile_hv_volt">HV voltage</string>
+    <string name="panel_tile_hv_current">HV current</string>
+    <string name="panel_tile_v12">12 V</string>
+    <string name="panel_tile_outside_temp">Outside</string>
+    <string name="panel_tile_inside_temp">Inside</string>
+    <string name="panel_tile_light">Light</string>
+    <string name="panel_tile_fuel">Fuel</string>
+    <string name="panel_tile_fuel_range">Fuel range</string>
+    <string name="panel_tile_engine_rpm">Engine rpm</string>
+    <string name="panel_tile_energy_mode">Energy mode</string>
+    <string name="panel_tile_drive_mode">Drive mode</string>
+    <string name="panel_tile_power_state">Ignition</string>
+    <string name="panel_tile_insulation">Insulation</string>
+    <string name="panel_tile_compressor">Compressor</string>
+    <string name="panel_tile_fan">Fan</string>
+    <string name="panel_tile_recirculation">Recirculation</string>
+    <string name="panel_tile_defrost">Defrost</string>
+    <string name="panel_tile_wind_mode">Air direction</string>
+    <string name="panel_tile_ac_control">A/C mode</string>
+    <string name="panel_tile_drl">Daytime running</string>
+    <string name="panel_tile_turn_signal">Turn signal</string>
+    <string name="panel_tile_sunroof">Sunroof</string>
+    <string name="panel_tile_lock">Driver lock</string>
+    <string name="panel_tile_key_battery">Key battery</string>
+    <string name="panel_tile_fuel_total">Fuel used</string>
+    <string name="panel_tile_hev_mileage">HEV mileage</string>
+    <string name="panel_tile_ev_mileage">EV mileage</string>
+
+    <!-- Grouped tiles that show several related signals side by side. -->
+    <string name="panel_tile_motor_rpm">Motor speed</string>
+    <string name="panel_tile_motor_current">Motor current</string>
+    <string name="panel_tile_motor_temp">Motor temp</string>
+    <string name="panel_tile_inverter_temp">Inverter temp</string>
+    <string name="panel_tile_climate">A/C</string>
+    <string name="panel_tile_seat_driver">Driver seat</string>
+    <string name="panel_tile_seat_passenger">Passenger seat</string>
+    <string name="panel_tile_lights">Lights</string>
+    <string name="panel_tile_doors">Doors</string>
+    <string name="panel_tile_windows">Windows</string>
+    <string name="panel_tile_openings">Trunk / hood</string>
+    <string name="panel_tile_seatbelts">Seat belts</string>
+    <string name="panel_tile_occupancy">Seats</string>
+    <string name="panel_tile_wipers">Wipers</string>
+
+    <!-- The panel editor and the add drawer. -->
+    <string name="panel_edit">Edit</string>
+    <string name="panel_done">Done</string>
+    <string name="panel_add_tiles">Add tiles</string>
+    <string name="panel_edit_hint">Hold and drag a tile to reorder. Tap the size to change it, × to remove.</string>
+    <string name="panel_no_data">No data</string>
+    <string name="panel_group_clock">Clock</string>
+    <string name="panel_group_energy">Energy</string>
+    <string name="panel_group_drive">Driving</string>
+    <string name="panel_group_climate">Climate</string>
+    <string name="panel_group_hybrid">Hybrid</string>
+    <string name="panel_group_tech">Battery</string>
+    <string name="panel_group_lights">Lights</string>
+    <string name="panel_group_safety">Safety</string>
+    <string name="panel_group_system">System</string>
+    <string name="panel_group_body">Car</string>
+
+    <!-- Status words a tile value shows; the formatter carries these resource ids. -->
+    <string name="panel_state_on">On</string>
+    <string name="panel_state_off">Off</string>
+    <string name="panel_state_open">Open</string>
+    <string name="panel_state_closed">Closed</string>
+    <string name="panel_state_locked">Locked</string>
+    <string name="panel_state_unlocked">Unlocked</string>
+    <string name="panel_state_drive">Drive</string>
+    <string name="panel_state_ok">OK</string>
+    <string name="panel_state_low">Low</string>
+    <string name="panel_state_moving">Moving</string>
+    <string name="panel_mode_eco">Eco</string>
+    <string name="panel_mode_sport">Sport</string>
+    <string name="panel_mode_normal">Normal</string>
+    <string name="panel_mode_snow">Snow</string>
+    <string name="panel_wind_face">Face</string>
+    <string name="panel_wind_feet">Feet</string>
+    <string name="panel_wind_glass">Windscreen</string>
+    <string name="panel_air_recirc">Recirc</string>
+    <string name="panel_air_fresh">Fresh</string>
+    <string name="panel_air_auto">Auto</string>
+    <string name="panel_air_manual">Manual</string>
+</resources>

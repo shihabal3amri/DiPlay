@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Tile titles on the side panel and in the add drawer. -->
+    <string name="panel_tile_clock">時計</string>
+    <string name="panel_tile_battery">バッテリー</string>
+    <string name="panel_tile_tyres">タイヤ</string>
+    <string name="panel_tile_system">車機状態</string>
+    <string name="panel_tile_energy">充電</string>
+    <string name="panel_tile_range">航続距離</string>
+    <string name="panel_tile_soc">充電率</string>
+    <string name="panel_tile_kwh">バッテリー電力量</string>
+    <string name="panel_tile_ev_range">EV航続距離</string>
+    <string name="panel_tile_avg_consumption">平均電費</string>
+    <string name="panel_tile_soh">バッテリー健康度</string>
+    <string name="panel_tile_odometer">総走行距離</string>
+    <string name="panel_tile_speed">速度</string>
+    <string name="panel_tile_gear">ギア</string>
+    <string name="panel_tile_battery_power">バッテリー出力</string>
+    <string name="panel_tile_accelerator">アクセル</string>
+    <string name="panel_tile_brake">ブレーキ</string>
+    <string name="panel_tile_max_cell">最高セル電圧</string>
+    <string name="panel_tile_min_cell">最低セル電圧</string>
+    <string name="panel_tile_max_batt_temp">バッテリー最高温度</string>
+    <string name="panel_tile_min_batt_temp">バッテリー最低温度</string>
+    <string name="panel_tile_hv_volt">HV電圧</string>
+    <string name="panel_tile_hv_current">HV電流</string>
+    <string name="panel_tile_v12">12 V</string>
+    <string name="panel_tile_outside_temp">外気温度</string>
+    <string name="panel_tile_inside_temp">車内温度</string>
+    <string name="panel_tile_light">明るさ</string>
+    <string name="panel_tile_fuel">燃料</string>
+    <string name="panel_tile_fuel_range">燃料航続距離</string>
+    <string name="panel_tile_engine_rpm">エンジン回転数</string>
+    <string name="panel_tile_energy_mode">駆動モード</string>
+    <string name="panel_tile_drive_mode">ドライブモード</string>
+    <string name="panel_tile_power_state">電源状態</string>
+    <string name="panel_tile_insulation">絶縁抵抗</string>
+    <string name="panel_tile_compressor">コンプレッサー出力</string>
+    <string name="panel_tile_fan">風量</string>
+    <string name="panel_tile_recirculation">内気循環</string>
+    <string name="panel_tile_defrost">フロント除霜</string>
+    <string name="panel_tile_wind_mode">風向</string>
+    <string name="panel_tile_ac_control">空調モード</string>
+    <string name="panel_tile_drl">デイライト</string>
+    <string name="panel_tile_turn_signal">方向指示</string>
+    <string name="panel_tile_sunroof">サンルーフ</string>
+    <string name="panel_tile_lock">運転席ロック</string>
+    <string name="panel_tile_key_battery">キーバッテリー</string>
+    <string name="panel_tile_fuel_total">累計燃費量</string>
+    <string name="panel_tile_hev_mileage">HEV距離</string>
+    <string name="panel_tile_ev_mileage">EV距離</string>
+
+    <!-- Grouped tiles that show several related signals side by side. -->
+    <string name="panel_tile_motor_rpm">モーター回転数</string>
+    <string name="panel_tile_motor_current">モーター電流</string>
+    <string name="panel_tile_motor_temp">モーター温度</string>
+    <string name="panel_tile_inverter_temp">インバーター温度</string>
+    <string name="panel_tile_climate">空調</string>
+    <string name="panel_tile_seat_driver">運転席シート</string>
+    <string name="panel_tile_seat_passenger">助手席シート</string>
+    <string name="panel_tile_lights">ライト</string>
+    <string name="panel_tile_doors">ドア</string>
+    <string name="panel_tile_windows">窓</string>
+    <string name="panel_tile_openings">トランク / ボンネット</string>
+    <string name="panel_tile_seatbelts">シートベルト</string>
+    <string name="panel_tile_occupancy">着席状態</string>
+    <string name="panel_tile_wipers">ワイパー</string>
+
+    <!-- The panel editor and the add drawer. -->
+    <string name="panel_edit">編集</string>
+    <string name="panel_done">完了</string>
+    <string name="panel_add_tiles">タイルを追加</string>
+    <string name="panel_edit_hint">長押しでドラッグして並べ替え。サイズをタップで変更、×で削除します。</string>
+    <string name="panel_no_data">データなし</string>
+    <string name="panel_group_clock">時計</string>
+    <string name="panel_group_energy">エネルギー</string>
+    <string name="panel_group_drive">走行</string>
+    <string name="panel_group_climate">空調</string>
+    <string name="panel_group_hybrid">ハイブリッド</string>
+    <string name="panel_group_tech">システム</string>
+    <string name="panel_group_lights">ライト</string>
+    <string name="panel_group_safety">安全</string>
+    <string name="panel_group_system">システム</string>
+    <string name="panel_group_body">車両</string>
+    <!-- Status words a tile value shows; the formatter carries these resource ids. -->
+    <string name="panel_state_on">オン</string>
+    <string name="panel_state_off">オフ</string>
+    <string name="panel_state_open">開</string>
+    <string name="panel_state_closed">閉</string>
+    <string name="panel_state_locked">ロック</string>
+    <string name="panel_state_unlocked">解錠</string>
+    <string name="panel_state_drive">走行</string>
+    <string name="panel_state_ok">正常</string>
+    <string name="panel_state_low">低下</string>
+    <string name="panel_state_moving">作動中</string>
+    <string name="panel_mode_eco">エコ</string>
+    <string name="panel_mode_sport">スポーツ</string>
+    <string name="panel_mode_normal">ノーマル</string>
+    <string name="panel_mode_snow">雪路</string>
+    <string name="panel_wind_face">顔</string>
+    <string name="panel_wind_feet">足元</string>
+    <string name="panel_wind_glass">ウィンドウ</string>
+    <string name="panel_air_recirc">内気循環</string>
+    <string name="panel_air_fresh">外気導入</string>
+    <string name="panel_air_auto">自動</string>
+    <string name="panel_air_manual">手動</string>
+</resources>
