@@ -846,8 +846,9 @@
     <string name="settings_ambient_colors_hint_follow">ライトに使う色をタップしてください。選んだ色の間で変化します。</string>
     <string name="settings_ambient_colors_hint_fixed">使う色をタップしてください。固定モードでは1色だけ表示されます。</string>
     <string name="settings_ambient_colors_hint_album">色はアルバムアートから決まります。自分で選ぶには「アルバムアートに合わせる」をオフにしてください。</string>
-    <string name="settings_ambient_swatch">色 %1$d</string>
-    <string name="settings_ambient_swatch_selected">色 %1$d、選択中</string>
+    <!-- #来源@Hanxu4131：本次为原有色块描述补充颜色名称参数。 -->
+    <string name="settings_ambient_swatch">色 %1$d · %2$s</string>
+    <string name="settings_ambient_swatch_selected">色 %1$d · %2$s、選択中</string>
     <string name="settings_ambient_brightness_value">レベル %1$d / 6</string>
     <string name="settings_ambient_select_one">少なくとも1色を選んでください</string>
     <string name="settings_ambient_brightness">最大輝度</string>

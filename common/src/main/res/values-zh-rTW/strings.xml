@@ -875,8 +875,9 @@
     <string name="settings_ambient_colors_hint_follow">點選燈光可以使用的顏色。燈光會在你選的顏色之間變化。</string>
     <string name="settings_ambient_colors_hint_fixed">點選要使用的顏色。固定模式只顯示一種顏色。</string>
     <string name="settings_ambient_colors_hint_album">顏色取自專輯封面。關閉「跟隨專輯封面」即可自行選擇顏色。</string>
-    <string name="settings_ambient_swatch">顏色 %1$d</string>
-    <string name="settings_ambient_swatch_selected">顏色 %1$d，已選</string>
+    <!-- #来源@Hanxu4131：本次为原有色块描述补充颜色名称参数。 -->
+    <string name="settings_ambient_swatch">顏色 %1$d · %2$s</string>
+    <string name="settings_ambient_swatch_selected">顏色 %1$d · %2$s，已選</string>
     <string name="settings_ambient_brightness_value">第 %1$d 檔，共 6 檔</string>
     <string name="settings_ambient_select_one">請至少選擇一個顏色</string>
     <string name="settings_ambient_brightness">最高亮度</string>

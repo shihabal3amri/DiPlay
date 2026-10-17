@@ -37,6 +37,26 @@ class AmbientLampSessionTest {
         h.engine.setEnabled(true); h.engine.update(desired)
         return h.clients.last().also { it.begin.complete(original); h.drain(); h.engine.update(desired) }
     }
+    // #来源@Hanxu4131：本次验证短拍不会被提交限频吞掉。
+    @Test fun shortPeakBetweenHardwareWritesSurvivesThenReleasesToValley() {
+        val h = Harness(); val client = start(h)
+        client.applies.last().second.complete(Unit); h.drain()
+        h.time = 50; h.engine.update(desired.copy(third = 1), true)
+        h.time = 100; h.engine.update(desired.copy(third = 5), true)
+        h.time = 200; h.engine.update(desired.copy(third = 1), true)
+        assertEquals(5, client.applies.last().first.third)
+        client.applies.last().second.complete(Unit); h.drain()
+        h.time = 400; h.engine.update(desired.copy(third = 1), true)
+        assertEquals(1, client.applies.last().first.third)
+    }
+    // #来源@Hanxu4131：本次验证暂停或静态显示会丢弃待提交短拍。
+    @Test fun staticOrPausedPlaybackDiscardsPendingMusicalPeak() {
+        val h = Harness(); val client = start(h)
+        client.applies.last().second.complete(Unit); h.drain()
+        h.time = 50; h.engine.update(desired.copy(third = 5), true)
+        h.time = 200; h.engine.update(desired.copy(third = 1), false)
+        assertEquals(1, client.applies.last().first.third)
+    }
     @Test fun applyAndStopFailureRecoverWithoutSettingsSaveAndPreserveOriginalSnapshot() {
         val h = Harness(); val first = start(h)
         first.applies.last().second.completeExceptionally(IllegalStateException("transport")); h.drain()

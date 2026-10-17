@@ -827,8 +827,9 @@
     <string name="settings_ambient_colors_hint_follow">Торкніться кольорів, які може використовувати підсвічування. Воно змінюється між вибраними.</string>
     <string name="settings_ambient_colors_hint_fixed">Торкніться потрібного кольору. У фіксованому режимі показується один колір.</string>
     <string name="settings_ambient_colors_hint_album">Кольори беруться з обкладинки альбому. Вимкніть «Колір обкладинки альбому», щоб вибрати кольори самостійно.</string>
-    <string name="settings_ambient_swatch">Колір %1$d</string>
-    <string name="settings_ambient_swatch_selected">Колір %1$d, вибрано</string>
+    <!-- #来源@Hanxu4131：本次为原有色块描述补充颜色名称参数。 -->
+    <string name="settings_ambient_swatch">Колір %1$d · %2$s</string>
+    <string name="settings_ambient_swatch_selected">Колір %1$d · %2$s, вибрано</string>
     <string name="settings_ambient_brightness_value">Рівень %1$d з 6</string>
     <string name="settings_ambient_select_one">Виберіть хоча б один колір</string>
     <string name="settings_ambient_brightness">Максимальна яскравість</string>

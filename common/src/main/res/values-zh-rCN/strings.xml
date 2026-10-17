@@ -804,8 +804,9 @@
     <string name="settings_ambient_colors_hint_follow">点按灯光可以使用的颜色。灯光会在你选的颜色之间变化。</string>
     <string name="settings_ambient_colors_hint_fixed">点按要使用的颜色。固定模式只显示一种颜色。</string>
     <string name="settings_ambient_colors_hint_album">颜色取自专辑封面。关闭“跟随专辑封面”即可自己选择颜色。</string>
-    <string name="settings_ambient_swatch">颜色%1$d</string>
-    <string name="settings_ambient_swatch_selected">颜色%1$d，已选</string>
+    <!-- #来源@Hanxu4131：本次为原有色块描述补充颜色名称参数。 -->
+    <string name="settings_ambient_swatch">颜色%1$d · %2$s</string>
+    <string name="settings_ambient_swatch_selected">颜色%1$d · %2$s，已选</string>
     <string name="settings_ambient_brightness_value">第%1$d档，共6档</string>
     <string name="settings_ambient_select_one">至少选择一种颜色</string>
     <string name="settings_ambient_brightness">亮度上限</string>

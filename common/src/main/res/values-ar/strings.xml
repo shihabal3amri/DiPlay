@@ -815,8 +815,9 @@
     <string name="settings_ambient_colors_hint_follow">اضغط على الألوان التي يمكن للإضاءة استخدامها. تتنقل الإضاءة بين اختيارك.</string>
     <string name="settings_ambient_colors_hint_fixed">اضغط على اللون المطلوب. الوضع الثابت يعرض لونًا واحدًا.</string>
     <string name="settings_ambient_colors_hint_album">تؤخذ الألوان من غلاف الألبوم. أوقف اتباع غلاف الألبوم لاختيار الألوان بنفسك.</string>
-    <string name="settings_ambient_swatch">اللون %1$d</string>
-    <string name="settings_ambient_swatch_selected">اللون %1$d، محدد</string>
+    <!-- #来源@Hanxu4131：本次为原有色块描述补充颜色名称参数。 -->
+    <string name="settings_ambient_swatch">اللون %1$d · %2$s</string>
+    <string name="settings_ambient_swatch_selected">اللون %1$d · %2$s، محدد</string>
     <string name="settings_ambient_brightness_value">المستوى %1$d من 6</string>
     <string name="settings_ambient_select_one">حدد لونًا واحدًا على الأقل</string>
     <string name="settings_ambient_brightness">أقصى سطوع</string>

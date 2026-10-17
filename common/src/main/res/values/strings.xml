@@ -847,8 +847,9 @@
     <string name="settings_ambient_colors_hint_follow">Tap the colors the lamps may use. They change between your selection.</string>
     <string name="settings_ambient_colors_hint_fixed">Tap the color to use. Fixed mode shows one color.</string>
     <string name="settings_ambient_colors_hint_album">Colors come from the album cover. Turn off Follow album cover to pick colors yourself.</string>
-    <string name="settings_ambient_swatch">Color %1$d</string>
-    <string name="settings_ambient_swatch_selected">Color %1$d, selected</string>
+    <!-- #来源@Hanxu4131：本次为原有色块描述补充颜色名称参数。 -->
+    <string name="settings_ambient_swatch">Color %1$d · %2$s</string>
+    <string name="settings_ambient_swatch_selected">Color %1$d · %2$s, selected</string>
     <string name="settings_ambient_brightness_value">Level %1$d of 6</string>
     <string name="settings_ambient_select_one">Select at least one color</string>
     <string name="settings_ambient_brightness">Maximum brightness</string>
