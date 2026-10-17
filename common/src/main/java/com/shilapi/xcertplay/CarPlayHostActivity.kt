@@ -5,8 +5,11 @@ import android.Manifest
 import android.content.ActivityNotFoundException
 import android.animation.ObjectAnimator
 import android.animation.ValueAnimator
+import android.bluetooth.BluetoothAdapter
+import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.content.res.Configuration
 import android.content.res.Resources
@@ -605,6 +608,20 @@ class CarPlayHostActivity : ComponentActivity() {
     private var startAfterHandshakeReset = false
     private var restartGeneration = 0
     private var reconnectScheduled = false
+    // The scheduled retry, and whether its failure asked the driver to turn Bluetooth on. Bluetooth
+    // turning on then runs it at once, instead of after a back-off of up to 30 s.
+    private var pendingReconnect: Runnable? = null
+    private var reconnectWaitsForBluetooth = false
+    private val bluetoothOnReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            if (intent.getIntExtra(BluetoothAdapter.EXTRA_STATE, BluetoothAdapter.ERROR) != BluetoothAdapter.STATE_ON) return
+            val retry = pendingReconnect ?: return
+            if (!reconnectScheduled || !reconnectWaitsForBluetooth) return
+            appendLog("Bluetooth turned on; retrying now")
+            mainHandler.removeCallbacks(retry)
+            mainHandler.post(retry)
+        }
+    }
     // How often the current controller reached its control loop, and whether a loss came after the
     // last time. A retry scheduled before the count went up leaves the attempt alone only while it is
     // still running when the retry fires (#873).
@@ -802,6 +819,12 @@ class CarPlayHostActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        val bluetoothState = IntentFilter(BluetoothAdapter.ACTION_STATE_CHANGED)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            registerReceiver(bluetoothOnReceiver, bluetoothState, Context.RECEIVER_NOT_EXPORTED)
+        } else {
+            registerReceiver(bluetoothOnReceiver, bluetoothState)
+        }
         NavigationWidgetUpdater.attach(applicationContext)
         CarPlayCallKeys.install(applicationContext)
         CenterMapOverlay.requestShow = ::showCenterMap
@@ -1866,6 +1889,7 @@ class CarPlayHostActivity : ComponentActivity() {
     }
 
     override fun onDestroy() {
+        runCatching { unregisterReceiver(bluetoothOnReceiver) }
         mainHandler.removeCallbacks(hideTemporarySystemBars)
         discardLastPicture()
         if (pictureCopyThreadStarted) pictureCopyThread.quitSafely()
@@ -5948,29 +5972,31 @@ class CarPlayHostActivity : ComponentActivity() {
         reconnectAttempts += 1
         appendLog("$reason; retrying in ${delayMillis}ms generation=$generation startupFailure=$startupFailure startupRetries=${startupRetryBudget.retries}")
         val controlRunsAtFailure = controlRunningCount
-        mainHandler.postDelayed(
-            {
-                reconnectScheduled = false
-                if (menuOpen && generation == restartGeneration) recoveryPendingAfterMenu = true
-                if (
-                    shuttingDown.get() ||
-                    menuOpen ||
-                    handshakeResetInProgress || startupRetryStopped ||
-                    generation != restartGeneration
-                ) {
-                    return@postDelayed
-                }
-                // A wired attempt can report a failure and still go on: a second CarPlay mode request
-                // failed while the iPhone was already switching, and the switch then completed (#873).
-                // Leave it alone only if it is still running; a loss after its recovery still restarts.
-                if (controlRunningCount != controlRunsAtFailure && !lossSinceControlRunning) {
-                    appendLog("Not reconnecting after $reason: the same attempt is running again")
-                    return@postDelayed
-                }
-                restartCarPlay("Reconnecting after $reason")
-            },
-            delayMillis,
-        )
+        val retry = Runnable {
+            reconnectScheduled = false
+            pendingReconnect = null
+            reconnectWaitsForBluetooth = false
+            if (menuOpen && generation == restartGeneration) recoveryPendingAfterMenu = true
+            if (
+                shuttingDown.get() ||
+                menuOpen ||
+                handshakeResetInProgress || startupRetryStopped ||
+                generation != restartGeneration
+            ) {
+                return@Runnable
+            }
+            // A wired attempt can report a failure and still go on: a second CarPlay mode request
+            // failed while the iPhone was already switching, and the switch then completed (#873).
+            // Leave it alone only if it is still running; a loss after its recovery still restarts.
+            if (controlRunningCount != controlRunsAtFailure && !lossSinceControlRunning) {
+                appendLog("Not reconnecting after $reason: the same attempt is running again")
+                return@Runnable
+            }
+            restartCarPlay("Reconnecting after $reason")
+        }
+        pendingReconnect = retry
+        reconnectWaitsForBluetooth = englishReason.contains(BluetoothRadioCheck.RADIO_OFF_MARK, true)
+        mainHandler.postDelayed(retry, delayMillis)
     }
 
     /** Full-stack fallback when an AirPlay-only reconnect is unavailable. */
