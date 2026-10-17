@@ -75,6 +75,7 @@ import com.shilapi.xcertplay.media.AmbientMusicSettings
 import com.shilapi.xcertplay.media.MtkDecoderTuning
 import com.shilapi.xcertplay.network.CarHotspotConfigRead
 import com.shilapi.xcertplay.network.CarHotspotConfigWrite
+import com.shilapi.xcertplay.network.CarHotspotSavedCredentials
 import com.shilapi.xcertplay.network.CarHotspotSettings
 import com.shilapi.xcertplay.network.CarHotspotTethering
 import com.shilapi.xcertplay.network.HotspotCredentials
@@ -2980,13 +2981,22 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
     }
 
     private var carHotspotConfigStatus: Int? = null
+    // What the import last read from the car. Saving exactly these writes nothing new to the car, so
+    // it gets no overwrite warning.
+    private var importedCarHotspot: CarHotspotSavedCredentials? = null
 
     // Copies the car's saved hotspot details into our settings without touching the car. When the
     // car's configuration cannot be read the write path runs instead, after a warning: it keeps the
     // car's name and password, or creates new details when nothing is saved on either side.
     private fun importCarHotspotConfig() {
+        // The driver just turned the switch on, so the read may ask the car to approve DiPlay's ADB key,
+        // as the other ADB switches do. Without asking it could only fail on a car that never saw the key.
+        if (Build.VERSION.SDK_INT > Build.VERSION_CODES.N_MR1) {
+            carHotspotConfigStatus = R.string.adb_checking_may_ask
+            render()
+        }
         Thread({
-            val read = CarHotspotConfigRead.read(applicationContext, log = { Log.i("DiPlay-Hotspot", it) })
+            val read = CarHotspotConfigRead.read(applicationContext, mayAsk = true, log = { Log.i("DiPlay-Hotspot", it) })
             Log.i("DiPlay-Hotspot", "car hotspot config read: credentials=${read.credentials != null} reason=${read.reason}")
             val saved = read.credentials
             if (saved != null) {
@@ -2995,6 +3005,7 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
                 AirPlayPersistence.saveManualHotspotSecurity(applicationContext, saved.security)
                 runOnUiThread {
                     carHotspotConfigStatus = null
+                    importedCarHotspot = saved
                     toast(getString(R.string.settings_car_hotspot_config_imported))
                     render()
                 }
@@ -3010,24 +3021,28 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
                         }
                         render()
                     }
-                    else -> AlertDialog.Builder(this)
-                        .setTitle(getString(R.string.settings_car_hotspot_config_dialog_title))
-                        .setMessage(getString(
-                            // With nothing saved yet the write creates the details, so the warning
-                            // must say that instead of only announcing an overwrite.
-                            if (hasSavedHotspotDetails()) R.string.settings_car_hotspot_config_dialog_message
-                            else R.string.settings_car_hotspot_config_dialog_generate_message,
-                        ))
-                        .setPositiveButton(getString(R.string.settings_car_hotspot_config_dialog_confirm)) { _, _ -> writeCarHotspotConfigNow() }
-                        .setNegativeButton(getString(R.string.cancel)) { _, _ ->
-                            CarHotspotSettings.setConfigWrite(this, false)
-                            render()
-                        }
-                        .setOnCancelListener {
-                            CarHotspotSettings.setConfigWrite(this, false)
-                            render()
-                        }
-                        .show()
+                    else -> {
+                        carHotspotConfigStatus = null
+                        render()
+                        AlertDialog.Builder(this)
+                            .setTitle(getString(R.string.settings_car_hotspot_config_dialog_title))
+                            .setMessage(getString(
+                                // With nothing saved yet the write creates the details, so the warning
+                                // must say that instead of only announcing an overwrite.
+                                if (hasSavedHotspotDetails()) R.string.settings_car_hotspot_config_dialog_message
+                                else R.string.settings_car_hotspot_config_dialog_generate_message,
+                            ))
+                            .setPositiveButton(getString(R.string.settings_car_hotspot_config_dialog_confirm)) { _, _ -> writeCarHotspotConfigNow() }
+                            .setNegativeButton(getString(R.string.cancel)) { _, _ ->
+                                CarHotspotSettings.setConfigWrite(this, false)
+                                render()
+                            }
+                            .setOnCancelListener {
+                                CarHotspotSettings.setConfigWrite(this, false)
+                                render()
+                            }
+                            .show()
+                    }
                 }
             }
         }, "diplay-hotspot-config-read").start()
@@ -3698,7 +3713,8 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
         AirPlayPersistence.saveManualHotspotChannel(this, 0)
         AirPlayPersistence.saveManualHotspotInterface(this, interfaceName)
         markReconnectNeeded()
-        if (CarHotspotConfigWrite.supported() && CarHotspotSettings.configWrite(this)) {
+        val fromCar = importedCarHotspot == CarHotspotSavedCredentials(ssid, password, security)
+        if (CarHotspotConfigWrite.supported() && CarHotspotSettings.configWrite(this) && !fromCar) {
             AlertDialog.Builder(this)
                 .setTitle(getString(R.string.settings_car_hotspot_config_dialog_title))
                 .setMessage(getString(R.string.settings_car_hotspot_config_dialog_save_message))
