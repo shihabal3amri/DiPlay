@@ -915,4 +915,6 @@
     <string name="settings_launcher_bubble_unlocked">Закріплення знято</string>
     <string name="settings_launcher_bubble_hold_to_lock">Утримуйте: закріпити</string>
     <string name="settings_launcher_bubble_hold_to_unlock">Утримуйте: зняти</string>
+    <string name="settings_video_lifecycle_guard">Захист життєвого циклу відеодекодера (експериментально)</string>
+    <string name="settings_video_lifecycle_guard_description">Послідовно запускає та звільняє відеодекодери, відкладаючи повторні запити, поки зайнята нативна операція. Не може скасувати завислий виклик драйвера. Типово вимкнено; застосовується під час наступного підключення.</string>
 </resources>

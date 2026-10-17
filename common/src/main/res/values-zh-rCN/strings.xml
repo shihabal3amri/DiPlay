@@ -963,4 +963,6 @@
     <string name="settings_launcher_bubble_unlocked">位置已解锁</string>
     <string name="settings_launcher_bubble_hold_to_lock">长按 锁定</string>
     <string name="settings_launcher_bubble_hold_to_unlock">长按 解锁</string>
+    <string name="settings_video_lifecycle_guard">视频解码器交接保护（实验性）</string>
+    <string name="settings_video_lifecycle_guard_description">串行处理视频解码器启动与释放，原生操作忙碌时延后重复申请。无法取消已卡住的驱动调用。默认关闭，下次连接生效。</string>
 </resources>
