@@ -219,6 +219,7 @@ class AndroidMediaSink(
     private val vendorLowLatencyDecoder: Boolean = false,
     /** Opt-in MTK ACodec low-latency/no-reorder modes, with per-session automatic fallback. */
     private val mtkDecoderTuningEnabled: Boolean = false,
+    // #来源@Hanxu4131：本次可选视频交接保护，默认关闭，不改变音频准入。
     /** Serialize video startup/cleanup; takes effect with a new sink and is off by default. */
     private val videoLifecycleGuardEnabled: Boolean = false,
 ) : MediaSink {
@@ -693,6 +694,7 @@ class AndroidMediaSink(
         // Keep the experimental MTK mode on the main CarPlay picture only. Mirrors and the
         // cluster have separate timing and must retain their established decoder configuration.
         mtkDecoderTuningEnabled = mtkDecoderTuningEnabled && type == MAIN_SCREEN_TYPE && statsLabel == null,
+        // #来源@Hanxu4131：本次把同一可选策略传给显示及镜像视频工作线程。
         lifecycleGuardEnabled = videoLifecycleGuardEnabled,
     ).also { if (startImmediately) it.start() }
 
@@ -917,6 +919,7 @@ private class VideoDecoder(
     private val queue = VideoDecodeQueue()
     @Volatile private var running = true
     @Volatile private var decoder: MediaCodec? = null
+    // #来源@Hanxu4131：本次视频交接诊断与有界重试状态。
     private val lifecycleLabel = "$streamType/${statsLabel ?: "display"}"
     private var nextLifecycleAttemptNs = 0L
     private var lifecycleConfigPending = false
@@ -1150,6 +1153,7 @@ private class VideoDecoder(
     }
 
     private fun configureDecoder(config: VideoJob.Config) {
+        // #来源@Hanxu4131：本次重配置先准入再释放旧 codec，忙时保留健康画面。
         if (lifecycleGuardEnabled && (!running || System.nanoTime() < nextLifecycleAttemptNs)) return
         val previous = lastConfig
         if (
@@ -1314,6 +1318,7 @@ private class VideoDecoder(
         attempt: DecoderAttempt,
         /** Ask for [PICTURE_ORDER_PARAMETER] when the decoder lists it ([framesAtOnce], H.264). */
         atOnce: Boolean = false,
+        // #来源@Hanxu4131：本次复用外层租约，避免持有自己租约再次入门。
         lease: VideoCodecLifecycleGuard.Lease? = null,
     ): ConfiguredVideoDecoder? {
         if (lifecycleGuardEnabled && (!running || System.nanoTime() < nextLifecycleAttemptNs)) return null
@@ -1324,6 +1329,7 @@ private class VideoDecoder(
         var phaseStartNs = System.nanoTime()
         val startedNs = phaseStartNs
         return try {
+            // #来源@Hanxu4131：本次逐阶段核验关闭与超时，不能取消已经阻塞的 native。
             lease?.phase("create") { running }
             val codec = attempt.codecName?.let { MediaCodec.createByCodecName(it) } ?: createDecoder(mime) { lease?.phase("create") { running } }
             candidate = codec
@@ -1410,6 +1416,7 @@ private class VideoDecoder(
         }?.name
     }
 
+    // #来源@Hanxu4131：本次仅在原工厂回退之间补充阶段准入回调。
     private fun createDecoder(mime: String, beforeFactory: () -> Unit = {}): MediaCodec {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q &&
             mime == MediaFormat.MIMETYPE_VIDEO_HEVC &&
@@ -1506,6 +1513,7 @@ private class VideoDecoder(
             requestKeyFrameIfDue()
             return
         }
+        // #来源@Hanxu4131：本次待配配置只在重新准入后使用，避免旧 codec 接收新配置帧。
         if (decoder == null || lifecycleConfigPending) configureDecoder(config)
         if (lifecycleConfigPending) return
         val codec = decoder ?: return
@@ -1690,6 +1698,7 @@ private class VideoDecoder(
         configuredMtkMode = MtkDecoderMode.NONE
         configuredMtkCodec2LowLatency = false
         if (codec != null) {
+            // #来源@Hanxu4131：本次清理保留真实资源所有权，并复用已有租约避免自锁。
             val lease = heldLease ?: if (lifecycleGuardEnabled) VideoCodecLifecycleGuard.process.cleanup("video-cleanup $lifecycleLabel") else null
             try {
                 lease?.cleanupPhase("stop")

@@ -1,3 +1,4 @@
+// #来源@Hanxu4131：本次增加可选视频交接准入保护及其设置、生命周期回归覆盖。
 package com.shilapi.xcertplay
 
 import android.view.View
@@ -42,8 +43,8 @@ class VideoLifecycleSettingsTest {
 
     @Test
     @GraphicsMode(GraphicsMode.Mode.NATIVE)
-    @Config(qualifiers = "en-w320dp-h800dp-xhdpi")
-    fun compactLargeFontGuardRowRendersWithoutClipping() = renderGuardRow("compact", 320)
+    @Config(qualifiers = "zh-rCN-w320dp-h800dp-xhdpi")
+    fun compactLargeFontGuardRowRendersWithoutClipping() = renderGuardRow("compact-zh", 320)
 
     @Test
     @GraphicsMode(GraphicsMode.Mode.NATIVE)
@@ -52,8 +53,8 @@ class VideoLifecycleSettingsTest {
 
     @Test
     @GraphicsMode(GraphicsMode.Mode.NATIVE)
-    @Config(qualifiers = "en-w1280dp-h800dp-xhdpi")
-    fun fullWidthLargeFontGuardRowRendersWithoutClipping() = renderGuardRow("full-en", 1280)
+    @Config(qualifiers = "zh-rCN-w1280dp-h800dp-xhdpi")
+    fun fullWidthLargeFontGuardRowRendersWithoutClipping() = renderGuardRow("full-zh", 1280)
 
     private fun renderGuardRow(name: String, widthDp: Int) {
         val activity = Robolectric.buildActivity(DiPlayActivity::class.java).get()

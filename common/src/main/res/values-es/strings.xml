@@ -903,6 +903,7 @@
     <string name="settings_launcher_bubble_unlocked">Posición liberada</string>
     <string name="settings_launcher_bubble_hold_to_lock">Mantén para fijar</string>
     <string name="settings_launcher_bubble_hold_to_unlock">Mantén para liberar</string>
+    <!-- #来源@Hanxu4131：本次可选视频交接保护设置文案。 -->
     <string name="settings_video_lifecycle_guard">Protección del ciclo del decodificador de vídeo (experimental)</string>
     <string name="settings_video_lifecycle_guard_description">Procesa en serie el inicio y la liberación del decodificador de vídeo y aplaza solicitudes repetidas mientras una operación nativa está ocupada. No puede cancelar un controlador bloqueado. Desactivada por defecto; se aplica en la próxima conexión.</string>
 </resources>

@@ -963,6 +963,7 @@
     <string name="settings_launcher_bubble_unlocked">位置已解鎖</string>
     <string name="settings_launcher_bubble_hold_to_lock">長按 鎖定</string>
     <string name="settings_launcher_bubble_hold_to_unlock">長按 解鎖</string>
+    <!-- #来源@Hanxu4131：本次可选视频交接保护设置文案。 -->
     <string name="settings_video_lifecycle_guard">視訊解碼器交接保護（實驗性）</string>
     <string name="settings_video_lifecycle_guard_description">依序處理視訊解碼器啟動與釋放，原生操作忙碌時延後重複申請。無法取消已卡住的驅動程式呼叫。預設關閉，下次連線生效。</string>
 </resources>

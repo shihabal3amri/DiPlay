@@ -1,3 +1,4 @@
+// #来源@Hanxu4131：本次增加可选视频交接准入保护及其设置、生命周期回归覆盖。
 package com.shilapi.xcertplay.media
 
 /**
