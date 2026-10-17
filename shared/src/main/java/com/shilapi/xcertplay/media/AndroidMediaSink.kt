@@ -533,6 +533,11 @@ class AndroidMediaSink(
         if (before != after) onMediaAudioChanged(after)
     }
 
+    /** 保守保护整个语音流生命周期，包含通话或 Siri 暂时没有下行声音的间隙。 */
+    // #来源@Hanxu4131：本次新增供静音联动读取的语音流保护状态。
+    fun hasPriorityVoiceAudio(): Boolean = microphoneUplinks.isNotEmpty() ||
+        audioRenderers.values.any { it.isPriorityVoiceStream() }
+
     override fun onMicrophoneStarted(id: AudioStreamId, config: MicrophoneConfig) {
         // This callback runs on the downlink thread; microphone failures must not stop playback.
         try {
@@ -2462,6 +2467,13 @@ private class AudioRenderer(
             rebufferRecoverReportCount++
             report("Audio: rebuffer recovered audioType=${format.audioType} rebufferCount=$rebufferCount")
         }
+    }
+
+    // #来源@Hanxu4131：本次保护通话/Siri整段生命周期，包含扬声器通话。
+    fun isPriorityVoiceStream(): Boolean {
+        if (!running) return false
+        val channel = mappedSelection().channel
+        return format.audioType == "telephony" || channel == AudioChannel.PHONE || channel == AudioChannel.ASSISTANT
     }
 
     private fun reportNavigationPlayback(track: AudioTrack) {

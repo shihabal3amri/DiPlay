@@ -1967,6 +1967,8 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
         // Opt-in controls that can cost sound or video on some head units.
         filteredSection(content, SettingsSection.ADVANCED_MEDIA,
             getString(R.string.settings_advanced_media), R.drawable.ic_dp_advanced) { card ->
+            vehicleMuteSwitch(card)
+
             if (Build.VERSION.SDK_INT == 32) {
                 toggle(card, getString(R.string.settings_hide_byd_call_popup),
                     getString(R.string.settings_hide_byd_call_popup_description),
@@ -4374,6 +4376,14 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
     }
 
     /** The 0.2.9 Dashboard song setting, shown once: in the BYD navigation card, or under Advanced vehicle data. */
+    // #来源@Hanxu4131：本次新增静音联动设置，立即应用且默认关闭。
+    private fun vehicleMuteSwitch(card: LinearLayout) {
+        toggle(card, getString(R.string.settings_vehicle_mute), getString(R.string.settings_vehicle_mute_hint),
+            AirPlayPersistence.loadVehicleMediaMutePauseEnabled(this)) {
+            AirPlayPersistence.saveVehicleMediaMutePauseEnabled(this, it)
+        }
+    }
+
     private fun clusterSongSwitch(card: LinearLayout) {
         toggle(card, getString(R.string.cluster_song),
             getString(R.string.cluster_song_description),
