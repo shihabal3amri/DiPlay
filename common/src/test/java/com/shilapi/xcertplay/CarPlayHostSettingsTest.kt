@@ -316,6 +316,17 @@ class CarPlayHostSettingsTest {
         assertFalse(field("temporarySystemBarsVisible") as Boolean)
     }
 
+    // #来源@Hanxu4131：本次确保分屏衔接不挡住设置手势。
+    @Test fun settingsGestureStaysAvailableDuringTheSplitResizeBridge() {
+        val bridge = SplitResizeBridge(activity)
+        setField("resizeBridge", bridge)
+        bridge.show(Bitmap.createBitmap(8, 8, Bitmap.Config.ARGB_8888)) { false }
+        try {
+            gesture(3)
+            assertTrue(field("menuOpen") as Boolean)
+        } finally { bridge.clear() }
+    }
+
     @Test fun releasingFingersAfterBarPeekCannotGenerateStrayCarPlayTouches() {
         val controller = mock(CarPlayController::class.java)
         setField("controller", controller)
