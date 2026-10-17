@@ -915,6 +915,7 @@
     <string name="settings_launcher_bubble_unlocked">Закріплення знято</string>
     <string name="settings_launcher_bubble_hold_to_lock">Утримуйте: закріпити</string>
     <string name="settings_launcher_bubble_hold_to_unlock">Утримуйте: зняти</string>
+    <!-- #来源@Hanxu4131：原车歌曲栏歌手显示开关 -->
     <string name="settings_cluster_song_artist">Показувати виконавця в картці автомобіля</string>
     <string name="settings_cluster_song_artist_hint">Змінює лише картку автомобіля. Android зберігає інформацію про виконавця. Діє одразу.</string>
 </resources>

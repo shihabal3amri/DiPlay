@@ -1,3 +1,4 @@
+// #来源@Hanxu4131：本次新增歌手开关大字体和多语布局测试；公开展示仅使用中文图。
 package com.shilapi.xcertplay
 
 import android.content.res.Configuration
@@ -24,7 +25,7 @@ import org.robolectric.annotation.GraphicsMode
 @Config(sdk = [29])
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class ClusterSongArtistScreenshotsTest {
-    @Test fun songArtistControlRendersAtLargeFontsInThreeLayouts() {
+    @Test fun songArtistControlRendersAtLargeFontsAcrossLayouts() {
         val activity = Robolectric.buildActivity(DiPlayActivity::class.java).get()
         activity.setTheme(android.R.style.Theme_Material_NoActionBar)
         // common 的测试宿主没有 mobile manifest，补真实应用已声明的 RTL 能力。
@@ -35,6 +36,7 @@ class ClusterSongArtistScreenshotsTest {
             for ((filename, widthDp, language) in listOf(
                 Triple("compact-zh", 320, "zh-CN"),
                 Triple("full-en", 960, "en-US"),
+                Triple("full-zh", 960, "zh-CN"),
                 Triple("compact-ar-rtl", 320, "ar-SA"),
             )) {
                 val locale = Locale.forLanguageTag(language)

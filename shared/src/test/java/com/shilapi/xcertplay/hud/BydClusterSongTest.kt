@@ -10,6 +10,7 @@ class BydClusterSongTest {
     private fun update(block: com.shilapi.xcertplay.iap2.body.Iap2BodyBuilder.() -> Unit) =
         Iap2Messages.buildRaw(ClusterSongState.NOW_PLAYING_UPDATE, block)
 
+    // #来源@Hanxu4131：本次新增关闭歌手显示时的缓存保留测试。
     @Test fun hidingArtistDoesNotDiscardRetainedMetadataOrTitleOnlyHudLine() {
         val state = ClusterSongState()
         state.accept(update { group(0) { string(1, "Track"); string(12, "Artist") } })

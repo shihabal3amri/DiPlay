@@ -4382,6 +4382,7 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
             if (it) checkAdbState(mayAsk = true)
             BydNavigationOutputs.clusterSongChanged(it)
         }
+        // #来源@Hanxu4131：本次新增原车歌曲栏歌手开关，不改变 Android 元数据。
         toggle(card, getString(R.string.settings_cluster_song_artist), getString(R.string.settings_cluster_song_artist_hint),
             BydOutputSettings.clusterSongArtist(this)) {
             BydOutputSettings.setClusterSongArtist(this, it)

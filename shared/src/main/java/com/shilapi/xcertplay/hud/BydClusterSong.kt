@@ -49,6 +49,7 @@ internal class ClusterSongState {
     }
 
     /** The card for the song known so far, if any. */
+    // #来源@Hanxu4131：本次新增仅在原车歌曲栏隐藏歌手的读取方式。
     fun current(showArtist: Boolean = true): ClusterSong? =
         if (showArtist) last else text(title, null)?.let { last?.copy(text = it) }
 
@@ -101,6 +102,7 @@ internal object BydClusterSong {
     private const val STATE_PAUSED = 2
     private const val STATE_STOPPED = 3
 
+    // #来源@Hanxu4131：本次将单次 shell 写入改为租约 worker，保留上游歌曲/提示状态机。
     private val worker = ClusterSongWorkerClient()
     private val controls = ClusterSongAcknowledgements()
     private const val NOTE_MILLIS = 3_000L
@@ -119,6 +121,7 @@ internal object BydClusterSong {
     private var shown: ClusterSong? = null // writer thread
     private var firstLogged = false // writer thread
 
+    // #来源@Hanxu4131：本次新增 worker 续租及控制字段退避刷新。
     init {
         writer.scheduleWithFixedDelay({
             runCatching {
@@ -271,6 +274,7 @@ internal object BydClusterSong {
             song.playing -> STATE_PLAYING
             else -> STATE_PAUSED
         }
+        // #来源@Hanxu4131：本次补充常驻写入、独立确认及启动后的最新请求核对。
         if (!worker.ensure(app)) return
         if (synchronized(state) { wanted } != song) return
         val command = controls.command(song.source ?: SOURCE_OTHERS, playing, text, System.nanoTime())
@@ -289,6 +293,7 @@ internal object BydClusterSong {
 
     private fun clear(app: Context) {
         if (synchronized(state) { wanted } != null) return
+        // #来源@Hanxu4131：本次结束写入时关闭租约和连接。
         worker.stop()
         controls.reset()
         shown = null
@@ -307,6 +312,7 @@ internal object ClusterSongWriteResult {
         return acceptedFields(output, expected)
     }
 
+    // #来源@Hanxu4131：本次拆分逐字段确认；成功码仍兼容上游已有规则。
     fun acceptedFields(output: String?, expected: Set<String>): Boolean {
         if (output == null) return false
         val received = mutableSetOf<String>()
@@ -326,6 +332,7 @@ internal object ClusterSongWriteResult {
  * (source feature resolved from the vehicle SDK, state 0x43E0000A, text 0x43FB1008 in UTF-16LE). Arguments: source, state and
  * base64 UTF-8 text, "-" to skip one. Prints "name=result" per write; 0 is success.
  */
+// #来源@Hanxu4131：本次让兼容命令入口复用新增 SDK 写入器。
 object BydClusterSongTool {
     @JvmStatic fun main(args: Array<String>) {
         try { println(ClusterSongDeviceWriter().write(args)) }
@@ -335,6 +342,7 @@ object BydClusterSongTool {
 }
 
 /** Initializes only the previously approved instrument device and methods. */
+// #来源@Hanxu4131：本次新增 SDK 来源字段解析及逐字段失败隔离。
 @SuppressLint("PrivateApi")
 internal class ClusterSongDeviceWriter(
     suppliedDevice: Any? = null,
@@ -413,6 +421,7 @@ private fun clusterSongError(error: Throwable): String {
 
 
 /** 分别确认来源和播放状态；来源失败时歌词仍可更新，30 秒后再试来源。 */
+// #来源@Hanxu4131：本次新增来源/状态独立确认和重试间隔。
 internal class ClusterSongAcknowledgements {
     data class Command(val args: String, val source: Int?, val state: Int?, val fields: Set<String>)
     private var source: Int? = null

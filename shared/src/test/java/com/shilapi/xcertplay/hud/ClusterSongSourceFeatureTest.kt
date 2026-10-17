@@ -1,3 +1,4 @@
+// #来源@Hanxu4131：本次新增 SDK 来源字段及独立写入测试。
 package com.shilapi.xcertplay.hud
 
 import org.junit.Assert.*
