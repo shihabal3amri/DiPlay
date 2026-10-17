@@ -151,6 +151,8 @@ class CarPlayHostActivity : ComponentActivity() {
     )
 
     private var connectionPanel: View? = null
+    // #来源@Hanxu4131：本次中控等待视图，只覆盖本应用视频区域。
+    private var projectionWaiting: ProjectionWaitingView? = null
     private var connectionInstructionsView: TextView? = null
     private var connectionHelpView: TextView? = null
     private var wifiRecoveryButton: View? = null
@@ -1901,6 +1903,9 @@ class CarPlayHostActivity : ComponentActivity() {
             setOnTouchListener { view, event -> onHostTouch(view, event) }
         }
         root.addView(video, FrameLayout.LayoutParams(-1, -1))
+        // #来源@Hanxu4131：本次新增的中控等待画面，保留原有连接面板与菜单层。
+        projectionWaiting = ProjectionWaitingView(this, appNight).apply { visibility = View.GONE }
+        root.addView(projectionWaiting, FrameLayout.LayoutParams(-1, -1))
         blackCornerOverlay = CarPlayBlackCornerOverlay(this).also { overlay ->
             overlay.radiusDp = localCornerRadius()
             root.addView(overlay, FrameLayout.LayoutParams(-1, -1))
@@ -5167,6 +5172,19 @@ class CarPlayHostActivity : ComponentActivity() {
             mainVideoFrameRate = fps,
             vendorLowLatencyDecoder = AirPlayPersistence.loadLowLatencyDecoder(this),
             mtkDecoderTuningEnabled = AirPlayPersistence.loadMtkDecoderTuning(this),
+            // #来源@Hanxu4131：本次按有效输出版本隐藏等待页，排队后再核验一次。
+            onScreenFirstFrame = { type, token ->
+                runOnUiThread {
+                    if (controllerGeneration == restartGeneration && !shuttingDown.get() &&
+                        type in activeScreenStreamTypes && sink?.isCurrentVideoFrame(type, token) == true) {
+                        if (type == SCREEN_TYPE_MAIN) projectionWaiting?.presented()
+                        if (type == SCREEN_TYPE_ALT) {
+                            ClusterActivityOutput.frameRendered()
+                            (clusterLayers.values + listOfNotNull(clusterPresentation)).distinct().forEach { it.frameRendered() }
+                        }
+                    }
+                }
+            },
         )
     }
 
@@ -6392,7 +6410,13 @@ class CarPlayHostActivity : ComponentActivity() {
     private fun onScreenStreamStateChanged(generation: Int, type: Int, active: Boolean) {
         runOnUiThread {
             if (shuttingDown.get() || generation != restartGeneration) return@runOnUiThread
-            if (type == SCREEN_TYPE_MAIN && !active) clearIphoneCornerMask()
+            // #来源@Hanxu4131：本次主视频启动与断开时管理有界等待。
+            if (type == SCREEN_TYPE_MAIN) {
+                if (active) projectionWaiting?.waitForFrame() else {
+                    projectionWaiting?.presented()
+                    clearIphoneCornerMask()
+                }
+            }
             if (active) {
                 activeScreenStreamTypes.add(type)
             } else {
