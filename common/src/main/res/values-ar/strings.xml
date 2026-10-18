@@ -956,6 +956,9 @@
     <string name="settings_launcher_bubble_unlocked">تم تحرير الموضع</string>
     <string name="settings_launcher_bubble_hold_to_lock">اضغط مطولاً للتثبيت</string>
     <string name="settings_launcher_bubble_hold_to_unlock">اضغط مطولاً للتحرير</string>
+    <!-- 可选视频交接保护设置文案。 -->
+    <string name="settings_video_lifecycle_guard">حماية دورة فك ترميز الفيديو (تجريبي)</string>
+    <string name="settings_video_lifecycle_guard_description">تنفذ بدء فك ترميز الفيديو وتحرير موارده بالتتابع، وتؤجل الطلبات المتكررة أثناء انشغال عملية أصلية. لا يمكنها إلغاء استدعاء برنامج تشغيل عالق. معطلة افتراضياً؛ تسري عند الاتصال التالي.</string>
 
     <string name="settings_hotspot_interface">واجهة نقطة الاتصال (اختياري)</string>
     <string name="settings_hotspot_interface_description">لوحدات الرأس التي تشغّل نقطة الاتصال على واجهة شبكة لا يبلّغ عنها أندرويد كنقطة اتصال Wi-Fi، مثل eth0.3 في بعض وحدات Geely وLynk &amp; Co وغيرها من وحدات Qualcomm. اتركه فارغاً للعثور عليها تلقائياً.</string>

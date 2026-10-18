@@ -5219,6 +5219,8 @@ class CarPlayHostActivity : ComponentActivity() {
             mainVideoFrameRate = fps,
             vendorLowLatencyDecoder = AirPlayPersistence.loadLowLatencyDecoder(this),
             mtkDecoderTuningEnabled = AirPlayPersistence.loadMtkDecoderTuning(this),
+            // 在新连接的 sink 中应用视频交接保护偏好。
+            videoLifecycleGuardEnabled = AirPlayPersistence.loadVideoLifecycleGuard(this),
         )
     }
 

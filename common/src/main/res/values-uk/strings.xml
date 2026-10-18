@@ -919,6 +919,9 @@
     <string name="settings_launcher_bubble_unlocked">Закріплення знято</string>
     <string name="settings_launcher_bubble_hold_to_lock">Утримуйте: закріпити</string>
     <string name="settings_launcher_bubble_hold_to_unlock">Утримуйте: зняти</string>
+    <!-- 可选视频交接保护设置文案。 -->
+    <string name="settings_video_lifecycle_guard">Захист життєвого циклу відеодекодера (експериментально)</string>
+    <string name="settings_video_lifecycle_guard_description">Послідовно запускає та звільняє відеодекодери, відкладаючи повторні запити, поки зайнята нативна операція. Не може скасувати завислий виклик драйвера. Типово вимкнено; застосовується під час наступного підключення.</string>
 
     <string name="settings_hotspot_interface">Інтерфейс точки доступу (необов’язково)</string>
     <string name="settings_hotspot_interface_description">Лише для головних пристроїв, які тримають точку доступу на мережевому інтерфейсі, що Android не вважає точкою доступу Wi-Fi, наприклад eth0.3 на деяких пристроях Geely, Lynk &amp; Co та інших Qualcomm. Залиште порожнім для автоматичного пошуку.</string>

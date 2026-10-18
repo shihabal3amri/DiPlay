@@ -727,6 +727,14 @@ object AirPlayPersistence {
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putBoolean(KEY_FPS_COUNTER, enabled).apply()
     }
 
+    // 新增默认关闭、下次连接生效的视频交接保护偏好。
+    fun loadVideoLifecycleGuard(context: Context): Boolean =
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getBoolean("video_lifecycle_guard", false)
+
+    fun saveVideoLifecycleGuard(context: Context, enabled: Boolean) {
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putBoolean("video_lifecycle_guard", enabled).apply()
+    }
+
     fun loadLowLatencyDecoder(context: Context): Boolean =
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getBoolean(KEY_LOW_LATENCY_DECODER, false)
 

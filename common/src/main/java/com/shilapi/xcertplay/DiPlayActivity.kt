@@ -2002,6 +2002,13 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
                 AirPlayPersistence.saveDirectVideoOutput(this, it)
                 reconnectIfRunning()
             }
+            // 高级媒体选项，仅保存并提示用户自行重连。
+            toggle(card, getString(R.string.settings_video_lifecycle_guard),
+                getString(R.string.settings_video_lifecycle_guard_description),
+                AirPlayPersistence.loadVideoLifecycleGuard(this)) {
+                AirPlayPersistence.saveVideoLifecycleGuard(this, it)
+                markReconnectNeeded()
+            }
             toggle(card, getString(R.string.settings_low_latency_decoder),
                 getString(R.string.settings_low_latency_decoder_description),
                 AirPlayPersistence.loadLowLatencyDecoder(this)) {

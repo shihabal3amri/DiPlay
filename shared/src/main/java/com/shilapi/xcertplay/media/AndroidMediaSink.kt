@@ -219,6 +219,9 @@ class AndroidMediaSink(
     private val vendorLowLatencyDecoder: Boolean = false,
     /** Opt-in MTK ACodec low-latency/no-reorder modes, with per-session automatic fallback. */
     private val mtkDecoderTuningEnabled: Boolean = false,
+    // 可选视频交接保护，默认关闭，不改变音频准入。
+    /** Serialize video startup/cleanup; takes effect with a new sink and is off by default. */
+    private val videoLifecycleGuardEnabled: Boolean = false,
 ) : MediaSink {
     // Each downlink publishes its own reference; a mic must match that stream and sample rate.
     private val callEchoReferences = ConcurrentHashMap<AudioStreamId, EchoReference>()
@@ -691,6 +694,8 @@ class AndroidMediaSink(
         // Keep the experimental MTK mode on the main CarPlay picture only. Mirrors and the
         // cluster have separate timing and must retain their established decoder configuration.
         mtkDecoderTuningEnabled = mtkDecoderTuningEnabled && type == MAIN_SCREEN_TYPE && statsLabel == null,
+        // 把同一可选策略传给显示及镜像视频工作线程。
+        lifecycleGuardEnabled = videoLifecycleGuardEnabled,
     ).also { if (startImmediately) it.start() }
 
     @Synchronized
@@ -891,6 +896,7 @@ private class VideoDecoder(
      */
     private val framesAtOnce: Boolean = false,
     private val mtkDecoderTuningEnabled: Boolean = false,
+    private val lifecycleGuardEnabled: Boolean = false,
 ) : Closeable {
     private val pacer = FramePacer()
     private val pacingDelay = if (pacingDelayNanos > 0) PacingDelay(pacingDelayNanos) else null
@@ -913,6 +919,10 @@ private class VideoDecoder(
     private val queue = VideoDecodeQueue()
     @Volatile private var running = true
     @Volatile private var decoder: MediaCodec? = null
+    // 视频交接诊断与有界重试状态。
+    private val lifecycleLabel = "$streamType/${statsLabel ?: "display"}"
+    private var nextLifecycleAttemptNs = 0L
+    private var lifecycleConfigPending = false
     private var outputSurface: Surface? = surface
     private var parking: ParkingOutput? = null
     private var lastConfig: VideoJob.Config? = null
@@ -1143,9 +1153,11 @@ private class VideoDecoder(
     }
 
     private fun configureDecoder(config: VideoJob.Config) {
+        // 重配置先准入再释放旧 codec，忙时保留健康画面。
+        if (lifecycleGuardEnabled && (!running || System.nanoTime() < nextLifecycleAttemptNs)) return
         val previous = lastConfig
         if (
-            decoder != null &&
+            decoder != null && !lifecycleConfigPending &&
             previous?.codec == config.codec &&
             previous.codecData.contentEquals(config.codecData)
         ) {
@@ -1157,86 +1169,103 @@ private class VideoDecoder(
         }
         lastConfig = config
         duplicateConfigLogged = false
-        releaseDecoder()
-        referenceChain.reset()
-        val surface = outputSurface ?: return
-        val codec = config.codec
-        val codecData = config.codecData
-        val mime = if (codec == VideoCodec.H265) MediaFormat.MIMETYPE_VIDEO_HEVC
-        else MediaFormat.MIMETYPE_VIDEO_AVC
-        val csd = if (codec == VideoCodec.H265) {
-            MediaCodecSupport.hevcCodecSpecificData(codecData).takeIf { it.isNotEmpty() }
-                ?.let { listOf(it) } ?: emptyList()
-        } else {
-            val (sps, pps) = MediaCodecSupport.avcParameterSets(codecData)
-            listOfNotNull(
-                sps.takeIf { it.isNotEmpty() }?.let { START_CODE + it },
-                pps.takeIf { it.isNotEmpty() }?.let { START_CODE + it },
-            )
-        }
-        val requestedRate = operatingRate
-        val atOnce = framesAtOnce && codec == VideoCodec.H264
-        val requestedMtkCodec2 = if (mtkDecoderTuningEnabled && !lowLatencyDecoderRefused) {
-            MtkDecoderTuning.codec2LowLatencyDecoderName(mime)
-        } else null
-        val requestedLowLatency = requestedMtkCodec2
-            ?: if (atOnce && !lowLatencyDecoderRefused) findLowLatencyDecoder(mime) else null
-        val requestedMtkMode = if (mtkDecoderTuningEnabled &&
-            MtkDecoderTuning.legacyAcodecDecoderName(mime) != null) maximumMtkMode else MtkDecoderMode.NONE
-        var configured: ConfiguredVideoDecoder? = null
-        var used: DecoderAttempt? = null
-        for (attempt in videoDecoderAttempts(
-            requestedRate,
-            softwareDecoderName(mime),
-            requestedLowLatency,
-            requestedMtkMode,
-        )) {
-            configured = tryConfigure(mime, csd, surface, attempt, atOnce)
-            if (configured != null) { used = attempt; break }
-        }
-        if (configured == null) {
+        val gate = VideoCodecLifecycleGuard.process
+        val lease = if (lifecycleGuardEnabled) gate.startup("video-startup $lifecycleLabel", { running }) else null
+        if (lifecycleGuardEnabled && lease == null) {
+            lifecycleConfigPending = true
+            referenceChain.reset()
             queue.discardCurrentChain()
-            report("decoder configuration failed mime=$mime size=${width}x$height")
+            nextLifecycleAttemptNs = System.nanoTime() + 1_000_000_000L
+            report("video lifecycle admission deferred; ${gate.blockedPhase().orEmpty()}")
+            return
         }
-        if (nextOperatingRate(requestedRate, used) != requestedRate) dropOperatingRate("refused at configure")
-        if (nextLowLatencyDecoder(requestedLowLatency, used) != requestedLowLatency) {
-            report("low-latency decoder $requestedLowLatency dropped: refused at configure")
-            lowLatencyDecoderRefused = true
-        }
-        renderedFrameLogged = false
-        submittedFrameLogged = false
-        synchronized(outputLock) {
-            decoder = configured?.codec
-            outputLock.notifyAll()
-        }
-        configuredRate = used?.operatingRate ?: 0
-        configuredMtkMode = configured?.mtkMode ?: MtkDecoderMode.NONE
-        configuredMtkCodec2LowLatency = configured != null && requestedMtkCodec2 != null &&
-            configured.codecName.equals(requestedMtkCodec2, ignoreCase = true)
-        if (configured != null && MtkDecoderTuning.supportsLegacyAcodecKeys(configured.codecName) &&
-            configuredMtkMode.ordinal < requestedMtkMode.ordinal) {
-            report("MTK decoder tuning fell back at configure from=${requestedMtkMode.diagnosticName} " +
-                "to=${configuredMtkMode.diagnosticName}")
-            maximumMtkMode = configuredMtkMode
-        }
-        if (configured != null) {
-            val rate = if (requestedRate > 0) " operatingRate=$configuredRate" else ""
-            val lowLatency = if (vendorLowLatency) " vendorLowLatency=$configuredVendorLowLatency" else ""
-            val output = if (outputThread != null) " outputThread=true" else ""
-            val atOnceReport = if (atOnce) " lowLatency=$startedLowLatency pictureOrder=$startedPictureOrder" else ""
-            val mtk = when {
-                configuredMtkCodec2LowLatency -> " mtkTuning=codec2-low-latency"
-                MtkDecoderTuning.isDecoderName(configured.codecName) ->
-                    " mtkTuning=${configuredMtkMode.diagnosticName}"
-                else -> ""
+        lifecycleConfigPending = false
+        try {
+            releaseDecoder(lease)
+            referenceChain.reset()
+            val surface = outputSurface ?: return
+            val codec = config.codec
+            val codecData = config.codecData
+            val mime = if (codec == VideoCodec.H265) MediaFormat.MIMETYPE_VIDEO_HEVC
+            else MediaFormat.MIMETYPE_VIDEO_AVC
+            val csd = if (codec == VideoCodec.H265) {
+                MediaCodecSupport.hevcCodecSpecificData(codecData).takeIf { it.isNotEmpty() }
+                    ?.let { listOf(it) } ?: emptyList()
+            } else {
+                val (sps, pps) = MediaCodecSupport.avcParameterSets(codecData)
+                listOfNotNull(
+                    sps.takeIf { it.isNotEmpty() }?.let { START_CODE + it },
+                    pps.takeIf { it.isNotEmpty() }?.let { START_CODE + it },
+                )
             }
-            report("decoder=${configured.codecName} mime=$mime size=${width}x$height" +
-                "$rate$lowLatency$output$atOnceReport$mtk")
-            Log.i(
-                TAG,
-                "video decoder configured name=${configured.codecName} mime=$mime size=${width}x$height$mtk",
-            )
-        }
+            val requestedRate = operatingRate
+            val atOnce = framesAtOnce && codec == VideoCodec.H264
+            val requestedMtkCodec2 = if (mtkDecoderTuningEnabled && !lowLatencyDecoderRefused) {
+                MtkDecoderTuning.codec2LowLatencyDecoderName(mime)
+            } else null
+            val requestedLowLatency = requestedMtkCodec2
+                ?: if (atOnce && !lowLatencyDecoderRefused) findLowLatencyDecoder(mime) else null
+            val requestedMtkMode = if (mtkDecoderTuningEnabled &&
+                MtkDecoderTuning.legacyAcodecDecoderName(mime) != null) maximumMtkMode else MtkDecoderMode.NONE
+            var configured: ConfiguredVideoDecoder? = null
+            var used: DecoderAttempt? = null
+            for (attempt in videoDecoderAttempts(
+                requestedRate,
+                softwareDecoderName(mime),
+                requestedLowLatency,
+                requestedMtkMode,
+            )) {
+                configured = tryConfigure(mime, csd, surface, attempt, atOnce, lease)
+                if (configured != null) { used = attempt; break }
+            }
+            if (configured == null) {
+                queue.discardCurrentChain()
+                report("decoder configuration failed mime=$mime size=${width}x$height")
+            }
+            if (lifecycleGuardEnabled && System.nanoTime() < nextLifecycleAttemptNs) {
+                lifecycleConfigPending = true
+                return
+            }
+            if (nextOperatingRate(requestedRate, used) != requestedRate) dropOperatingRate("refused at configure")
+            if (nextLowLatencyDecoder(requestedLowLatency, used) != requestedLowLatency) {
+                report("low-latency decoder $requestedLowLatency dropped: refused at configure")
+                lowLatencyDecoderRefused = true
+            }
+            renderedFrameLogged = false
+            submittedFrameLogged = false
+            synchronized(outputLock) {
+                decoder = configured?.codec
+                outputLock.notifyAll()
+            }
+            configuredRate = used?.operatingRate ?: 0
+            configuredMtkMode = configured?.mtkMode ?: MtkDecoderMode.NONE
+            configuredMtkCodec2LowLatency = configured != null && requestedMtkCodec2 != null &&
+                configured.codecName.equals(requestedMtkCodec2, ignoreCase = true)
+            if (configured != null && MtkDecoderTuning.supportsLegacyAcodecKeys(configured.codecName) &&
+                configuredMtkMode.ordinal < requestedMtkMode.ordinal) {
+                report("MTK decoder tuning fell back at configure from=${requestedMtkMode.diagnosticName} " +
+                    "to=${configuredMtkMode.diagnosticName}")
+                maximumMtkMode = configuredMtkMode
+            }
+            if (configured != null) {
+                val rate = if (requestedRate > 0) " operatingRate=$configuredRate" else ""
+                val lowLatency = if (vendorLowLatency) " vendorLowLatency=$configuredVendorLowLatency" else ""
+                val output = if (outputThread != null) " outputThread=true" else ""
+                val atOnceReport = if (atOnce) " lowLatency=$startedLowLatency pictureOrder=$startedPictureOrder" else ""
+                val mtk = when {
+                    configuredMtkCodec2LowLatency -> " mtkTuning=codec2-low-latency"
+                    MtkDecoderTuning.isDecoderName(configured.codecName) ->
+                        " mtkTuning=${configuredMtkMode.diagnosticName}"
+                    else -> ""
+                }
+                report("decoder=${configured.codecName} mime=$mime size=${width}x$height" +
+                    "$rate$lowLatency$output$atOnceReport$mtk")
+                Log.i(
+                    TAG,
+                    "video decoder configured name=${configured.codecName} mime=$mime size=${width}x$height$mtk",
+                )
+            }
+        } finally { lease?.close() }
     }
 
     private fun dropOperatingRate(reason: String) {
@@ -1289,7 +1318,10 @@ private class VideoDecoder(
         attempt: DecoderAttempt,
         /** Ask for [PICTURE_ORDER_PARAMETER] when the decoder lists it ([framesAtOnce], H.264). */
         atOnce: Boolean = false,
+        // 复用外层租约，避免持有自己租约再次入门。
+        lease: VideoCodecLifecycleGuard.Lease? = null,
     ): ConfiguredVideoDecoder? {
+        if (lifecycleGuardEnabled && (!running || System.nanoTime() < nextLifecycleAttemptNs)) return null
         var candidate: MediaCodec? = null
         var mtkMode = MtkDecoderMode.NONE
         var codecName = attempt.codecName ?: "default"
@@ -1297,8 +1329,11 @@ private class VideoDecoder(
         var phaseStartNs = System.nanoTime()
         val startedNs = phaseStartNs
         return try {
-            val codec = attempt.codecName?.let { MediaCodec.createByCodecName(it) } ?: createDecoder(mime)
+            // 逐阶段核验关闭与超时，不能取消已经阻塞的 native。
+            lease?.phase("create") { running }
+            val codec = attempt.codecName?.let { MediaCodec.createByCodecName(it) } ?: createDecoder(mime) { lease?.phase("create") { running } }
             candidate = codec
+            lease?.phase("configure") { running }
             val createdName = runCatching { codec.name }.getOrNull().orEmpty()
             codecName = createdName.ifEmpty { codecName }
             mtkMode = appliedMtkDecoderMode(attempt.mtkMode, createdName)
@@ -1316,19 +1351,28 @@ private class VideoDecoder(
             codec.configure(format, surface, null, 0)
             phase = "start"
             phaseStartNs = System.nanoTime()
+            lease?.phase("start") { running }
             codec.start()
+            lease?.phase("publish") { running }
             startedLowLatency = lowLatency
             startedPictureOrder = pictureOrder
             val configuredName = runCatching { codec.name }.getOrNull().orEmpty()
                 .ifEmpty { createdName }
                 .ifEmpty { attempt.codecName ?: "default" }
+            lease?.phase("ready") { running }
             ConfiguredVideoDecoder(codec, configuredName, mtkMode)
-        } catch (error: Exception) {
+        } catch (error: Throwable) {
+            // Preserve the default path; opt-in ownership also cleans up a fatal startup failure.
+            if (error !is Exception && !lifecycleGuardEnabled) throw error
             val phaseMs = (System.nanoTime() - phaseStartNs) / 1_000_000
             val elapsedMs = (System.nanoTime() - startedNs) / 1_000_000
+            if (error is VideoCodecLifecycleGuard.StartupAborted) nextLifecycleAttemptNs = System.nanoTime() + 1_000_000_000L
+            // Cleanup is permitted even when the worker was closed between startup phases.
+            lease?.cleanupPhase("candidate-release")
             runCatching { candidate?.release() }.onFailure {
                 Log.w(TAG, "video decoder candidate release failed name=$codecName", it)
             }
+            if (error !is Exception) throw error
             reportFailure("stage=configure phase=$phase phaseMs=$phaseMs elapsedMs=$elapsedMs " +
                 "tuned=${attempt.tuned} operatingRate=${attempt.operatingRate} " +
                 "mtkTuning=${mtkMode.diagnosticName} mime=$mime", error)
@@ -1372,7 +1416,8 @@ private class VideoDecoder(
         }?.name
     }
 
-    private fun createDecoder(mime: String): MediaCodec {
+    // 仅在原工厂回退之间补充阶段准入回调。
+    private fun createDecoder(mime: String, beforeFactory: () -> Unit = {}): MediaCodec {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q &&
             mime == MediaFormat.MIMETYPE_VIDEO_HEVC &&
             preferSoftwareHevcDecoder
@@ -1381,6 +1426,7 @@ private class VideoDecoder(
                 !it.isEncoder && it.isSoftwareOnly && mime in it.supportedTypes
             }
             if (software != null) {
+                beforeFactory()
                 try {
                     return MediaCodec.createByCodecName(software.name)
                 } catch (error: Exception) {
@@ -1388,6 +1434,7 @@ private class VideoDecoder(
                 }
             }
         }
+        beforeFactory()
         return MediaCodec.createDecoderByType(mime)
     }
 
@@ -1466,7 +1513,9 @@ private class VideoDecoder(
             requestKeyFrameIfDue()
             return
         }
-        if (decoder == null) configureDecoder(config)
+        // 待配配置只在重新准入后使用，避免旧 codec 接收新配置帧。
+        if (decoder == null || lifecycleConfigPending) configureDecoder(config)
+        if (lifecycleConfigPending) return
         val codec = decoder ?: return
         // A slow rebuild must not immediately restart on its obsolete triggering IDR.
         if (referenceChain.needsKeyFrame && VideoRecoveryFrameAge.isObsolete(
@@ -1636,7 +1685,7 @@ private class VideoDecoder(
     }
 
     // Worker only; [outputLock] orders it against the output thread.
-    private fun releaseDecoder() {
+    private fun releaseDecoder(heldLease: VideoCodecLifecycleGuard.Lease? = null) {
         backlogRecovery.reset()
         val codec: MediaCodec?
         synchronized(outputLock) {
@@ -1649,16 +1698,22 @@ private class VideoDecoder(
         configuredMtkMode = MtkDecoderMode.NONE
         configuredMtkCodec2LowLatency = false
         if (codec != null) {
+            // 清理保留真实资源所有权，并复用已有租约避免自锁。
+            val lease = heldLease ?: if (lifecycleGuardEnabled) VideoCodecLifecycleGuard.process.cleanup("video-cleanup $lifecycleLabel") else null
             try {
-                codec.stop()
-            } catch (_: Exception) {
-                // Best effort.
-            }
-            try {
-                codec.release()
-            } catch (_: Exception) {
-                // Best effort.
-            }
+                lease?.cleanupPhase("stop")
+                try {
+                    codec.stop()
+                } catch (_: Exception) {
+                    // Best effort.
+                }
+                lease?.cleanupPhase("release")
+                try {
+                    codec.release()
+                } catch (_: Exception) {
+                    // Best effort.
+                }
+            } finally { if (heldLease == null) lease?.close() }
         }
     }
 

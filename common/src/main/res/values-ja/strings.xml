@@ -1009,6 +1009,9 @@
     <string name="settings_launcher_bubble_unlocked">位置のロックを解除</string>
     <string name="settings_launcher_bubble_hold_to_lock">長押しでロック</string>
     <string name="settings_launcher_bubble_hold_to_unlock">長押しで解除</string>
+    <!-- 可选视频交接保护设置文案。 -->
+    <string name="settings_video_lifecycle_guard">動画デコーダーの切り替え保護（実験的機能）</string>
+    <string name="settings_video_lifecycle_guard_description">動画デコーダーの起動と解放を順番に処理し、ネイティブ処理中の重複要求を延期します。停止したドライバー呼び出しは中断できません。初期設定はオフで、次回接続時に適用されます。</string>
 
     <string name="settings_hotspot_interface">ホットスポットのインターフェース（任意）</string>
     <string name="settings_hotspot_interface_description">Android が Wi-Fi ホットスポットとして報告しないネットワークインターフェースでホットスポットを動かすヘッドユニット専用です。一部の Geely、Lynk &amp; Co、その他の Qualcomm ユニットでは eth0.3 です。空欄のままにすると自動で検出します。</string>
