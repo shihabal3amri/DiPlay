@@ -49,8 +49,13 @@ class CarPlayViewAreas private constructor(
      */
     fun indexFor(width: Int, height: Int, splitScreen: Boolean, portrait: Boolean = slots[current].portrait): Int? {
         val edge = areas[current].dockEdge
-        val split = index(Kind.SPLIT_SCREEN, portrait, edge)
-        if (splitScreen && split != null && closeShape(areas[split], width, height)) return split
+        // 从同方向多档历史中选择形状最接近的区域。
+        val split = areas.indices.filter {
+            slots[it].kind == Kind.SPLIT_SCREEN && slots[it].portrait == portrait && areas[it].dockEdge == edge
+        }.filter { closeShape(areas[it], width, height) }.minByOrNull {
+            abs(ln(areas[it].width.toDouble() / areas[it].height / (width.toDouble() / height)))
+        }
+        if (splitScreen && split != null) return split
         return index(Kind.FULL_SCREEN, portrait, edge)
     }
 
@@ -93,7 +98,11 @@ class CarPlayViewAreas private constructor(
     }
 
     /** The area in use after moving the dock to [dockEdge], keeping the kind of area and the screen. */
-    fun withDock(dockEdge: Int): Int? = index(kindOf(current), dockEdge)
+    // 切换 Dock 时保留同一分屏形状。
+    fun withDock(dockEdge: Int): Int? = areas.indices.firstOrNull {
+        slots[it] == slots[current] && areas[it].dockEdge == dockEdge &&
+            areas[it].width == areas[current].width && areas[it].height == areas[current].height
+    } ?: index(kindOf(current), dockEdge)
 
     fun use(index: Int) {
         current = index.coerceIn(0, areas.lastIndex)
@@ -139,9 +148,11 @@ class CarPlayViewAreas private constructor(
             startPortrait: Boolean,
             sidePanel: Boolean = false,
             rightHandDrive: Boolean = false,
+            // 扩展历史入参，原调用默认行为保持不变。
+            splitWindowHistory: (portrait: Boolean) -> List<Pair<Float, Float>> = { emptyList() },
         ): CarPlayViewAreas? {
             val splits = screens.associateWith { splitWindow(it.portrait) }
-            if (screens.size == 1 && dock.edge == null && splits.values.all { it == null } && !sidePanel &&
+            if (screens.size == 1 && dock.edge == null && splits.values.all { it == null } && screens.all { splitWindowHistory(it.portrait).isEmpty() } && !sidePanel &&
                 screens[0].width == canvasWidth && screens[0].height == canvasHeight) return null
             val edges = dock.edge?.let { listOf(AirPlayInfoPlist.DOCK_EDGE_DRIVER_SIDE, AirPlayInfoPlist.DOCK_EDGE_BOTTOM) }
                 ?: listOf(null)
@@ -152,13 +163,18 @@ class CarPlayViewAreas private constructor(
                 slots += Slot(Kind.FULL_SCREEN, screen.portrait)
             }
             for (screen in screens) {
-                val window = splits[screen] ?: continue
-                // The window's own size (BYD shows its bars in split screen), kept even for the encoder.
-                val splitWidth = (screen.width * window.first).toInt().coerceIn(2, screen.width) and 1.inv()
-                val splitHeight = (screen.height * window.second).toInt().coerceIn(2, screen.height) and 1.inv()
-                for (edge in edges) {
-                    areas += AirPlayViewArea(splitWidth, splitHeight, dockEdge = edge)
-                    slots += Slot(Kind.SPLIT_SCREEN, screen.portrait)
+                // 每个方向最多声明三档有效分屏比例。
+                val windows = (listOfNotNull(splits[screen]) + splitWindowHistory(screen.portrait))
+                    .filter { it.first in 0.1f..1f && it.second in 0.1f..1f }.distinct().take(3)
+                for (window in windows) {
+                    // The window's own size (BYD shows its bars in split screen), kept even for the encoder.
+                    val splitWidth = (screen.width * window.first).toInt().coerceIn(2, screen.width) and 1.inv()
+                    val splitHeight = (screen.height * window.second).toInt().coerceIn(2, screen.height) and 1.inv()
+                    for (edge in edges) {
+                        areas += AirPlayViewArea(splitWidth, splitHeight, dockEdge = edge)
+                        if (areas.dropLast(1).any { it == areas.last() }) { areas.removeAt(areas.lastIndex); continue }
+                        slots += Slot(Kind.SPLIT_SCREEN, screen.portrait)
+                    }
                 }
             }
             if (sidePanel) for (screen in screens) for (sixths in SIDE_PANEL_SIXTHS) {
@@ -242,7 +258,13 @@ object SplitScreenSettings {
     fun saveWindow(context: Context, portrait: Boolean, width: Float, height: Float) {
         if (width !in 0.1f..1f || height !in 0.1f..1f) return
         val key = if (portrait) "portrait" else "landscape"
-        prefs(context).edit().putFloat("${key}_screen_width", width).putFloat("${key}_screen_height", height).apply()
+        // 合并轻微抖动并保留有限历史，不影响原单比例键。
+        val previous = history(context, portrait)
+        val size = previous.firstOrNull { kotlin.math.abs(it.first - width) <= .002f &&
+            kotlin.math.abs(it.second - height) <= .002f } ?: (width to height)
+        val history = (listOf(size) + previous.filterNot { it == size }).take(3)
+        prefs(context).edit().putFloat("${key}_screen_width", size.first).putFloat("${key}_screen_height", size.second)
+            .putString("${key}_history", history.joinToString(";") { "${it.first},${it.second}" }).apply()
     }
 
     /**
@@ -254,6 +276,18 @@ object SplitScreenSettings {
         if (screenWidth <= 0 || screenHeight <= 0 || windowWidth <= 0 || windowHeight <= 0) return screenFraction
         return (screenFraction.first * screenWidth / windowWidth).coerceAtMost(1f) to
             (screenFraction.second * screenHeight / windowHeight).coerceAtMost(1f)
+    }
+
+    /** At most three observed, valid sizes per orientation. Old single-size preferences still work. */
+    // 读取方向独立的有效分屏历史。
+    internal fun history(context: Context, portrait: Boolean): List<Pair<Float, Float>> {
+        val key = if (portrait) "portrait" else "landscape"
+        return prefs(context).getString("${key}_history", "").orEmpty().split(';').mapNotNull {
+            val parts = it.split(',')
+            val width = parts.getOrNull(0)?.toFloatOrNull() ?: return@mapNotNull null
+            val height = parts.getOrNull(1)?.toFloatOrNull() ?: return@mapNotNull null
+            (width to height).takeIf { width in .1f..1f && height in .1f..1f }
+        }.distinct().take(3)
     }
 
     private fun prefs(context: Context) = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)

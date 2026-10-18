@@ -340,6 +340,75 @@ class CarPlayHostSettingsTest {
         assertFalse(field("temporarySystemBarsVisible") as Boolean)
     }
 
+    // 确保分屏衔接不挡住设置手势。
+    @Test fun settingsGestureStaysAvailableDuringTheSplitResizeBridge() {
+        val bridge = SplitResizeBridge(activity)
+        setField("resizeBridge", bridge)
+        bridge.show(Bitmap.createBitmap(8, 8, Bitmap.Config.ARGB_8888)) { false }
+        try {
+            gesture(3)
+            assertTrue(field("menuOpen") as Boolean)
+        } finally { bridge.clear() }
+    }
+
+    @Test fun newMainStreamClearsTheOldResizeSnapshotWithoutAcceptingOldStreamEvents() {
+        val bridge = field("resizeBridge") as SplitResizeBridge
+        val waiting = field("projectionWaiting") as ProjectionWaitingView
+        val root = bridge.parent as ViewGroup
+        assertTrue(root.indexOfChild(waiting) < root.indexOfChild(bridge))
+        assertTrue(root.indexOfChild(bridge) < root.indexOfChild(field("gestureOverlay") as View))
+        bridge.show(Bitmap.createBitmap(8, 8, Bitmap.Config.ARGB_8888)) { false }
+        setField("resizeTouchSuppressed", true)
+        setField("restartGeneration", 1)
+        fun stream(generation: Int, active: Boolean) {
+            activity.javaClass.getDeclaredMethod("onScreenStreamStateChanged", Int::class.javaPrimitiveType,
+                Int::class.javaPrimitiveType, Boolean::class.javaPrimitiveType).apply { isAccessible = true }
+                .invoke(activity, generation, 110, active)
+            shadowOf(Looper.getMainLooper()).idle()
+        }
+        stream(1, true)
+        assertEquals(View.GONE, bridge.visibility)
+        assertNull(bridge.drawable)
+        assertEquals(View.VISIBLE, waiting.visibility)
+        stream(0, false)
+        shadowOf(Looper.getMainLooper()).idleFor(java.time.Duration.ofMillis(1_300))
+        assertEquals("old bridge deadline and stream callback cannot hide new waiting", View.VISIBLE, waiting.visibility)
+        assertTrue(field("resizeTouchSuppressed") as Boolean)
+        gesture(3)
+        assertTrue("settings gestures still work during the new wait", field("menuOpen") as Boolean)
+        stream(1, false)
+        assertEquals(View.GONE, waiting.visibility)
+    }
+
+    @Test fun declaredViewAreaResizeKeepsTheSessionClusterAndWaitingState() {
+        val controller = attachController()
+        org.mockito.Mockito.`when`(controller.showViewArea(org.mockito.ArgumentMatchers.anyInt())).thenReturn(true)
+        val cluster = mock(ClusterMapPresentation::class.java)
+        setField("clusterPresentation", cluster)
+        val areas = CarPlayViewAreas.build(1920, 990, CarPlayDock.AUTOMATIC, .5f to 1f)!!
+        areas.use(areas.indexFor(960, 990, splitScreen = true)!!)
+        val display = CarPlaySessionDisplay(1920, 990, 0, true, true, 1920, 990, viewAreas = areas)
+        setField("sessionDisplay", display)
+        val waiting = field("projectionWaiting") as ProjectionWaitingView
+        waiting.presented()
+        val texture = mock(android.view.TextureView::class.java)
+        org.mockito.Mockito.`when`(texture.bitmap).thenReturn(Bitmap.createBitmap(8, 8, Bitmap.Config.ARGB_8888))
+        setField("videoView", texture)
+        val size = field("activeDisplaySize")!!
+        val changed = activity.javaClass.getDeclaredMethod("applyViewArea", size.javaClass, CarPlaySessionDisplay::class.java)
+            .apply { isAccessible = true }.invoke(activity, size, display)
+        assertEquals(true, changed)
+        assertSame(controller, field("controller"))
+        assertSame(cluster, field("clusterPresentation"))
+        assertEquals(0, field("restartGeneration"))
+        assertEquals(View.GONE, waiting.visibility)
+        assertEquals(View.VISIBLE, (field("resizeBridge") as SplitResizeBridge).visibility)
+        org.mockito.Mockito.verify(controller).showViewArea(areas.current)
+        org.mockito.Mockito.verifyNoInteractions(cluster)
+        (field("resizeBridge") as SplitResizeBridge).clear()
+        setField("clusterPresentation", null)
+    }
+
     @Test fun releasingFingersAfterBarPeekCannotGenerateStrayCarPlayTouches() {
         val controller = mock(CarPlayController::class.java)
         setField("controller", controller)

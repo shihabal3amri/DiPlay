@@ -281,6 +281,8 @@ class CarPlayController(
 
     @Volatile private var hotspot: WirelessHotspotManager? = null
     @Volatile private var wifiScanPause: WifiScanPause? = null
+    // 本次将可选性能锁归属于无线会话生命周期。
+    private var wirelessPerformance: com.shilapi.xcertplay.network.WirelessPerformanceLock? = null
     @Volatile private var bonjour: CarPlayBonjour? = null
     private val wirelessResourceLock = Any()
     private val wirelessFailureReported = AtomicBoolean(false)
@@ -360,7 +362,17 @@ class CarPlayController(
                     debugLog("video in car session allowed=${VideoInCar.allowed} delivery=$delivery")
                 }
             }
-            activeSession = session
+            synchronized(wirelessResourceLock) {
+                if (!closed && !session.isClosed && config.transport == CarPlayTransport.WIRELESS &&
+                    com.shilapi.xcertplay.network.WirelessPerformanceSettings.enabled(appContext)) {
+                    (wirelessPerformance ?: com.shilapi.xcertplay.network.WirelessPerformanceLock.create(appContext, ::debugLog)
+                        .also { wirelessPerformance = it }).acquire()
+                } else {
+                    wirelessPerformance?.close()
+                    wirelessPerformance = null
+                }
+                activeSession = session
+            }
             val btPrefs = appContext.getSharedPreferences("xcertplay_airplay", android.content.Context.MODE_PRIVATE)
             if (btPrefs.getBoolean("bt_suspend_during_carplay", false)) {
                 // close() marks [closed], and a closing session marks itself before onSessionEnded
@@ -380,8 +392,15 @@ class CarPlayController(
 
         override fun onSessionEnded(session: AirPlaySession) {
             if (currentCornerMask?.session === session) currentCornerMask = null
-            if (activeSession === session) {
-                activeSession = null
+            val endedCurrent = synchronized(wirelessResourceLock) {
+                if (activeSession !== session) false else {
+                    wirelessPerformance?.close()
+                    wirelessPerformance = null
+                    activeSession = null
+                    true
+                }
+            }
+            if (endedCurrent) {
                 synchronized(albumReplayLock) { initialArtworkReplay = null }
                 BydNavigationOutputs.endNow(preserveTurnOverlay = !closed && config.transport == CarPlayTransport.WIRELESS)
                 BydBluetoothSuspend.resume(appContext, this@CarPlayController) { debugLog(it) }
@@ -663,6 +682,8 @@ class CarPlayController(
         synchronized(wirelessResourceLock) {
             if (closed) return
             closed = true
+            wirelessPerformance?.close()
+            wirelessPerformance = null
             // Order cancellation with address-preference commits and generation replacement.
             wirelessGeneration.incrementAndGet()
             dashboardMapOutputVisible = false

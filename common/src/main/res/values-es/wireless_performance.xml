@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_wireless_performance">Rendimiento inalámbrico (experimental)</string>
+    <string name="settings_wireless_performance_description">Solicita Wi-Fi de alto rendimiento y baja latencia en Android 10 o posterior solo durante CarPlay inalámbrico. Puede aumentar el consumo y el equipo puede ignorarlo. Desactivado por defecto. Se aplica en la próxima conexión.</string>
+</resources>

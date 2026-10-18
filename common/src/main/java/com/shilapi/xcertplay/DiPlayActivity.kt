@@ -1974,6 +1974,7 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
                     AirPlayPersistence.saveHideBydCallPopup(this, it)
                 }
             }
+            wirelessPerformanceControls(card)
             toggle(card, getString(R.string.efficient_video), getString(R.string.use_hevc_leave_off_for_the_widest_head_unit_compatibility), AirPlayPersistence.loadHevcEnabled(this)) {
                 AirPlayPersistence.saveHevcEnabled(this, it)
                 markReconnectNeeded()
@@ -6046,6 +6047,15 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
         if (page == "settings") normalizeSpacing(card)
         parent.addView(card, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(SETTINGS_BLOCK_GAP_DP) })
     }
+    private fun wirelessPerformanceControls(parent: LinearLayout) {
+        toggle(parent, getString(R.string.settings_wireless_performance),
+            getString(R.string.settings_wireless_performance_description),
+            com.shilapi.xcertplay.network.WirelessPerformanceSettings.enabled(this)) {
+            com.shilapi.xcertplay.network.WirelessPerformanceSettings.save(this, it)
+            markReconnectNeeded()
+        }
+    }
+
     private fun audioFocusControls(parent: LinearLayout) {
         toggle(parent, getString(R.string.settings_disable_media_key_audio_focus),
             getString(R.string.settings_disable_media_key_audio_focus_description),

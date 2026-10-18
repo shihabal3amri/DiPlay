@@ -12,13 +12,13 @@ import android.view.Surface
 import android.view.View
 import android.view.WindowManager
 import android.widget.FrameLayout
-import android.widget.TextView
 import com.shilapi.xcertplay.host.R
 import java.lang.ref.WeakReference
 
 /** A separate task for stream 111. Routing is control traffic; video stays in the app process. */
 class AdbClusterActivity : Activity() {
-    private var waiting: TextView? = null
+    // 平台21仪表等待视图与实际呈现衔接。
+    private var waiting: ProjectionWaitingView? = null
     private var surface: Surface? = null
     private var videoTexture: ClusterVideoTexture? = null
     private var turnCard: ClusterTurnCardView? = null
@@ -39,7 +39,11 @@ class AdbClusterActivity : Activity() {
         window.decorView.systemUiVisibility = View.SYSTEM_UI_FLAG_FULLSCREEN or
             View.SYSTEM_UI_FLAG_HIDE_NAVIGATION or View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
         val root = FrameLayout(this).apply { setBackgroundColor(Color.TRANSPARENT) }
-        val video = ClusterVideoTexture(this, onPresented = { ClusterActivityOutput.presented(this) }) { next ->
+        // 只有当前流已有有效首帧时才解除仪表等待。
+        val video = ClusterVideoTexture(this, onPresented = {
+            if (ClusterActivityOutput.streamActive && ClusterActivityOutput.firstFrameReady) waiting?.presented()
+            ClusterActivityOutput.presented(this)
+        }) { next ->
             surface?.let { ClusterActivityOutput.detach(this, it) }
             surface = next
             if (next != null && ClusterActivityOutput.activity.get() === this)
@@ -60,13 +64,7 @@ class AdbClusterActivity : Activity() {
                 }
             }
         }
-        waiting = TextView(this).apply {
-            setBackgroundColor(Color.BLACK)
-            setTextColor(Color.WHITE)
-            textSize = 22f
-            gravity = Gravity.CENTER
-            setPadding(24, 24, 24, 24)
-        }
+        waiting = ProjectionWaitingView(this).apply { waitForFrame(hideAtDeadline = false) }
         videoRegion.addView(waiting, FrameLayout.LayoutParams(-1, -1))
         turnCard = ClusterTurnCardView(this).apply { visibility = View.GONE }
         root.addView(turnCard, FrameLayout.LayoutParams(-1, -1))
@@ -91,8 +89,10 @@ class AdbClusterActivity : Activity() {
     }
 
     internal fun updateStream() {
-        waiting?.visibility = if (ClusterActivityOutput.streamActive) View.GONE else View.VISIBLE
-        waiting?.text = ""
+        // 以首帧而非流公告解除等待，断线保留静态页。
+        // A stream announcement precedes actual pixels. Wait for TextureView presentation.
+        if (!ClusterActivityOutput.streamActive) waiting?.waitForFrame(hideAtDeadline = false)
+        else if (waiting?.visibility == View.VISIBLE) waiting?.waitForFrame()
         updateTurnCard()
     }
 
@@ -196,6 +196,9 @@ internal object ClusterActivityOutput {
     private var hostOwner: Any? = null
     private var onSurface: ((Surface?) -> Unit)? = null
     var streamActive = false
+        private set
+    // 按流重置实际首帧就绪状态。
+    var firstFrameReady = false
         private set
 
     var guidance: com.shilapi.xcertplay.hud.ClusterTurnGuidance? = null
@@ -318,7 +321,11 @@ internal object ClusterActivityOutput {
         onSurface?.invoke(null)
     }
 
+    // 等待页首帧准入，不更改已有仪表路由。
+    fun frameRendered() { if (streamActive) firstFrameReady = true }
+
     fun setStreamActive(active: Boolean) {
+        if (streamActive != active) firstFrameReady = false
         streamActive = active
         activity.get()?.updateStream()
     }

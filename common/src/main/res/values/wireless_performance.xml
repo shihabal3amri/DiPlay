@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_wireless_performance">Wireless performance hints (experimental)</string>
+    <string name="settings_wireless_performance_description">Requests high performance Wi-Fi and, on Android 10 or newer, low latency during wireless CarPlay only. May increase power use; the head unit may ignore these hints. Off by default. Applies at the next connection.</string>
+</resources>

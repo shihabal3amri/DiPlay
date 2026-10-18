@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_wireless_performance">ワイヤレス性能の保護（実験的機能）</string>
+    <string name="settings_wireless_performance_description">ワイヤレス CarPlay 中のみ高性能 Wi-Fi と Android 10 以降の低遅延を要求します。消費電力が増える場合や車載機が要求を無視する場合があります。初期状態はオフ。次回接続時に適用されます。</string>
+</resources>

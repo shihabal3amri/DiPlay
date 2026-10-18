@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_wireless_performance">无线性能保护（实验性）</string>
+    <string name="settings_wireless_performance_description">仅在无线 CarPlay 会话中请求 Wi-Fi 高性能锁，Android 10 及以上同时请求低延迟锁。可能增加耗电，车机也可能忽略请求。默认关闭，下次连接生效。</string>
+</resources>

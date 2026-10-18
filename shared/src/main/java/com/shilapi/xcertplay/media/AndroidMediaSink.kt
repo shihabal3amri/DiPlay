@@ -219,6 +219,8 @@ class AndroidMediaSink(
     private val vendorLowLatencyDecoder: Boolean = false,
     /** Opt-in MTK ACodec low-latency/no-reorder modes, with per-session automatic fallback. */
     private val mtkDecoderTuningEnabled: Boolean = false,
+    // 新增当前显示解码器的首帧通知。
+    private val onScreenFirstFrame: (Int, Any) -> Unit = { _, _ -> },
 ) : MediaSink {
     // Each downlink publishes its own reference; a mic must match that stream and sample rate.
     private val callEchoReferences = ConcurrentHashMap<AudioStreamId, EchoReference>()
@@ -405,6 +407,12 @@ class AndroidMediaSink(
             } else emptyList()
         }
         listeners.forEach { runCatching(it) }
+    }
+
+    /** Recheck at UI dispatch time: another stream/configuration may have replaced a queued callback. */
+    // 输出版本校验，防止旧排队通知解除新等待。
+    fun isCurrentVideoFrame(type: Int, token: Any): Boolean = synchronized(videoOwnershipLock) {
+        !videoClosed && videoDecoders[type]?.frameToken === token
     }
 
     /** True when this sink paces main-screen frames (smooth video); fixed for its lifetime. */
@@ -682,6 +690,11 @@ class AndroidMediaSink(
         report = { videoDiagnosticHandlers[type]?.invoke(it) },
         statsLabel = statsLabel,
         onExit = ::onVideoDecoderExit,
+        // 只允许当前显示解码器发出首帧通知，排除镜像。
+        onFirstFrame = { worker, token ->
+            val current = synchronized(videoOwnershipLock) { !videoClosed && videoDecoders[type] === worker }
+            if (current && statsLabel == null) onScreenFirstFrame(type, token)
+        },
         // Only the main screen goes to the host's SurfaceView; mirrors and the cluster keep their path.
         pacingDelayNanos = if (type == MAIN_SCREEN_TYPE && statsLabel == null) videoPacingDelayMillis * 1_000_000L else 0L,
         operatingRate = videoOperatingRate(type, statsLabel, mainVideoFrameRate),
@@ -877,6 +890,7 @@ private class VideoDecoder(
     pacingDelayNanos: Long = 0L,
     /** Called on the worker as its last step, after it has released its codec. */
     private val onExit: (VideoDecoder) -> Unit = {},
+    private val onFirstFrame: (VideoDecoder, Any) -> Unit = { _, _ -> },
     operatingRate: Int = 0,
     /** Set [vendorLowLatencyKeys] on the tuned configure attempts. */
     private val vendorLowLatency: Boolean = false,
@@ -913,6 +927,9 @@ private class VideoDecoder(
     private val queue = VideoDecodeQueue()
     @Volatile private var running = true
     @Volatile private var decoder: MediaCodec? = null
+    // 为每次输出配置保留不透明版本。
+    @Volatile var frameToken: Any = Any()
+        private set
     private var outputSurface: Surface? = surface
     private var parking: ParkingOutput? = null
     private var lastConfig: VideoJob.Config? = null
@@ -1597,6 +1614,8 @@ private class VideoDecoder(
                 }
                 if (shown && !renderedFrameLogged) {
                     renderedFrameLogged = true
+                    // 将首帧与其输出版本一起交给等待页。
+                    onFirstFrame(this, frameToken)
                     report("first frame rendered")
                     Log.i(TAG, "video decoder rendered first frame bytes=${info.size}")
                 }
@@ -1642,6 +1661,8 @@ private class VideoDecoder(
         synchronized(outputLock) {
             codec = decoder
             decoder = null
+            // 在输出锁下使旧配置首帧通知失效。
+            frameToken = Any()
             // The output thread returns from dequeueOutputBuffer within its timeout and then sees no codec.
             awaitNotDequeuing(codec)
         }

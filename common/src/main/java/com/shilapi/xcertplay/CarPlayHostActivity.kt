@@ -152,6 +152,8 @@ class CarPlayHostActivity : ComponentActivity() {
     )
 
     private var connectionPanel: View? = null
+    // 中控等待视图，只覆盖本应用视频区域。
+    private var projectionWaiting: ProjectionWaitingView? = null
     private var connectionInstructionsView: TextView? = null
     private var connectionHelpView: TextView? = null
     private var wifiRecoveryButton: View? = null
@@ -519,6 +521,10 @@ class CarPlayHostActivity : ComponentActivity() {
     private var carPlayDock = CarPlayDock.AUTOMATIC
     /** The view areas the next session declares (see createAirPlayConfig). */
     private var pendingViewAreas: CarPlayViewAreas? = null
+    // 分屏衔接状态，独立于上游旋转和侧边栏。
+    private var resizeBridge: SplitResizeBridge? = null
+    private var splitHistoryGeneration = 0L
+    private var resizeTouchSuppressed = false
     /** The dock the running session declared; null before the first connection. */
     private var sessionDock: CarPlayDock? = null
     private var hideTopBar = true
@@ -721,6 +727,14 @@ class CarPlayHostActivity : ComponentActivity() {
     private val applyDisplaySize = Runnable {
         val size = pendingDisplaySize ?: return@Runnable
         pendingDisplaySize = null
+        // 应用排队尺寸前再确认当前窗口，拒绝过期事件。
+        // A queued old resize must not select an area after the window has already changed again.
+        val view = videoView
+        if (view != null && view.width > 0 && view.height > 0 &&
+            (view.width != size.width || view.height != size.height)) {
+            scheduleDisplaySize(view.width, view.height)
+            return@Runnable
+        }
         applyDisplaySize(size)
     }
 
@@ -1927,6 +1941,11 @@ class CarPlayHostActivity : ComponentActivity() {
             setOnTouchListener { view, event -> onHostTouch(view, event) }
         }
         root.addView(video, FrameLayout.LayoutParams(-1, -1))
+        // 等待画面位于连接面板与菜单层下方。
+        projectionWaiting = ProjectionWaitingView(this, appNight).apply { visibility = View.GONE }
+        root.addView(projectionWaiting, FrameLayout.LayoutParams(-1, -1))
+        // 只在有效本地快照存在时启用分屏衔接。
+        resizeBridge = SplitResizeBridge(this).also { root.addView(it, FrameLayout.LayoutParams(-1, -1)) }
         blackCornerOverlay = CarPlayBlackCornerOverlay(this).also { overlay ->
             overlay.radiusDp = localCornerRadius()
             root.addView(overlay, FrameLayout.LayoutParams(-1, -1))
@@ -4925,6 +4944,16 @@ class CarPlayHostActivity : ComponentActivity() {
                     window.first, window.second)
             } else null
         }
+        // 把多档已见分屏尺寸接入上游现有区域声明。
+        val splitHistory: (Boolean) -> List<Pair<Float, Float>> = { portrait ->
+            if (!SplitScreenSettings.enabled(this) || inSplitScreen) emptyList() else {
+                val window = if (portrait) portraitWindow else landscapeWindow
+                SplitScreenSettings.history(this, portrait).map {
+                    SplitScreenSettings.ofWindow(it, if (portrait) screenShort else screenLong,
+                        if (portrait) screenLong else screenShort, window.first, window.second)
+                }
+            }
+        }
         val longPixels = maxOf(display.widthPixels, display.heightPixels)
         val square = if (CarPlayRotation.enabled(this) && !inSplitScreen) {
             CarPlayRotation.squareSide(longPixels, CarPlayRotation.picture(this), sessionHevc, hevcSoftwareDecoderEnabled)
@@ -4942,7 +4971,8 @@ class CarPlayHostActivity : ComponentActivity() {
             CarPlayViewAreas.build(display.widthPixels, display.heightPixels, listOf(
                 CarPlayViewAreas.Screen(display.widthPixels, display.heightPixels, portrait = display.heightPixels > display.widthPixels),
             ), dock, splitWindow, startPortrait = display.heightPixels > display.widthPixels,
-                sidePanel = SidePanelSettings.enabled(this), rightHandDrive = rightHandDrive)
+                sidePanel = SidePanelSettings.enabled(this), rightHandDrive = rightHandDrive,
+                splitWindowHistory = splitHistory)
         } else {
             val (landscape, portrait) = CarPlayRotation.turningAreas(square, size.width, size.height,
                 screen.widthPixels, screen.heightPixels)
@@ -4950,7 +4980,7 @@ class CarPlayHostActivity : ComponentActivity() {
                 CarPlayViewAreas.Screen(landscape.first, landscape.second, portrait = false),
                 CarPlayViewAreas.Screen(portrait.first, portrait.second, portrait = true),
             ), dock, splitWindow, startPortrait = size.height > size.width, sidePanel = SidePanelSettings.enabled(this),
-                rightHandDrive = rightHandDrive)
+                rightHandDrive = rightHandDrive, splitWindowHistory = splitHistory)
         }
         pendingViewAreas = viewAreas
         val declared = if (viewAreas == null) canvas else canvas.copy(viewAreas = viewAreas.areas, initialViewArea = viewAreas.current)
@@ -5219,6 +5249,19 @@ class CarPlayHostActivity : ComponentActivity() {
             mainVideoFrameRate = fps,
             vendorLowLatencyDecoder = AirPlayPersistence.loadLowLatencyDecoder(this),
             mtkDecoderTuningEnabled = AirPlayPersistence.loadMtkDecoderTuning(this),
+            // 按有效输出版本隐藏等待页，排队后再核验一次。
+            onScreenFirstFrame = { type, token ->
+                runOnUiThread {
+                    if (controllerGeneration == restartGeneration && !shuttingDown.get() &&
+                        type in activeScreenStreamTypes && sink?.isCurrentVideoFrame(type, token) == true) {
+                        if (type == SCREEN_TYPE_MAIN) projectionWaiting?.presented()
+                        if (type == SCREEN_TYPE_ALT) {
+                            ClusterActivityOutput.frameRendered()
+                            (clusterLayers.values + listOfNotNull(clusterPresentation)).distinct().forEach { it.frameRendered() }
+                        }
+                    }
+                }
+            },
         )
     }
 
@@ -5657,6 +5700,7 @@ class CarPlayHostActivity : ComponentActivity() {
         if (width <= 0 || height <= 0 || shuttingDown.get()) return
         val size = DisplaySize(width, height)
         if (size == pendingDisplaySize) return
+        splitHistoryGeneration++
         mainHandler.removeCallbacks(applyDisplaySize)
         if (size == activeDisplaySize && !displayLayoutChanged()) {
             pendingDisplaySize = null
@@ -5759,8 +5803,16 @@ class CarPlayHostActivity : ComponentActivity() {
             val screenLong = maxOf(screen.widthPixels, screen.heightPixels).toFloat()
             val screenShort = minOf(screen.widthPixels, screen.heightPixels).toFloat()
             if (screenLong > 0 && screenShort > 0) {
-                if (portrait) SplitScreenSettings.saveWindow(this, true, size.width / screenShort, size.height / screenLong)
-                else SplitScreenSettings.saveWindow(this, false, size.width / screenLong, size.height / screenShort)
+                // 窗口稳定一秒后才记住比例，避免保存转场尺寸。
+                val token = ++splitHistoryGeneration
+                mainHandler.postDelayed({
+                    val view = videoView
+                    if (!isDestroyed && token == splitHistoryGeneration && isMultiWindowActive() &&
+                        view != null && view.width == size.width && view.height == size.height) {
+                        if (portrait) SplitScreenSettings.saveWindow(this, true, size.width / screenShort, size.height / screenLong)
+                        else SplitScreenSettings.saveWindow(this, false, size.width / screenLong, size.height / screenShort)
+                    }
+                }, 1_000L)
             }
         }
         val target = areas.indexFor(size.width, size.height, split, portrait) ?: return false
@@ -5769,14 +5821,41 @@ class CarPlayHostActivity : ComponentActivity() {
         if (!turned && target == areas.current && areas.kindOf(target) == CarPlayViewAreas.Kind.FULL_SCREEN) return false
         activeDisplaySize = size
         sessionDisplay = display.copy(rotation = displayRotation())
-        val sent = if (target == areas.current) true else controller?.showViewArea(target) == true
-        if (sent) areas.use(target)
+        // 沿用区域切换，只在目标变化时衔接主屏画面。
+        val changed = target != areas.current
+        val sent = if (!changed) true else controller?.showViewArea(target) == true
+        if (sent) {
+            if (changed) {
+                showSplitResizeBridge()
+            }
+            areas.use(target)
+        }
         videoView?.let { updateVideoLayout(it.width, it.height) }
         val message = "Window ${previous?.width}x${previous?.height} -> ${size.width}x${size.height} " +
             "split=$split portrait=$portrait turned=$turned: view area $target sent=$sent"
         appendLog(message)
         Log.i(TAG, message)
         return true
+    }
+
+    private fun clearDisplayTransition() {
+        resizeBridge?.clear()
+        projectionWaiting?.presented()
+        // Cancel delayed dimensions from the outgoing session, too.
+        splitHistoryGeneration++
+        // Keep an interrupted touch sequence suppressed until a fresh DOWN.
+    }
+
+    // 无有效快照时沿原生切换，不凭空盖黑或开始吞触摸。
+    private fun showSplitResizeBridge() {
+        val bridge = resizeBridge ?: return
+        val baseline = sink?.liveVideoCounters()?.rendered ?: 0L
+        val frame = (videoView as? TextureView)?.let { runCatching { it.bitmap }.getOrNull() }
+        // SurfaceView and failed captures keep the upstream switch; never invent a black cover.
+        if (frame == null || frame.isRecycled) { bridge.clear(); return }
+        controller?.sendTouch(emptyList())
+        resizeTouchSuppressed = true
+        bridge.show(frame) { (sink?.liveVideoCounters()?.rendered ?: -1L) > baseline }
     }
 
     /** Whether the screen itself is portrait now (DiPlay's own window may be a split-screen part of it). */
@@ -5981,6 +6060,7 @@ class CarPlayHostActivity : ComponentActivity() {
         startupRetryBudget.disconnected()
         startupRetryButton?.visibility = View.GONE
         appendLog(reason)
+        clearDisplayTransition()
         activeScreenStreamTypes.clear()
         ClusterActivityOutput.setStreamActive(false)
         setConnectionStage(reason)
@@ -6197,6 +6277,7 @@ class CarPlayHostActivity : ComponentActivity() {
         releaseSidePanelEffects()
         startupRetryBudget.disconnected()
         restartGeneration += 1
+        clearDisplayTransition()
         mainHandler.removeCallbacks(applyDisplaySize)
         val oldController = controller
         val oldSink = sink
@@ -6434,6 +6515,14 @@ class CarPlayHostActivity : ComponentActivity() {
             return true
         }
 
+        // 快照期间暂停 CarPlay 触摸，设置入口保持可用。
+        // Settings gestures above remain available. Resume CarPlay only with a fresh DOWN,
+        // so a finger held across the cover cannot send a release without its matching press.
+        val resizing = resizeBridge?.visibility == View.VISIBLE
+        if (event.actionMasked == MotionEvent.ACTION_DOWN && !resizing) resizeTouchSuppressed = false
+        if (resizing) resizeTouchSuppressed = true
+        if (resizeTouchSuppressed) return true
+
         val content = contentRect(view.width, view.height)
         if (event.actionMasked == MotionEvent.ACTION_DOWN) {
             touchOutsideContent = !content.contains(event.x, event.y)
@@ -6472,7 +6561,16 @@ class CarPlayHostActivity : ComponentActivity() {
     private fun onScreenStreamStateChanged(generation: Int, type: Int, active: Boolean) {
         runOnUiThread {
             if (shuttingDown.get() || generation != restartGeneration) return@runOnUiThread
-            if (type == SCREEN_TYPE_MAIN && !active) clearIphoneCornerMask()
+            // 主视频启动与断开时管理有界等待。
+            if (type == SCREEN_TYPE_MAIN) {
+                // A snapshot belongs to the previous stream; never cover a new waiting page with it.
+                resizeBridge?.clear()
+                splitHistoryGeneration++
+                if (active) projectionWaiting?.waitForFrame() else {
+                    projectionWaiting?.presented()
+                    clearIphoneCornerMask()
+                }
+            }
             if (active) {
                 activeScreenStreamTypes.add(type)
             } else {

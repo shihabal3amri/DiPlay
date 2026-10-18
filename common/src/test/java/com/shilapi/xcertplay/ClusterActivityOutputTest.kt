@@ -11,6 +11,21 @@ import org.robolectric.annotation.Config
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [29], manifest = Config.NONE)
 class ClusterActivityOutputTest {
+    // 回归覆盖同类型流重建后不能复用旧首帧就绪。
+    @Test fun aNewStreamCannotUseThePreviousStreamsTextureReadiness() {
+        try {
+            ClusterActivityOutput.setStreamActive(true)
+            ClusterActivityOutput.frameRendered()
+            assertTrue(ClusterActivityOutput.firstFrameReady)
+            ClusterActivityOutput.setStreamActive(false)
+            assertFalse(ClusterActivityOutput.firstFrameReady)
+            ClusterActivityOutput.frameRendered()
+            assertFalse(ClusterActivityOutput.firstFrameReady)
+            ClusterActivityOutput.setStreamActive(true)
+            assertFalse(ClusterActivityOutput.firstFrameReady)
+        } finally { ClusterActivityOutput.setStreamActive(false) }
+    }
+
     @Test fun launchRejectsWrongTokenAndDisplayAndStopInvalidatesTheTicket() {
         val app = org.robolectric.RuntimeEnvironment.getApplication()
         AirPlayPersistence.saveAdbClusterEnabled(app, true)

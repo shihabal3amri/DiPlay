@@ -22,9 +22,7 @@ import android.view.SurfaceHolder
 import android.view.SurfaceView
 import android.view.View
 import android.view.TextureView
-import android.content.res.ColorStateList
 import android.widget.FrameLayout
-import android.widget.ProgressBar
 import com.shilapi.xcertplay.airplay.CarPlayClusterDisplay
 import com.shilapi.xcertplay.host.R
 import com.shilapi.xcertplay.hud.ClusterTurnGuidance
@@ -42,11 +40,13 @@ internal class ClusterMapPresentation(
     private val theme: DiLink51ClusterLayout.Theme = DiLink51ClusterLayout.theme(context),
     private val onSurface: (Surface?) -> Unit,
 ) : Presentation(context, display) {
-    // The placeholder until the map arrives: a small spinner.
-    private var waitingLabel: View? = null
+    // The bounded DiPlay waiting artwork stays inside this display’s video region.
+    // 有界等待视图替代原占位图，其他仪表层保持原顺序。
+    private var waitingLabel: ProjectionWaitingView? = null
     private var turnCardView: ClusterTurnCardView? = null
     private var videoView: View? = null
     private var streamActive = false
+    private var firstFrameReady = false
     var outputSurface: Surface? = null
         private set
     var mapVisible = true
@@ -88,7 +88,7 @@ internal class ClusterMapPresentation(
                     outputSurface = Surface(texture).also(onSurface)
                 }
                 override fun onSurfaceTextureSizeChanged(texture: SurfaceTexture, width: Int, height: Int) = transform()
-                override fun onSurfaceTextureUpdated(texture: SurfaceTexture) = Unit
+                override fun onSurfaceTextureUpdated(texture: SurfaceTexture) { if (streamActive && firstFrameReady) waitingLabel?.presented() }
                 override fun onSurfaceTextureDestroyed(texture: SurfaceTexture): Boolean {
                     onSurface(null)
                     outputSurface?.release()
@@ -124,52 +124,34 @@ internal class ClusterMapPresentation(
             root.addView(surfaceView, videoParams)
             videoView = surfaceView
         }
-        val waitingColor = if (dark) Color.WHITE else Color.DKGRAY
-        val density = context.resources.displayMetrics.density
-        waitingLabel = FrameLayout(context).apply {
-            if (plan == null) setBackgroundColor(placeholder)
-            addView(ProgressBar(context).apply {
-                isIndeterminate = true
-                indeterminateTintList = ColorStateList.valueOf(waitingColor)
-                contentDescription = context.getString(R.string.cluster_waiting_for_map)
-            }, FrameLayout.LayoutParams((40 * density).toInt(), (40 * density).toInt(), Gravity.CENTER))
-        }
+        // 等待画面限制在原视频区域，继续跟随深浅主题。
+        waitingLabel = ProjectionWaitingView(context, dark).apply { waitForFrame(hideAtDeadline = streamActive) }
         root.addView(waitingLabel, FrameLayout.LayoutParams(videoParams))
         turnCardView = ClusterTurnCardView(context).apply { visibility = View.GONE }
         root.addView(turnCardView, FrameLayout.LayoutParams(-1, -1))
         root.addView(ClusterMusicView(context), FrameLayout.LayoutParams(videoParams))
         root.addView(ClusterSpeedometerView(context), FrameLayout.LayoutParams(-1, -1))
-        // Start with the placeholder visible; SurfaceView would otherwise cover the light
-        // backdrop with an empty black surface before the first stream notification.
-        // SurfaceView ignores fractional alpha before API 34. Keep its decoder surface
-        // visible and fade an opaque ordinary View over it instead.
-        if (videoView !is SurfaceView) videoView?.alpha = if (streamActive) 1f else 0f
-        waitingLabel?.apply {
-            alpha = if (streamActive) 0f else 1f
-            visibility = if (streamActive) View.GONE else View.VISIBLE
-        }
         setContentView(root)
     }
 
-    /**
-     * Cross-fades the waiting placeholder over the live map. TextureView can also fade the
-     * video; legacy SurfaceView stays visible under the placeholder to preserve its surface.
-     */
+    // 按首帧隐藏占位，SurfaceView 始终保留可用解码表面。
     fun setStreamActive(active: Boolean) {
         if (streamActive == active) return
         // Update before cancelling: a cancelled fade must not hide the newly restored label.
         streamActive = active
-        val video = videoView
-        val label = waitingLabel
-        video?.animate()?.cancel()
-        label?.animate()?.cancel()
-        if (video == null || label == null) return
-        label.visibility = View.VISIBLE
-        // Animate from the current opacity so a stream reversal does not jump or restart.
-        if (video !is SurfaceView) video.animate().alpha(if (active) 1f else 0f).setDuration(300).start()
-        label.animate().alpha(if (active) 0f else 1f).setDuration(300).withEndAction {
-            if (streamActive == active) label.visibility = if (active) View.GONE else View.VISIBLE
-        }.start()
+        firstFrameReady = false
+        // TextureView confirms actual presentation. SurfaceView has no equivalent callback;
+        // its bounded cover yields after the same deadline rather than hiding a working map.
+        if (active) waitingLabel?.waitForFrame() else waitingLabel?.waitForFrame(hideAtDeadline = false)
+
+    }
+
+    /** Decoder output is the best available first-frame signal for SurfaceView. */
+    // 为没有 TextureView 呈现回调的 SurfaceView 提供首帧信号。
+    fun frameRendered() {
+        if (!streamActive) return
+        firstFrameReady = true
+        if (videoView is SurfaceView) waitingLabel?.presented()
     }
 
     /** Window alpha hides the pixels without destroying the TextureView/decoder surface. */

@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_wireless_performance">無線效能保護（實驗性）</string>
+    <string name="settings_wireless_performance_description">僅在無線 CarPlay 工作階段請求 Wi-Fi 高效能鎖，Android 10 以上同時請求低延遲鎖。可能增加耗電，車機也可能忽略請求。預設關閉，下次連線生效。</string>
+</resources>

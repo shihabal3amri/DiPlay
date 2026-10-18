@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_wireless_performance">Продуктивність Wi-Fi (експериментально)</string>
+    <string name="settings_wireless_performance_description">Запитує високу продуктивність Wi-Fi та низьку затримку на Android 10 і новіших лише під час бездротового CarPlay. Може збільшити споживання енергії; пристрій може ігнорувати запит. Типово вимкнено. Діє з наступного підключення.</string>
+</resources>

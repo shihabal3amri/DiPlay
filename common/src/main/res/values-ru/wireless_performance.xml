@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_wireless_performance">Производительность Wi-Fi (экспериментально)</string>
+    <string name="settings_wireless_performance_description">Запрашивает высокую производительность Wi-Fi и низкую задержку на Android 10 и новее только во время беспроводного CarPlay. Может увеличить расход энергии; устройство может игнорировать запрос. По умолчанию выключено. Применяется при следующем подключении.</string>
+</resources>

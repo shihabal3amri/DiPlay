@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_wireless_performance">Prestazioni wireless (sperimentale)</string>
+    <string name="settings_wireless_performance_description">Richiede Wi-Fi ad alte prestazioni e, su Android 10 o versioni successive, bassa latenza solo durante CarPlay wireless. Può aumentare il consumo energetico; il sistema dell’auto può ignorare queste richieste. Disattivato per impostazione predefinita. Si applica alla prossima connessione.</string>
+</resources>

@@ -57,6 +57,24 @@ class CarPlayViewAreasTest {
         assertEquals(DOCK_EDGE_BOTTOM, areas.areas[moved].dockEdge)
     }
 
+    // 多档历史与 Dock、旋转、侧边栏共存回归。
+    @Test
+    fun remembersSeveralSplitShapesWithoutChangingRotationPanelOrDock() {
+        val areas = CarPlayViewAreas.build(2400, 2400, listOf(
+            CarPlayViewAreas.Screen(2400, 1400, false), CarPlayViewAreas.Screen(1400, 2400, true)),
+            CarPlayDock.BOTTOM, splitWindow = { .5f to .85f }, startPortrait = false,
+            sidePanel = true, splitWindowHistory = { if (it) emptyList() else listOf(.33f to .85f, .67f to .85f) })!!
+        val index = areas.indexFor(792, 1190, true, false)!!
+        assertEquals(792, areas.areas[index].width)
+        areas.use(index)
+        val moved = areas.withDock(DOCK_EDGE_DRIVER_SIDE)!!
+        assertEquals(792, areas.areas[moved].width)
+        assertEquals(Kind.SPLIT_SCREEN, areas.kindOf(moved))
+        assertEquals(true, areas.turnsWithScreen)
+        assertEquals(Kind.SIDE_PANEL, areas.kindOf(areas.sidePanel()!!))
+        assertEquals(Kind.FULL_SCREEN, areas.kindOf(areas.indexFor(1400, 2400, false, true)!!))
+    }
+
     private fun turning(dock: CarPlayDock = CarPlayDock.AUTOMATIC, splits: Boolean = false, startPortrait: Boolean = false) =
         CarPlayViewAreas.build(2560, 2560, listOf(
             CarPlayViewAreas.Screen(2560, 1440, portrait = false),
