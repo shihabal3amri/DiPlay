@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string-array name="settings_ambient_color_names">
+        <item>Orchidea</item>
+        <item>Viola</item>
+        <item>Blu intenso</item>
+        <item>Blu oceano</item>
+        <item>Azzurro cielo</item>
+        <item>Azzurro</item>
+        <item>Turchese</item>
+        <item>Ciano</item>
+        <item>Acquamarina</item>
+        <item>Acquamarina chiaro</item>
+        <item>Menta</item>
+        <item>Salvia</item>
+        <item>Giada</item>
+        <item>Verde</item>
+        <item>Verde foglia</item>
+        <item>Verde lime</item>
+        <item>Crema</item>
+        <item>Sabbia</item>
+        <item>Cachi</item>
+        <item>Limone</item>
+        <item>Oro</item>
+        <item>Senape</item>
+        <item>Ambra</item>
+        <item>Pesca</item>
+        <item>Corallo</item>
+        <item>Cremisi</item>
+        <item>Rosa</item>
+        <item>Rosa tenue</item>
+        <item>Bianco</item>
+        <item>Bianco freddo</item>
+        <item>Blu ghiaccio</item>
+    </string-array>
+</resources>

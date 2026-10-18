@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Human names describe the OEM previews, not calibrated lamp colors. -->
+    <string-array name="settings_ambient_color_names">
+        <item>Орхідея</item>
+        <item>Фіолетовий</item>
+        <item>Темно-синій</item>
+        <item>Морський</item>
+        <item>Небесний</item>
+        <item>Лазурний</item>
+        <item>Бірюзовий</item>
+        <item>Ціан</item>
+        <item>Аква</item>
+        <item>Світла аква</item>
+        <item>М’ятний</item>
+        <item>Шавлія</item>
+        <item>Нефритовий</item>
+        <item>Зелений</item>
+        <item>Листяний</item>
+        <item>Лайм</item>
+        <item>Кремовий</item>
+        <item>Пісочний</item>
+        <item>Хакі</item>
+        <item>Лимонний</item>
+        <item>Золотий</item>
+        <item>Гірчичний</item>
+        <item>Бурштиновий</item>
+        <item>Персиковий</item>
+        <item>Кораловий</item>
+        <item>Малиновий</item>
+        <item>Рожевий</item>
+        <item>Світло-рожевий</item>
+        <item>Білий</item>
+        <item>Холодний білий</item>
+        <item>Крижаний синій</item>
+    </string-array>
+</resources>

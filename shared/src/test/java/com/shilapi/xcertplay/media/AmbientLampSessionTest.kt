@@ -37,6 +37,24 @@ class AmbientLampSessionTest {
         h.engine.setEnabled(true); h.engine.update(desired)
         return h.clients.last().also { it.begin.complete(original); h.drain(); h.engine.update(desired) }
     }
+    @Test fun shortPeakBetweenHardwareWritesSurvivesThenReleasesToValley() {
+        val h = Harness(); val client = start(h)
+        client.applies.last().second.complete(Unit); h.drain()
+        h.time = 50; h.engine.update(desired.copy(third = 1), true)
+        h.time = 100; h.engine.update(desired.copy(third = 5), true)
+        h.time = 200; h.engine.update(desired.copy(third = 1), true)
+        assertEquals(5, client.applies.last().first.third)
+        client.applies.last().second.complete(Unit); h.drain()
+        h.time = 400; h.engine.update(desired.copy(third = 1), true)
+        assertEquals(1, client.applies.last().first.third)
+    }
+    @Test fun staticOrPausedPlaybackDiscardsPendingMusicalPeak() {
+        val h = Harness(); val client = start(h)
+        client.applies.last().second.complete(Unit); h.drain()
+        h.time = 50; h.engine.update(desired.copy(third = 5), true)
+        h.time = 200; h.engine.update(desired.copy(third = 1), false)
+        assertEquals(1, client.applies.last().first.third)
+    }
     @Test fun applyAndStopFailureRecoverWithoutSettingsSaveAndPreserveOriginalSnapshot() {
         val h = Harness(); val first = start(h)
         first.applies.last().second.completeExceptionally(IllegalStateException("transport")); h.drain()

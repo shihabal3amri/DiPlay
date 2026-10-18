@@ -34,10 +34,15 @@ class AmbientSettingsRedesignTest {
         RuntimeEnvironment.getApplication().getSharedPreferences("ambient_music", 0).edit().clear().commit()
         activity = Robolectric.buildActivity(DiPlayActivity::class.java).get()
         activity.setTheme(android.R.style.Theme_Material_NoActionBar)
+        activity.applicationInfo.flags = activity.applicationInfo.flags or android.content.pm.ApplicationInfo.FLAG_SUPPORTS_RTL
         activity.ambientSupportCheck = { CompletableFuture.completedFuture(true) }
     }
 
-    private fun text(id: Int, vararg args: Any) = activity.getString(id, *args)
+    private fun text(id: Int, vararg args: Any): String {
+        val named = if ((id == R.string.settings_ambient_swatch || id == R.string.settings_ambient_swatch_selected) && args.size == 1)
+            arrayOf(args[0], AmbientSwatchGrid.colorName(activity, args[0] as Int)) else args
+        return activity.getString(id, *named)
+    }
 
     @Test fun offStateOnlyPromisesTheCarKeepsItsOwnSettings() {
         val lines = AmbientBehaviorText.lines(activity, AmbientMusicSettings.Values(enabled = false))
@@ -89,6 +94,15 @@ class AmbientSettingsRedesignTest {
         assertEquals(listOf(text(R.string.settings_ambient_behavior_lowest), text(R.string.settings_ambient_behavior_restore)), lines)
     }
 
+    @Test fun allSwatchesHaveVisibleNamesIncludingTheTwoWhiteColors() {
+        val context = RuntimeEnvironment.getApplication()
+        val grid = AmbientSwatchGrid(context, 0xffabcdef.toInt(), setOf(1), false, {}, {})
+        assertEquals(31, context.resources.getStringArray(R.array.settings_ambient_color_names).size)
+        val labels = descendants(grid).filterIsInstance<TextView>().map { it.text.toString() }
+        assertTrue(labels.contains(AmbientSwatchGrid.colorName(context, 29)))
+        assertTrue(labels.contains(AmbientSwatchGrid.colorName(context, 30)))
+        assertNotEquals(AmbientSwatchGrid.colorName(context, 29), AmbientSwatchGrid.colorName(context, 30))
+    }
     @Test fun swatchGridKeepsAtLeastOneColorSelected() {
         var emptied = 0
         val changes = mutableListOf<Set<Int>>()
@@ -123,6 +137,21 @@ class AmbientSettingsRedesignTest {
         assertTrue(children.all { it.bottom <= grid.measuredHeight })
     }
 
+    @Test fun swatchTilesClampToVeryNarrowWindowsAndMirrorInRtl() {
+        val grid = AmbientSwatchGrid(activity, 0xff00ff, setOf(1), false, {}, {})
+        grid.layoutDirection = View.LAYOUT_DIRECTION_RTL
+        val width = (70 * activity.resources.displayMetrics.density).toInt()
+        grid.measure(View.MeasureSpec.makeMeasureSpec(width, View.MeasureSpec.EXACTLY), View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED))
+        grid.layout(0, 0, width, grid.measuredHeight)
+        for (index in 0 until grid.childCount) {
+            val child = grid.getChildAt(index)
+            assertTrue(child.left >= 0 && child.right <= width)
+        }
+        val wide = (300 * activity.resources.displayMetrics.density).toInt()
+        grid.measure(View.MeasureSpec.makeMeasureSpec(wide, View.MeasureSpec.EXACTLY), View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED))
+        grid.layout(0, 0, wide, grid.measuredHeight)
+        assertTrue("RTL starts with the first swatch on the right", grid.getChildAt(0).left > grid.getChildAt(1).left)
+    }
     @Test fun disabledGridIgnoresTaps() {
         val grid = AmbientSwatchGrid(activity, 0xff00ff, setOf(1), single = false, onChanged = { fail("disabled") }, onLastDeselected = {})
         grid.setInteractive(false)
@@ -216,7 +245,7 @@ class AmbientSettingsRedesignTest {
         descendants(grid).first { it.contentDescription?.toString()?.let { d -> d == text(R.string.settings_ambient_swatch, index) || d == text(R.string.settings_ambient_swatch_selected, index) } == true }
 
     private fun swatches(dialog: AlertDialog): List<View> = descendants(dialog.window!!.decorView).filter {
-        it.contentDescription?.toString()?.let { d -> Regex("Color \\d+(, selected)?").matches(d) } == true
+        it.tag == "ambient-swatch"
     }
 
     private fun texts(dialog: AlertDialog): List<String> =

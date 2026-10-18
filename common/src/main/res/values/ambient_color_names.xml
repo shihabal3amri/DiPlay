@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Human names describe the OEM previews, not calibrated lamp colors. -->
+    <string-array name="settings_ambient_color_names">
+        <item>Orchid</item>
+        <item>Violet</item>
+        <item>Deep blue</item>
+        <item>Ocean blue</item>
+        <item>Sky blue</item>
+        <item>Azure</item>
+        <item>Turquoise</item>
+        <item>Cyan</item>
+        <item>Aqua</item>
+        <item>Pale aqua</item>
+        <item>Mint</item>
+        <item>Sage</item>
+        <item>Jade</item>
+        <item>Green</item>
+        <item>Leaf green</item>
+        <item>Lime</item>
+        <item>Cream</item>
+        <item>Sand</item>
+        <item>Khaki</item>
+        <item>Lemon</item>
+        <item>Gold</item>
+        <item>Mustard</item>
+        <item>Amber</item>
+        <item>Peach</item>
+        <item>Coral</item>
+        <item>Crimson</item>
+        <item>Rose</item>
+        <item>Blush</item>
+        <item>White</item>
+        <item>Cool white</item>
+        <item>Ice blue</item>
+    </string-array>
+</resources>

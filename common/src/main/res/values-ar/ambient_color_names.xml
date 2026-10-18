@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Human names describe the OEM previews, not calibrated lamp colors. -->
+    <string-array name="settings_ambient_color_names">
+        <item>أوركيد</item>
+        <item>بنفسجي</item>
+        <item>أزرق داكن</item>
+        <item>أزرق بحري</item>
+        <item>سماوي</item>
+        <item>لازوردي</item>
+        <item>فيروزي</item>
+        <item>سيان</item>
+        <item>مائي</item>
+        <item>مائي فاتح</item>
+        <item>نعناعي</item>
+        <item>مريمي</item>
+        <item>يشمي</item>
+        <item>أخضر</item>
+        <item>أخضر ورقي</item>
+        <item>ليموني أخضر</item>
+        <item>كريمي</item>
+        <item>رملي</item>
+        <item>كاكي</item>
+        <item>ليموني</item>
+        <item>ذهبي</item>
+        <item>خردلي</item>
+        <item>كهرماني</item>
+        <item>خوخي</item>
+        <item>مرجاني</item>
+        <item>قرمزي</item>
+        <item>وردي</item>
+        <item>وردي فاتح</item>
+        <item>أبيض</item>
+        <item>أبيض بارد</item>
+        <item>أزرق جليدي</item>
+    </string-array>
+</resources>

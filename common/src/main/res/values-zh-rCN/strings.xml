@@ -804,8 +804,8 @@
     <string name="settings_ambient_colors_hint_follow">点按灯光可以使用的颜色。灯光会在你选的颜色之间变化。</string>
     <string name="settings_ambient_colors_hint_fixed">点按要使用的颜色。固定模式只显示一种颜色。</string>
     <string name="settings_ambient_colors_hint_album">颜色取自专辑封面。关闭“跟随专辑封面”即可自己选择颜色。</string>
-    <string name="settings_ambient_swatch">颜色%1$d</string>
-    <string name="settings_ambient_swatch_selected">颜色%1$d，已选</string>
+    <string name="settings_ambient_swatch">颜色%1$d · %2$s</string>
+    <string name="settings_ambient_swatch_selected">颜色%1$d · %2$s，已选</string>
     <string name="settings_ambient_brightness_value">第%1$d档，共6档</string>
     <string name="settings_ambient_select_one">至少选择一种颜色</string>
     <string name="settings_ambient_brightness">亮度上限</string>
@@ -970,4 +970,7 @@
 
     <string name="settings_hotspot_interface">热点网络接口（可选）</string>
     <string name="settings_hotspot_interface_description">仅用于把热点放在 Android 不认为是 Wi-Fi 热点的网络接口上的车机，例如部分吉利、领克及其它高通车机上的 eth0.3。留空则自动查找。</string>
+    <!-- 原车歌曲栏歌手显示开关 -->
+    <string name="settings_cluster_song_artist">原车歌曲栏显示歌手</string>
+    <string name="settings_cluster_song_artist_hint">只影响原车歌曲栏，Android 媒体信息仍保留歌手。立即生效。</string>
 </resources>

@@ -1,6 +1,8 @@
 package com.shilapi.xcertplay
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
+import org.junit.Assert.assertNotEquals
 import org.junit.Test
 import java.io.File
 import javax.xml.parsers.DocumentBuilderFactory
@@ -19,6 +21,21 @@ class SettingsTranslationsTest {
             for ((name, text) in base) {
                 assertEquals("${locale.name}/$name", placeholders(text), placeholders(translated.getValue(name)))
             }
+        }
+    }
+
+    @Test fun everyLocaleNamesAllThirtyOneAmbientColors() {
+        val folders = res.listFiles { file -> file.name == "values" ||
+            file.name.matches(Regex("values-[a-z]{2}(-r[A-Z]{2})?")) }!!
+        for (folder in folders) {
+            val file = File(folder, "ambient_color_names.xml")
+            assertTrue("${folder.name} must translate the color names", file.isFile)
+            val document = DocumentBuilderFactory.newInstance().newDocumentBuilder().parse(file)
+            val items = document.getElementsByTagName("item")
+            assertEquals(folder.name, 31, items.length)
+            val names = (0 until items.length).map { items.item(it).textContent.trim() }
+            assertTrue("${folder.name} contains an empty color name", names.all { it.isNotEmpty() })
+            assertNotEquals("${folder.name} must distinguish white and cool white", names[28], names[29])
         }
     }
 

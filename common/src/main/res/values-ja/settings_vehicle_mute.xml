@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 车机静音联动设置 -->
+    <string name="settings_vehicle_mute">車両のミュートと再生を連動（実験的機能）</string>
+    <string name="settings_vehicle_mute_hint">メディアのミュート時に一時停止し、解除時に再生します。通話と Siri を優先します。すぐに反映されます。</string>
+</resources>

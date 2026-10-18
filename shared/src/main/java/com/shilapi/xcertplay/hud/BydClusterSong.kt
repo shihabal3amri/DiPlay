@@ -49,7 +49,8 @@ internal class ClusterSongState {
     }
 
     /** The card for the song known so far, if any. */
-    fun current(): ClusterSong? = last
+    fun current(showArtist: Boolean = true): ClusterSong? =
+        if (showArtist) last else text(title, null)?.let { last?.copy(text = it) }
 
     /** The session ended: forget the song. */
     fun clear() {
@@ -100,7 +101,8 @@ internal object BydClusterSong {
     private const val STATE_PAUSED = 2
     private const val STATE_STOPPED = 3
 
-    private val shell = BydAdbShell(TAG)
+    private val worker = ClusterSongWorkerClient()
+    private val controls = ClusterSongAcknowledgements()
     private const val NOTE_MILLIS = 3_000L
     private const val ON_CHANGE_MILLIS = 5_000L
 
@@ -117,6 +119,17 @@ internal object BydClusterSong {
     private var shown: ClusterSong? = null // writer thread
     private var firstLogged = false // writer thread
 
+    init {
+        writer.scheduleWithFixedDelay({
+            runCatching {
+                val app = context ?: return@runCatching
+                val song = synchronized(state) { wanted } ?: return@runCatching
+                if (!worker.keepAlive()) { shown = null; controls.reset() }
+                if (song != shown || controls.needsRefresh(System.nanoTime())) write(app, song)
+            }.onFailure { Log.w(TAG, "song worker renewal failed", it) }
+        }, 5, 5, TimeUnit.SECONDS)
+    }
+
     fun attach(appContext: Context) {
         context = appContext.applicationContext
     }
@@ -127,8 +140,8 @@ internal object BydClusterSong {
         synchronized(state) {
             val previous = state.current()
             state.accept(frame)
-            val song = state.current()
-            if (song == previous || !BydOutputSettings.clusterSong(app)) return
+            val song = state.current(BydOutputSettings.clusterSongArtist(app))
+            if (state.current() == previous || !BydOutputSettings.clusterSong(app)) return
             if (song == null) {
                 stop(app)
                 return
@@ -179,7 +192,7 @@ internal object BydClusterSong {
         synchronized(state) {
             onChange = null
             announced = null
-            val song = state.current().takeIf { enabled }
+            val song = state.current(BydOutputSettings.clusterSongArtist(app)).takeIf { enabled }
             when {
                 song == null -> stop(app)
                 BydOutputSettings.clusterSongOnChange(app) -> {
@@ -221,7 +234,7 @@ internal object BydClusterSong {
         val song = synchronized(state) {
             if (note !== token) return
             note = null
-            val current = state.current().takeIf { BydOutputSettings.clusterSong(app) }
+            val current = state.current(BydOutputSettings.clusterSongArtist(app)).takeIf { BydOutputSettings.clusterSong(app) }
             // In the "only when it changes" mode the card stays empty unless the new song's seconds still run.
             (if (current != null && BydOutputSettings.clusterSongOnChange(app) && onChange == null) EMPTY else current)
                 .also { wanted = it }
@@ -251,35 +264,36 @@ internal object BydClusterSong {
 
     private fun write(app: Context, song: ClusterSong) {
         // Only the newest song matters; older queued ones are skipped.
-        if (synchronized(state) { wanted } != song || song == shown) return
+        if (synchronized(state) { wanted } != song || (song == shown && !controls.needsRefresh(System.nanoTime()))) return
         val text = Base64.encodeToString(song.text.toByteArray(Charsets.UTF_8), Base64.NO_WRAP)
         val playing = when {
             song == EMPTY -> STATE_STOPPED
             song.playing -> STATE_PLAYING
             else -> STATE_PAUSED
         }
-        if (run(app, "${song.source ?: SOURCE_OTHERS} $playing $text")) {
-            shown = song
-            if (!firstLogged) {
-                firstLogged = true
-                Log.i(TAG, "song on the dashboard")
-            }
+        if (!worker.ensure(app)) return
+        if (synchronized(state) { wanted } != song) return
+        val command = controls.command(song.source ?: SOURCE_OTHERS, playing, text, System.nanoTime())
+        val output = worker.write(command.args)
+        val previousSourceConfirmation = controls.sourceConfirmed
+        controls.accept(output, command, System.nanoTime())
+        if (previousSourceConfirmation != controls.sourceConfirmed) {
+            Log.i(TAG, "dashboard sourceConfirmed=${controls.sourceConfirmed}")
         }
+        if (ClusterSongWriteResult.acceptedFields(output, command.fields)) {
+            shown = song
+            if (!firstLogged) { firstLogged = true; Log.i(TAG, "dashboard write fields=${command.fields} sourceConfirmed=${controls.sourceConfirmed}") }
+        }
+
     }
 
     private fun clear(app: Context) {
-        if (shown == null || synchronized(state) { wanted } != null) return
-        if (run(app, "- $STATE_STOPPED -", clearing = true)) shown = null
+        if (synchronized(state) { wanted } != null) return
+        worker.stop()
+        controls.reset()
+        shown = null
     }
 
-    private fun run(app: Context, args: String, clearing: Boolean = false): Boolean {
-        val apk = app.applicationInfo.sourceDir
-        val output = shell.run(app, "CLASSPATH=$apk app_process /system/bin ${BydClusterSongTool::class.java.name} $args")
-            ?: return false
-        val succeeded = ClusterSongWriteResult.accepted(output, clearing)
-        if (!succeeded) Log.w(TAG, "dashboard write failed: incomplete or rejected vendor response")
-        return succeeded
-    }
 }
 
 /** Validate the complete app_process write response, rather than treating an empty response as success. */
@@ -290,6 +304,11 @@ internal object ClusterSongWriteResult {
 
     fun accepted(output: String, clearing: Boolean = false): Boolean {
         val expected = if (clearing) setOf("state") else setOf("source", "state", "text")
+        return acceptedFields(output, expected)
+    }
+
+    fun acceptedFields(output: String?, expected: Set<String>): Boolean {
+        if (output == null) return false
         val received = mutableSetOf<String>()
         for (line in output.lineSequence().map { it.trim() }.filter { '=' in it }) {
             val name = line.substringBefore('=').trim()
@@ -304,53 +323,118 @@ internal object ClusterSongWriteResult {
 /**
  * Runs under the head unit's adb shell through app_process, not in DiPlay: writes the dashboard's music
  * source, play state and song text to the instrument (device 1007), as BYD's media controller does
- * (source 0x33F00030, state 0x43E0000A, text 0x43FB1008 in UTF-16LE). Arguments: source, state and
+ * (source feature resolved from the vehicle SDK, state 0x43E0000A, text 0x43FB1008 in UTF-16LE). Arguments: source, state and
  * base64 UTF-8 text, "-" to skip one. Prints "name=result" per write; 0 is success.
  */
 object BydClusterSongTool {
-    private const val DEVICE = 1007
-    private const val SOURCE = 0x33F00030
-    private const val STATE = 0x43E0000A
-    private const val TEXT = 0x43FB1008
-
-    @JvmStatic
-    fun main(args: Array<String>) {
-        try {
-            write(args)
-        } catch (error: Throwable) {
-            println("write=ERR ${describe(error)}")
-        } finally {
-            // ActivityThread leaves threads behind; without this the shell command would not return.
-            System.exit(0)
-        }
+    @JvmStatic fun main(args: Array<String>) {
+        try { println(ClusterSongDeviceWriter().write(args)) }
+        catch (error: Throwable) { println("write=ERR ${clusterSongError(error)}") }
+        finally { System.exit(0) }
     }
+}
 
-    @SuppressLint("PrivateApi")
-    private fun write(args: Array<String>) {
+/** Initializes only the previously approved instrument device and methods. */
+@SuppressLint("PrivateApi")
+internal class ClusterSongDeviceWriter(
+    suppliedDevice: Any? = null,
+    private val sourceFeatureClass: () -> Class<*> = { Class.forName("android.hardware.bydauto.BYDAutoFeatureIds\$Instrument") },
+) {
+    private val sourceFeature = lazy { runCatching { resolveSourceFeature(sourceFeatureClass()) } }
+    private val started = System.nanoTime()
+    private val device: Any
+    private val setState: java.lang.reflect.Method
+    private val setInfo: java.lang.reflect.Method
+    private val contextMs: Long
+    private val deviceMs: Long
+
+    init {
         runCatching { android.os.Looper.prepareMainLooper() }
-        val thread = Class.forName("android.app.ActivityThread")
-        val main = thread.getMethod("systemMain").invoke(null)
-        val context = thread.getMethod("getSystemContext").invoke(main)
-        val deviceClass = Class.forName("android.hardware.bydauto.instrument.BYDAutoInstrumentDevice")
-        // getInstance checks BYDAUTO_INSTRUMENT_COMMON on the caller's side only; autoservice itself
-        // accepts the shell user, so build the device the way getInstance does.
-        val device = try {
-            deviceClass.getMethod("getInstance", Context::class.java).invoke(null, context)
-        } catch (_: InvocationTargetException) {
-            deviceClass.getDeclaredConstructor(Context::class.java).apply { isAccessible = true }.newInstance(context)
+        val contextReady: Long
+        val deviceClass: Class<*>
+        if (suppliedDevice != null) {
+            device = suppliedDevice
+            deviceClass = device.javaClass
+            contextReady = started
+        } else {
+            val thread = Class.forName("android.app.ActivityThread")
+            val main = thread.getMethod("systemMain").invoke(null)
+            val context = thread.getMethod("getSystemContext").invoke(main)
+            contextReady = System.nanoTime()
+            deviceClass = Class.forName("android.hardware.bydauto.instrument.BYDAutoInstrumentDevice")
+            device = try {
+                deviceClass.getMethod("getInstance", Context::class.java).invoke(null, context)
+            } catch (_: InvocationTargetException) {
+                deviceClass.getDeclaredConstructor(Context::class.java).apply { isAccessible = true }.newInstance(context)
+            }
         }
-        val setState = deviceClass.getMethod("setMediaState", Int::class.java, Int::class.java, Int::class.java)
-        val setInfo = deviceClass.getMethod("setMediaInfo", Int::class.java, Int::class.java, ByteArray::class.java)
-        args.getOrNull(0)?.takeIf { it != "-" }?.let { println("source=${setState.invoke(device, DEVICE, SOURCE, it.toInt())}") }
-        args.getOrNull(1)?.takeIf { it != "-" }?.let { println("state=${setState.invoke(device, DEVICE, STATE, it.toInt())}") }
-        args.getOrNull(2)?.takeIf { it != "-" }?.let { encoded ->
-            val text = String(Base64Compat.decode(encoded), Charsets.UTF_8).toByteArray(Charsets.UTF_16LE)
-            println("text=${if (text.size > ClusterSongState.MAX_TEXT_BYTES) "ERR too long" else setInfo.invoke(device, DEVICE, TEXT, text)}")
-        }
+        setState = deviceClass.getMethod("setMediaState", Int::class.java, Int::class.java, Int::class.java)
+        setInfo = deviceClass.getMethod("setMediaInfo", Int::class.java, Int::class.java, ByteArray::class.java)
+        contextMs = (contextReady - started) / 1_000_000L
+        deviceMs = (System.nanoTime() - contextReady) / 1_000_000L
     }
 
-    private fun describe(error: Throwable): String {
-        val cause = error.cause ?: error
-        return cause.javaClass.name + (cause.message?.let { ": $it" } ?: "")
+    private fun resolveSourceFeature(featureClass: Class<*>): Int {
+        val field = featureClass.getField("INSTRUMENT_MUSIC_SOURCE_SET")
+        require(java.lang.reflect.Modifier.isStatic(field.modifiers) && field.type == Int::class.javaPrimitiveType) {
+            "INSTRUMENT_MUSIC_SOURCE_SET must be a static int"
+        }
+        val id = field.getInt(null)
+        require(id == 0x43E00030 || id == 0x38F00030) { "unsupported INSTRUMENT_MUSIC_SOURCE_SET 0x${id.toUInt().toString(16)}" }
+        return id
+    }
+
+    fun write(args: Array<String>): String {
+        val response = mutableListOf<String>()
+        val start = System.nanoTime()
+        fun result(name: String, action: () -> Any?) {
+            response += "$name=${runCatching { action().toString() }.getOrElse { "ERR ${clusterSongError(it)}" }}"
+        }
+        args.getOrNull(0)?.takeIf { it != "-" }?.let { result("source") { setState.invoke(device, 1007, sourceFeature.value.getOrThrow(), it.toInt()) } }
+        val sourceDone = System.nanoTime()
+        args.getOrNull(1)?.takeIf { it != "-" }?.let { result("state") { setState.invoke(device, 1007, 0x43E0000A, it.toInt()) } }
+        val stateDone = System.nanoTime()
+        args.getOrNull(2)?.takeIf { it != "-" }?.let { encoded ->
+            result("text") {
+                val text = String(Base64Compat.decode(encoded), Charsets.UTF_8).toByteArray(Charsets.UTF_16LE)
+                if (text.size > ClusterSongState.MAX_TEXT_BYTES) "ERR too long" else setInfo.invoke(device, 1007, 0x43FB1008, text)
+            }
+        }
+        val textDone = System.nanoTime()
+        response += "timing contextMs:$contextMs deviceMs:$deviceMs sourceMs:${(sourceDone - start) / 1_000_000L} stateMs:${(stateDone - sourceDone) / 1_000_000L} textMs:${(textDone - stateDone) / 1_000_000L}"
+        return response.joinToString("\n")
+    }
+}
+
+private fun clusterSongError(error: Throwable): String {
+    val cause = error.cause ?: error
+    return (cause.javaClass.name + (cause.message?.let { ": $it" } ?: "")).replace('\n', ' ').replace('\r', ' ').take(160)
+}
+
+
+/** 分别确认来源和播放状态；来源失败时歌词仍可更新，30 秒后再试来源。 */
+internal class ClusterSongAcknowledgements {
+    data class Command(val args: String, val source: Int?, val state: Int?, val fields: Set<String>)
+    private var source: Int? = null
+    private var state: Int? = null
+    val sourceConfirmed: Boolean get() = source != null
+    private var retrySourceAt = 0L
+    private var retryStateAt = 0L
+    fun reset() { source = null; state = null; retrySourceAt = 0L; retryStateAt = 0L }
+    fun needsRefresh(now: Long) = (source == null && now >= retrySourceAt) || (state == null && now >= retryStateAt)
+    fun command(nextSource: Int, nextState: Int, text: String, now: Long): Command {
+        val sourceValue = nextSource.takeIf { source != it && now >= retrySourceAt }
+        val stateValue = nextState.takeIf { state != it && now >= retryStateAt }
+        return Command("${sourceValue ?: "-"} ${stateValue ?: "-"} $text", sourceValue, stateValue,
+            buildSet { add("text"); if (sourceValue != null) add("source"); if (stateValue != null) add("state") })
+    }
+    fun accept(output: String?, command: Command, now: Long) {
+        if (output == null) { reset(); return }
+        fun accepted(name: String) = ClusterSongWriteResult.acceptedFields(
+            output.lineSequence().filter { it.substringBefore('=') == name }.joinToString("\n"), setOf(name))
+        command.source?.let { if (accepted("source")) { source = it; retrySourceAt = 0L }
+            else { source = null; retrySourceAt = now + TimeUnit.SECONDS.toNanos(30) } }
+        command.state?.let { if (accepted("state")) { state = it; retryStateAt = 0L }
+            else { state = null; retryStateAt = now + TimeUnit.SECONDS.toNanos(5) } }
     }
 }

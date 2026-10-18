@@ -815,8 +815,8 @@
     <string name="settings_ambient_colors_hint_follow">Нажмите на цвета, которые может использовать подсветка. Она меняется между выбранными.</string>
     <string name="settings_ambient_colors_hint_fixed">Нажмите на нужный цвет. В фиксированном режиме показывается один цвет.</string>
     <string name="settings_ambient_colors_hint_album">Цвета берутся с обложки альбома. Выключите «Цвет обложки альбома», чтобы выбрать цвета самостоятельно.</string>
-    <string name="settings_ambient_swatch">Цвет %1$d</string>
-    <string name="settings_ambient_swatch_selected">Цвет %1$d, выбран</string>
+    <string name="settings_ambient_swatch">Цвет %1$d · %2$s</string>
+    <string name="settings_ambient_swatch_selected">Цвет %1$d · %2$s, выбран</string>
     <string name="settings_ambient_brightness_value">Уровень %1$d из 6</string>
     <string name="settings_ambient_select_one">Выберите хотя бы один цвет</string>
     <string name="settings_ambient_brightness">Максимальная яркость</string>
@@ -910,4 +910,7 @@
 
     <string name="settings_hotspot_interface">Интерфейс точки доступа (необязательно)</string>
     <string name="settings_hotspot_interface_description">Только для головных устройств, которые держат точку доступа на сетевом интерфейсе, не считающемся в Android точкой доступа Wi-Fi, например eth0.3 на некоторых устройствах Geely, Lynk &amp; Co и других Qualcomm. Оставьте пустым для автоматического поиска.</string>
+    <!-- 原车歌曲栏歌手显示开关 -->
+    <string name="settings_cluster_song_artist">Показывать исполнителя в карточке автомобиля</string>
+    <string name="settings_cluster_song_artist_hint">Меняет только карточку автомобиля. Android сохраняет информацию об исполнителе. Действует сразу.</string>
 </resources>

@@ -96,9 +96,10 @@ class AmbientAlbumUiScreenshotsTest {
         for ((widthDp, fontScale, name) in listOf(
             Triple(600, 1.3f, "compact-600dp-font-1.3"),
             Triple(1280, 1.5f, "full-1280dp-font-1.5"),
+            Triple(600, 1.5f, "ar-rtl-600dp-font-1.5"),
         )) {
             for (atBottom in listOf(false, true)) {
-                val opened = openDialog(widthDp, fontScale)
+                val opened = openDialog(widthDp, fontScale, if (name.startsWith("ar-")) "ar" else "zh-rCN")
                 try {
                     val decor = opened.second.window!!.decorView
                     layout(decor, RuntimeEnvironment.getApplication().resources.displayMetrics.density, widthDp)
@@ -117,8 +118,8 @@ class AmbientAlbumUiScreenshotsTest {
         }
     }
 
-    private fun openDialog(widthDp: Int, fontScale: Float): Pair<DiPlayActivity, AlertDialog> {
-        RuntimeEnvironment.setQualifiers("en-w${widthDp}dp-h960dp-mdpi")
+    private fun openDialog(widthDp: Int, fontScale: Float, locale: String = "en"): Pair<DiPlayActivity, AlertDialog> {
+        RuntimeEnvironment.setQualifiers("$locale-w${widthDp}dp-h960dp-mdpi")
         val app = RuntimeEnvironment.getApplication()
         app.resources.updateConfiguration(
             Configuration(app.resources.configuration).apply {
@@ -130,10 +131,13 @@ class AmbientAlbumUiScreenshotsTest {
         )
         val activity = Robolectric.buildActivity(DiPlayActivity::class.java).get()
         activity.setTheme(android.R.style.Theme_Material_NoActionBar)
+        activity.applicationInfo.flags = activity.applicationInfo.flags or android.content.pm.ApplicationInfo.FLAG_SUPPORTS_RTL
         activity.ambientSupportCheck = { CompletableFuture.completedFuture(false) }
         ReflectionHelpers.callInstanceMethod<Unit>(activity, "showAmbientConfiguration")
         shadowOf(Looper.getMainLooper()).idle()
-        return activity to ShadowAlertDialog.getLatestAlertDialog()
+        val dialog = ShadowAlertDialog.getLatestAlertDialog()
+        dialog.window!!.decorView.layoutDirection = app.resources.configuration.layoutDirection
+        return activity to dialog
     }
 
     private fun layout(decor: View, density: Float, widthDp: Int) {

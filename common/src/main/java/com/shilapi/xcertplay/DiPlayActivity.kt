@@ -1967,6 +1967,8 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
         // Opt-in controls that can cost sound or video on some head units.
         filteredSection(content, SettingsSection.ADVANCED_MEDIA,
             getString(R.string.settings_advanced_media), R.drawable.ic_dp_advanced) { card ->
+            vehicleMuteSwitch(card)
+
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q && CarHotspotSetup.isBydHeadUnit(this)) {
                 toggle(card, getString(R.string.settings_hide_byd_call_popup),
                     getString(R.string.settings_hide_byd_call_popup_description),
@@ -4401,6 +4403,13 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
         return action != WheelZoomKeys.Action.PASS || super.dispatchKeyEvent(event)
     }
 
+    private fun vehicleMuteSwitch(card: LinearLayout) {
+        toggle(card, getString(R.string.settings_vehicle_mute), getString(R.string.settings_vehicle_mute_hint),
+            AirPlayPersistence.loadVehicleMediaMutePauseEnabled(this)) {
+            AirPlayPersistence.saveVehicleMediaMutePauseEnabled(this, it)
+        }
+    }
+
     /** The 0.2.9 Dashboard song setting, shown once: in the BYD navigation card, or under Advanced vehicle data. */
     private fun clusterSongSwitch(card: LinearLayout) {
         toggle(card, getString(R.string.cluster_song),
@@ -4409,6 +4418,11 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
             BydOutputSettings.setClusterSong(this, it)
             if (it) checkAdbState(mayAsk = true)
             BydNavigationOutputs.clusterSongChanged(it)
+        }
+        toggle(card, getString(R.string.settings_cluster_song_artist), getString(R.string.settings_cluster_song_artist_hint),
+            BydOutputSettings.clusterSongArtist(this)) {
+            BydOutputSettings.setClusterSongArtist(this, it)
+            BydNavigationOutputs.clusterSongOnChangeChanged()
         }
         toggle(card, getString(R.string.cluster_song_on_change), getString(R.string.cluster_song_on_change_description),
             BydOutputSettings.clusterSongOnChange(this), enabled = !adbSwitchChangePending) {

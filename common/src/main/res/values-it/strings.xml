@@ -821,8 +821,8 @@
     <string name="settings_ambient_colors_hint_follow">Tocca i colori che le luci possono usare. Cambiano tra quelli selezionati.</string>
     <string name="settings_ambient_colors_hint_fixed">Tocca il colore da usare. La modalità fissa mostra un solo colore.</string>
     <string name="settings_ambient_colors_hint_album">I colori vengono dalla copertina dell’album. Disattiva Segui la copertina dell’album per scegliere i colori tu.</string>
-    <string name="settings_ambient_swatch">Colore %1$d</string>
-    <string name="settings_ambient_swatch_selected">Colore %1$d, selezionato</string>
+    <string name="settings_ambient_swatch">Colore %1$d · %2$s</string>
+    <string name="settings_ambient_swatch_selected">Colore %1$d · %2$s, selezionato</string>
     <string name="settings_ambient_brightness_value">Livello %1$d di 6</string>
     <string name="settings_ambient_select_one">Seleziona almeno un colore</string>
     <string name="settings_ambient_brightness">Luminosità massima</string>
@@ -1000,4 +1000,6 @@
     <string name="settings_hotspot_interface_description">Solo per head unit che usano per l’hotspot un’interfaccia di rete che Android non riconosce come hotspot Wi-Fi, per esempio eth0.3 su alcune unità Geely, Lynk &amp; Co e altre Qualcomm. Lascia vuoto per trovarla automaticamente.</string>
     <string name="wifi_direct_refused_beside_hotspot">L’hotspot dell’auto è attivo e Wi-Fi Direct non può avviarsi insieme a esso</string>
     <string name="connection_help_wifi_direct_beside_hotspot">Disattiva l’hotspot dell’auto e riprova, oppure scegli Hotspot integrato dell’auto in Configurazione connessione e salva nome e password.</string>
+    <string name="settings_cluster_song_artist">Mostra l’artista nella scheda brano dell’auto</string>
+    <string name="settings_cluster_song_artist_hint">Modifica solo la scheda brano dell’auto. Le informazioni multimediali Android conservano l’artista. Si applica subito.</string>
 </resources>

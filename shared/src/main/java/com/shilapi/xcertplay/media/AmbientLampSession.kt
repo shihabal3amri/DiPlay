@@ -30,6 +30,7 @@ internal class AmbientLampSession(
     private var restoreUnconfirmed = false
     private var lastApplied: Triple<Int, Int, Int>? = null
     private val cadence = AmbientMusicApplyCadence()
+    private var pendingPeak = 0
 
     /** Called on the owning controller executor; an active worker need not be probed again. */
     fun isReady(): Boolean = ready && !stopping && client?.unhealthy() == false
@@ -38,6 +39,7 @@ internal class AmbientLampSession(
         if (enabled == value) return
         enabled = value
         if (!value) {
+            pendingPeak = 0
             if (client == null && !stopping && !restoreUnconfirmed) {
                 original = null; failures = 0; retryAt = now()
             }
@@ -49,8 +51,11 @@ internal class AmbientLampSession(
     }
 
     /** Called before desired-value deduplication, even if music stays on one color indefinitely. */
-    fun update(desired: Triple<Int, Int, Int>) {
+    fun update(desired: Triple<Int, Int, Int>, preserveMusicalPeak: Boolean = false) {
         if (!enabled || stopping) return
+        // Preserve a short played onset until the next allowed hardware write. Pause/static
+        // callers clear it so an old beat cannot light up after playback stops.
+        pendingPeak = if (preserveMusicalPeak) maxOf(pendingPeak, desired.third) else 0
         val owned = client
         if (owned != null && owned.unhealthy()) { failOwned("inactive"); return }
         if (owned == null) {
@@ -75,21 +80,28 @@ internal class AmbientLampSession(
             } }
             return
         }
-        if (!ready || applying || lastApplied == desired || !cadence.trySubmit(now())) return
+        if (!ready || applying) return
+        // A peak already sent must not hide its following valley behind deduplication.
+        if (preserveMusicalPeak && pendingPeak == lastApplied?.third) pendingPeak = desired.third
+        val command = desired.copy(third = maxOf(desired.third, pendingPeak))
+        if (lastApplied == command || !cadence.trySubmit(now())) return
+        pendingPeak = 0
         applying = true
-        val future = try { owned.apply(desired) } catch (error: Throwable) {
+        val future = try { owned.apply(command) } catch (error: Throwable) {
             CompletableFuture<Unit>().also { it.completeExceptionally(error) }
         }
         future.whenComplete { _, error -> dispatch {
             if (client !== owned || stopping) return@dispatch
             applying = false
             if (error == null) {
-                lastApplied = desired
+                lastApplied = command
                 failures = 0
-                applied(desired)
+                applied(command)
             } else if (!ambientApplyCancelled(error)) failOwned("apply")
         } }
     }
+
+    fun clearMusicalPeak() { pendingPeak = 0 }
 
     fun recover() { if (enabled) failOwned("controller") }
 
@@ -111,7 +123,7 @@ internal class AmbientLampSession(
         val old = client ?: return
         stopping = true
         client = null // All old begin/apply callbacks immediately lose ownership.
-        ready = false; applying = false; lastApplied = null; cadence.reset()
+        ready = false; applying = false; lastApplied = null; pendingPeak = 0; cadence.reset()
         val stopped = try { old.stop() } catch (error: Throwable) {
             CompletableFuture<Unit>().also { it.completeExceptionally(error) }
         }

@@ -847,8 +847,8 @@
     <string name="settings_ambient_colors_hint_follow">Tap the colors the lamps may use. They change between your selection.</string>
     <string name="settings_ambient_colors_hint_fixed">Tap the color to use. Fixed mode shows one color.</string>
     <string name="settings_ambient_colors_hint_album">Colors come from the album cover. Turn off Follow album cover to pick colors yourself.</string>
-    <string name="settings_ambient_swatch">Color %1$d</string>
-    <string name="settings_ambient_swatch_selected">Color %1$d, selected</string>
+    <string name="settings_ambient_swatch">Color %1$d · %2$s</string>
+    <string name="settings_ambient_swatch_selected">Color %1$d · %2$s, selected</string>
     <string name="settings_ambient_brightness_value">Level %1$d of 6</string>
     <string name="settings_ambient_select_one">Select at least one color</string>
     <string name="settings_ambient_brightness">Maximum brightness</string>
@@ -1013,4 +1013,7 @@
 
     <string name="settings_hotspot_interface">Hotspot interface (optional)</string>
     <string name="settings_hotspot_interface_description">Only for head units that run their hotspot on a network interface Android does not report as a Wi-Fi hotspot, for example eth0.3 on some Geely, Lynk &amp; Co and other Qualcomm units. Leave empty to find it automatically.</string>
+    <!-- 原车歌曲栏歌手显示开关 -->
+    <string name="settings_cluster_song_artist">Show artist in the car song card</string>
+    <string name="settings_cluster_song_artist_hint">Only changes the car song card. Android media information keeps the artist. Applies immediately.</string>
 </resources>

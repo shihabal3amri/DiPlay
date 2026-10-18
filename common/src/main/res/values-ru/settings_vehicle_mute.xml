@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 车机静音联动设置 -->
+    <string name="settings_vehicle_mute">Отключение звука управляет воспроизведением (экспериментально)</string>
+    <string name="settings_vehicle_mute_hint">Пауза при отключении звука мультимедиа, воспроизведение при включении. Звонки и Siri имеют приоритет. Действует сразу.</string>
+</resources>

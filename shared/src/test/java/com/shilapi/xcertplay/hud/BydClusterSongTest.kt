@@ -10,6 +10,17 @@ class BydClusterSongTest {
     private fun update(block: com.shilapi.xcertplay.iap2.body.Iap2BodyBuilder.() -> Unit) =
         Iap2Messages.buildRaw(ClusterSongState.NOW_PLAYING_UPDATE, block)
 
+    @Test fun hidingArtistDoesNotDiscardRetainedMetadataOrTitleOnlyHudLine() {
+        val state = ClusterSongState()
+        state.accept(update { group(0) { string(1, "Track"); string(12, "Artist") } })
+        assertEquals(ClusterSong("Track", false, "Track"), state.current(false))
+        assertEquals(ClusterSong("Track — Artist", false, "Track"), state.current(true))
+        state.accept(update { group(0) { string(1, "Next") } })
+        assertEquals("Next", state.current(false)?.text)
+        assertEquals("Next — Artist", state.current(true)?.text)
+        assertEquals("Next", state.current(true)?.line)
+    }
+
     @Test
     fun followsTitleArtistAndPlaybackStatus() {
         val state = ClusterSongState()

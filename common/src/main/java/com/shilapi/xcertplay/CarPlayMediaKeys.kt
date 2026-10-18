@@ -55,6 +55,7 @@ internal object CarPlayMediaKeys {
     private val ambientColorCache = LinkedHashMap<Int, Int?>()
     private var initialAlbumRecovery = InitialAlbumRecovery()
     private var initialAlbumRetry: Runnable? = null
+    private var vehicleMute: VehicleMediaMuteController? = null
     private var controller: CarPlayController? = null
     private var session: MediaSession? = null
     private var focusRequest: AudioFocusRequestCompat? = null
@@ -79,8 +80,12 @@ internal object CarPlayMediaKeys {
         }
         appContext = context.applicationContext
         controller = next
+        if (vehicleMute == null) vehicleMute = VehicleMediaMuteController(context, next)
         GeelyWheelKeys.start(context)
         com.shilapi.xcertplay.media.AmbientMusicController.claimPlaybackOwner(next)
+        next.manualMediaControlListener = {
+            synchronized(this) { if (controller === next) vehicleMute?.manualControl() }
+        }
         next.playbackListener = { playing ->
             com.shilapi.xcertplay.media.AmbientMusicController.phonePlaybackChanged(next, playing)
             onIphonePlaying(next, playing)
@@ -97,6 +102,7 @@ internal object CarPlayMediaKeys {
     fun detach(expected: CarPlayController?) {
         if (expected == null || controller !== expected) return
         com.shilapi.xcertplay.media.AmbientMusicController.releasePlaybackOwner(expected)
+        expected.manualMediaControlListener = null
         expected.playbackListener = null
         expected.nowPlayingListener = null
         expected.artworkListener = null
@@ -112,6 +118,7 @@ internal object CarPlayMediaKeys {
 
     /** The iPhone started or stopped playing; may run on any thread. */
     private fun onIphonePlaying(expected: CarPlayController, playing: Boolean) {
+        mainHandler.post { synchronized(this) { if (controller === expected) vehicleMute?.playbackChanged() } }
         if (playing) mainHandler.post {
             synchronized(this) {
                 if (controller === expected) regainFocusLocked(onIphonePlaybackResume = true)
@@ -124,6 +131,7 @@ internal object CarPlayMediaKeys {
         mainHandler.post {
             synchronized(this) {
                 if (controller !== expected) return@synchronized
+                vehicleMute?.mediaChanged()
                 // Resolve retained state at delivery: a queued callback cannot roll a replay back.
                 val update = expected.nowPlayingSnapshot()
                 val previousArtwork = artwork
@@ -363,6 +371,9 @@ internal object CarPlayMediaKeys {
     }
 
     private fun releaseLocked() {
+        vehicleMute?.stop()
+        vehicleMute = null
+        controller?.manualMediaControlListener = null
         focusOwner = null
         controller?.let(com.shilapi.xcertplay.media.AmbientMusicController::releasePlaybackOwner)
         artworkOwner = null

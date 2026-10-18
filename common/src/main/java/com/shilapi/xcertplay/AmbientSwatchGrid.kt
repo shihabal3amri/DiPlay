@@ -48,8 +48,10 @@ internal class AmbientSwatchGrid(
         var widest = 0
         for (i in 0 until childCount) {
             val child = getChildAt(i)
-            measureChildWithMargins(child, widthSpec, 0, heightSpec, 0)
             val lp = child.layoutParams as MarginLayoutParams
+            val preferred = dp((TILE_WIDTH_DP * context.resources.configuration.fontScale.coerceAtLeast(1f)).roundToInt())
+            lp.width = minOf(preferred, (available - lp.leftMargin - lp.rightMargin).coerceAtLeast(0))
+            measureChildWithMargins(child, widthSpec, 0, heightSpec, 0)
             val w = child.measuredWidth + lp.leftMargin + lp.rightMargin
             val h = child.measuredHeight + lp.topMargin + lp.bottomMargin
             if (x > 0 && x + w > available) {
@@ -79,7 +81,9 @@ internal class AmbientSwatchGrid(
                 y += rowHeight
                 rowHeight = 0
             }
-            child.layout(x + lp.leftMargin, y + lp.topMargin, x + lp.leftMargin + child.measuredWidth, y + lp.topMargin + child.measuredHeight)
+            val childLeft = if (layoutDirection == LAYOUT_DIRECTION_RTL)
+                available - x - lp.rightMargin - child.measuredWidth else x + lp.leftMargin
+            child.layout(childLeft, y + lp.topMargin, childLeft + child.measuredWidth, y + lp.topMargin + child.measuredHeight)
             x += w
             rowHeight = maxOf(rowHeight, h)
         }
@@ -103,6 +107,8 @@ internal class AmbientSwatchGrid(
 
     private fun swatchView(context: Context, index: Int): FrameLayout {
         val size = dp(SWATCH_DP)
+        val tileWidth = dp((TILE_WIDTH_DP * context.resources.configuration.fontScale.coerceAtLeast(1f)).roundToInt())
+        val labelHeight = dp((LABEL_HEIGHT_DP * context.resources.configuration.fontScale).roundToInt())
         val check = TextView(context).apply {
             text = "✓"
             textSize = 18f
@@ -112,10 +118,19 @@ internal class AmbientSwatchGrid(
             tag = CHECK
         }
         return FrameLayout(context).apply {
-            layoutParams = MarginLayoutParams(size, size).apply { setMargins(dp(MARGIN_DP), dp(MARGIN_DP), dp(MARGIN_DP), dp(MARGIN_DP)) }
+            layoutParams = MarginLayoutParams(tileWidth, size + labelHeight).apply { setMargins(dp(MARGIN_DP), dp(MARGIN_DP), dp(MARGIN_DP), dp(MARGIN_DP)) }
+            tag = "ambient-swatch"
             isClickable = true
             isFocusable = true
-            addView(check, FrameLayout.LayoutParams(-1, -1))
+            addView(View(context).apply { tag = COLOR }, FrameLayout.LayoutParams(size, size, Gravity.TOP or Gravity.CENTER_HORIZONTAL))
+            addView(check, FrameLayout.LayoutParams(size, size, Gravity.TOP or Gravity.CENTER_HORIZONTAL))
+            addView(TextView(context).apply {
+                text = colorName(context, index)
+                textSize = 11f
+                gravity = Gravity.CENTER
+                setTextColor(accent)
+                maxLines = 2
+            }, FrameLayout.LayoutParams(-1, labelHeight, Gravity.BOTTOM))
             setOnClickListener { toggle(index) }
         }
     }
@@ -137,14 +152,14 @@ internal class AmbientSwatchGrid(
     private fun refresh() {
         for ((index, swatch) in swatches) {
             val selected = index in selection
-            swatch.background = GradientDrawable().apply {
+            swatch.findViewWithTag<View>(COLOR).background = GradientDrawable().apply {
                 shape = GradientDrawable.OVAL
                 setColor(AmbientAlbumPalette.previewRgb(index))
                 if (selected) setStroke(dp(3), accent) else setStroke(dp(1), UNSELECTED_RING)
             }
             swatch.findViewWithTag<View>(CHECK).visibility = if (selected) VISIBLE else INVISIBLE
             swatch.contentDescription = context.getString(
-                if (selected) R.string.settings_ambient_swatch_selected else R.string.settings_ambient_swatch, index,
+                if (selected) R.string.settings_ambient_swatch_selected else R.string.settings_ambient_swatch, index, colorName(context, index),
             )
         }
     }
@@ -156,6 +171,13 @@ internal class AmbientSwatchGrid(
 
     internal companion object {
         const val COLORS = 31
+        fun colorName(context: Context, index: Int): String {
+            require(index in 1..COLORS)
+            return context.resources.getStringArray(R.array.settings_ambient_color_names)[index - 1]
+        }
+        private const val TILE_WIDTH_DP = 84
+        private const val LABEL_HEIGHT_DP = 34
+        private const val COLOR = "color"
         private const val SWATCH_DP = 44
         private const val MARGIN_DP = 5
         private const val CHECK = "check"

@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Human names describe the OEM previews, not calibrated lamp colors. -->
+    <string-array name="settings_ambient_color_names">
+        <item>蘭紫</item>
+        <item>紫羅蘭</item>
+        <item>深藍</item>
+        <item>海藍</item>
+        <item>天藍</item>
+        <item>蔚藍</item>
+        <item>青藍</item>
+        <item>青色</item>
+        <item>水青</item>
+        <item>淺水青</item>
+        <item>薄荷青</item>
+        <item>鼠尾草綠</item>
+        <item>翡翠綠</item>
+        <item>綠色</item>
+        <item>葉綠</item>
+        <item>青檸</item>
+        <item>米白</item>
+        <item>沙色</item>
+        <item>卡其</item>
+        <item>檸檬黃</item>
+        <item>金黃</item>
+        <item>芥黃</item>
+        <item>琥珀</item>
+        <item>蜜桃</item>
+        <item>珊瑚</item>
+        <item>緋紅</item>
+        <item>玫紅</item>
+        <item>淺玫紅</item>
+        <item>白色</item>
+        <item>冷白</item>
+        <item>冰藍</item>
+    </string-array>
+</resources>

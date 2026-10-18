@@ -90,6 +90,7 @@ object AmbientMusicController {
             if (activeSink.get() != token) return@execute
             this.context = context.applicationContext
             settings = AmbientMusicSettings.load(context)
+            lampSession.clearMusicalPeak()
             resetColors()
             brightnessEnvelope = AmbientMusicBrightness(settings.speed)
             allowed = settings.enabled; envelope = null; playback = null
@@ -190,6 +191,7 @@ object AmbientMusicController {
         executor.execute {
             this.context = context.applicationContext
             settings = AmbientMusicSettings.load(context)
+            lampSession.clearMusicalPeak()
             resetColors()
             brightnessEnvelope = AmbientMusicBrightness(settings.speed)
             allowed = settings.enabled
@@ -259,7 +261,8 @@ object AmbientMusicController {
         val color = if (target == AmbientMusicTarget.FOLLOW_PLAYBACK && values.colorCycle)
             colors.color(values.colorMode, nowMillis, rms, energy.bassRms) else if (values.colorSource == AmbientColorSource.ALBUM) albumColor ?: 1
             else values.selectedColors.firstOrNull() ?: values.color
-        lampSession.update(Triple(area, color, brightness))
+        // 仅跟随播放时保留短拍；原车律动和空闲策略沿用上游。
+        lampSession.update(Triple(area, color, brightness), preserveMusicalPeak = target == AmbientMusicTarget.FOLLOW_PLAYBACK)
     }
 
     private fun restoreOriginal() { lampSession.setEnabled(false) }

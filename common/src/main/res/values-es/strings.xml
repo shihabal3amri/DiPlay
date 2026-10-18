@@ -815,8 +815,8 @@
     <string name="settings_ambient_colors_hint_follow">Toca los colores que pueden usar las luces. Cambian entre tu selección.</string>
     <string name="settings_ambient_colors_hint_fixed">Toca el color que quieres usar. El modo fijo muestra un solo color.</string>
     <string name="settings_ambient_colors_hint_album">Los colores salen de la portada del álbum. Desactiva Seguir la portada del álbum para elegirlos tú.</string>
-    <string name="settings_ambient_swatch">Color %1$d</string>
-    <string name="settings_ambient_swatch_selected">Color %1$d, seleccionado</string>
+    <string name="settings_ambient_swatch">Color %1$d · %2$s</string>
+    <string name="settings_ambient_swatch_selected">Color %1$d · %2$s, seleccionado</string>
     <string name="settings_ambient_brightness_value">Nivel %1$d de 6</string>
     <string name="settings_ambient_select_one">Selecciona al menos un color</string>
     <string name="settings_ambient_brightness">Brillo máximo</string>
@@ -910,4 +910,7 @@
 
     <string name="settings_hotspot_interface">Interfaz del punto de acceso (opcional)</string>
     <string name="settings_hotspot_interface_description">Solo para unidades que ejecutan su punto de acceso en una interfaz de red que Android no informa como punto de acceso Wi-Fi, por ejemplo eth0.3 en algunas unidades Geely, Lynk &amp; Co y otros Qualcomm. Déjalo vacío para encontrarla automáticamente.</string>
+    <!-- 原车歌曲栏歌手显示开关 -->
+    <string name="settings_cluster_song_artist">Mostrar artista en la tarjeta del coche</string>
+    <string name="settings_cluster_song_artist_hint">Solo cambia la tarjeta del coche. Android conserva la información del artista. Se aplica al instante.</string>
 </resources>

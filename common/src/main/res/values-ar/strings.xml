@@ -815,8 +815,8 @@
     <string name="settings_ambient_colors_hint_follow">اضغط على الألوان التي يمكن للإضاءة استخدامها. تتنقل الإضاءة بين اختيارك.</string>
     <string name="settings_ambient_colors_hint_fixed">اضغط على اللون المطلوب. الوضع الثابت يعرض لونًا واحدًا.</string>
     <string name="settings_ambient_colors_hint_album">تؤخذ الألوان من غلاف الألبوم. أوقف اتباع غلاف الألبوم لاختيار الألوان بنفسك.</string>
-    <string name="settings_ambient_swatch">اللون %1$d</string>
-    <string name="settings_ambient_swatch_selected">اللون %1$d، محدد</string>
+    <string name="settings_ambient_swatch">اللون %1$d · %2$s</string>
+    <string name="settings_ambient_swatch_selected">اللون %1$d · %2$s، محدد</string>
     <string name="settings_ambient_brightness_value">المستوى %1$d من 6</string>
     <string name="settings_ambient_select_one">حدد لونًا واحدًا على الأقل</string>
     <string name="settings_ambient_brightness">أقصى سطوع</string>
@@ -959,4 +959,7 @@
 
     <string name="settings_hotspot_interface">واجهة نقطة الاتصال (اختياري)</string>
     <string name="settings_hotspot_interface_description">لوحدات الرأس التي تشغّل نقطة الاتصال على واجهة شبكة لا يبلّغ عنها أندرويد كنقطة اتصال Wi-Fi، مثل eth0.3 في بعض وحدات Geely وLynk &amp; Co وغيرها من وحدات Qualcomm. اتركه فارغاً للعثور عليها تلقائياً.</string>
+    <!-- 原车歌曲栏歌手显示开关 -->
+    <string name="settings_cluster_song_artist">إظهار الفنان في بطاقة أغنية السيارة</string>
+    <string name="settings_cluster_song_artist_hint">يغيّر بطاقة أغنية السيارة فقط. تبقى معلومات الفنان في وسائط Android. يسري فورًا.</string>
 </resources>

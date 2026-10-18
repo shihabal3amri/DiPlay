@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_vehicle_mute">Il silenziamento dell’auto controlla la riproduzione (sperimentale)</string>
+    <string name="settings_vehicle_mute_hint">Mette in pausa quando il flusso multimediale viene silenziato e riproduce quando il silenziamento viene disattivato. Chiamate e Siri hanno la priorità. Si applica subito.</string>
+</resources>

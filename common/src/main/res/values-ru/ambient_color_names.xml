@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Human names describe the OEM previews, not calibrated lamp colors. -->
+    <string-array name="settings_ambient_color_names">
+        <item>Орхидея</item>
+        <item>Фиолетовый</item>
+        <item>Тёмно-синий</item>
+        <item>Морской</item>
+        <item>Небесный</item>
+        <item>Лазурный</item>
+        <item>Бирюзовый</item>
+        <item>Циан</item>
+        <item>Аква</item>
+        <item>Светлая аква</item>
+        <item>Мятный</item>
+        <item>Шалфей</item>
+        <item>Нефритовый</item>
+        <item>Зелёный</item>
+        <item>Листва</item>
+        <item>Лайм</item>
+        <item>Кремовый</item>
+        <item>Песочный</item>
+        <item>Хаки</item>
+        <item>Лимонный</item>
+        <item>Золотой</item>
+        <item>Горчичный</item>
+        <item>Янтарный</item>
+        <item>Персиковый</item>
+        <item>Коралловый</item>
+        <item>Малиновый</item>
+        <item>Розовый</item>
+        <item>Светло-розовый</item>
+        <item>Белый</item>
+        <item>Холодный белый</item>
+        <item>Ледяной синий</item>
+    </string-array>
+</resources>
