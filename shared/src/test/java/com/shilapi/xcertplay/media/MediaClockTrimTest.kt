@@ -6,6 +6,7 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import kotlin.math.abs
 import kotlin.random.Random
 
 class MediaClockTrimTest {
@@ -22,7 +23,6 @@ class MediaClockTrimTest {
         val random = Random(seed)
         var queued = target.toDouble()
         var starved = 0
-        var lowest = queued
         val rates = mutableListOf<Int>()
 
         fun run(seconds: Int) {
@@ -36,6 +36,7 @@ class MediaClockTrimTest {
                 if (random.nextDouble() < 0.4 / 1000) gapUntilMs = ms + 50 + random.nextDouble() * 100
                 while (nextPacketMs <= ms) { pending += 352; nextPacketMs += 352 / 48.0 }
                 if (ms >= gapUntilMs && pending > 0) {
+                    if (trimmed) trim.sample(queued.toLong(), nowNs)
                     queued += pending
                     pending = 0
                     if (trimmed) {
@@ -46,11 +47,67 @@ class MediaClockTrimTest {
                 played += rate * (1 + drift) / 1000.0
                 while (played >= 1024) {
                     played -= 1024
-                    if (queued >= 1024) queued -= 1024 else { starved++; queued = 0.0 }
+                    if (queued >= 1024) queued -= 1024 else { starved++; queued = target.toDouble() }
                 }
-                lowest = minOf(lowest, queued)
             }
         }
+    }
+
+    /**
+     * Wireless CarPlay: the iPhone sends about 0.4 s of music at once, every 0.4 s by its clock give or take
+     * 30 ms (#807, #976), and now and then stalls for up to 0.9 s and then sends what it held back.
+     */
+    private class BurstDrive(targetMs: Int, seed: Int = 7) {
+        val target = 48L * targetMs
+        val trim = MediaClockTrim(48_000, target)
+        val random = Random(seed)
+        var queued = maxOf(target, 19_200L).toDouble()
+        val rates = mutableListOf<Int>()
+
+        fun run(seconds: Int) {
+            var rate = 48_000
+            var burst = 1
+            var nextBurstMs = 400.0
+            var played = 0.0
+            var owed = 0.0
+            for (ms in 0 until seconds * 1000) {
+                val nowNs = ms * 1_000_000L
+                owed += 48.0
+                if (ms >= nextBurstMs) {
+                    trim.sample(queued.toLong(), nowNs)
+                    queued += owed
+                    owed = 0.0
+                    burst++
+                    val stall = if (random.nextDouble() < 0.03) random.nextDouble() * 500 else 0.0
+                    nextBurstMs = burst * 400 + (random.nextDouble() - 0.5) * 60 + stall
+                    trim.sample(queued.toLong(), nowNs)
+                    trim.rateDue(nowNs)?.let { rate = it; rates += it }
+                }
+                played += rate / 1000.0
+                while (played >= 1024) {
+                    played -= 1024
+                    // A rebuffer: the renderer pauses until the next burst and restarts the measurement.
+                    if (queued >= 1024) queued -= 1024 else { queued = 0.0; trim.restart(nowNs) }
+                }
+            }
+        }
+    }
+
+    @Test fun overWiFiTheRateNeverMoves() {
+        for (targetMs in listOf(300, 500, 1000)) for (seed in 1..3) {
+            val drive = BurstDrive(targetMs, seed)
+            drive.run(600)
+            // No resampling at all: the pitch is exactly the iPhone's.
+            assertEquals("$targetMs ms seed $seed", emptyList<Int>(), drive.rates)
+            assertEquals(0.0, MediaClockTrim.learnedTrim, 0.0)
+        }
+    }
+
+    @Test fun anAccurateClockIsLeftAlone() {
+        val drive = Drive(0.0, trimmed = true)
+        drive.run(600)
+        assertEquals(emptyList<Int>(), drive.rates)
+        assertEquals(0, drive.starved)
     }
 
     @Test fun withoutTheTrimA076PercentFastHeadUnitRunsDryEveryMinuteOrSo() {
@@ -59,62 +116,32 @@ class MediaClockTrimTest {
         assertTrue("starved ${drive.starved}", drive.starved >= 3)
     }
 
-    @Test fun theTrimSettlesAtTheHeadUnitsDriftAndMusicNeverRunsDry() {
+    @Test fun aFastHeadUnitIsTunedOnceAndThenHolds() {
         val drive = Drive(0.0076, trimmed = true)
         drive.run(300)
-        assertEquals(0, drive.starved)
-        assertTrue("lowest ${drive.lowest}", drive.lowest > 0.2 * drive.target)
-        // 48000 / 1.0076: the track plays that much slower, so the fast clock consumes 48 kHz.
+        // 48000 / 1.0076: the track plays that much slower, so the fast clock consumes 48 kHz and music is in tune.
         assertEquals(47_638.0, drive.trim.rate.toDouble(), 15.0)
         assertEquals(-0.0075, MediaClockTrim.learnedTrim, 0.0003)
+        // A glide, never a jump: 0.9 cents a second, and an update covers at most 2 s.
+        drive.rates.zipWithNext().forEach { (a, b) -> assertTrue("$a -> $b", abs(a - b) <= 48) }
+        // Measuring takes 20 s, so the first song may refill once; then the buffer holds.
+        assertTrue("starved ${drive.starved}", drive.starved <= 1)
+        assertTrue("rates ${drive.rates.size}", drive.rates.last() == drive.trim.rate)
     }
 
-    @Test fun aSlowHeadUnitIsTrimmedTheOtherWay() {
+    @Test fun aSlowHeadUnitIsTunedTheOtherWay() {
         val drive = Drive(-0.0076, trimmed = true)
         drive.run(300)
         assertEquals(0, drive.starved)
         assertEquals(48_368.0, drive.trim.rate.toDouble(), 15.0)
     }
 
-    @Test fun anAccurateClockIsLeftAlone() {
-        val drive = Drive(0.0, trimmed = true)
-        drive.run(300)
+    @Test fun aSmallDriftThatStillEmptiesTheBufferIsTunedToo() {
+        // 0.05 % fast: 300 ms would last 10 minutes.
+        val drive = Drive(0.0005, trimmed = true)
+        drive.run(600)
+        assertEquals(47_976.0, drive.trim.rate.toDouble(), 6.0)
         assertEquals(0, drive.starved)
-        assertEquals(48_000.0, drive.trim.rate.toDouble(), 5.0)
-    }
-
-    @Test fun theTrimStaysWithinOnePointFivePercent() {
-        val trim = MediaClockTrim(48_000, 14_400)
-        // Nothing queued for minutes: the trim stops at its bound.
-        for (second in 0..600) {
-            val nowNs = second * 1_000_000_000L
-            trim.sample(0, nowNs)
-            trim.rateDue(nowNs)
-        }
-        assertEquals(47_280, trim.rate)
-    }
-
-    @Test fun withoutNewAudioTheTrimHolds() {
-        val trim = MediaClockTrim(48_000, 14_400)
-        trim.sample(7_200, 0)
-        assertEquals(47_280, trim.rateDue(0))
-        // The iPhone paused: no write for 2 s, so no update even though the last level was low.
-        assertNull(trim.rateDue(2_000_000_000L))
-        assertEquals(47_280, trim.rate)
-        // Music resumes at the target level: the average restarts there.
-        trim.sample(14_400, 2_100_000_000L)
-        assertEquals(48_000, trim.rateDue(2_100_000_000L))
-    }
-
-    @Test fun aLongPauseDoesNotCountAsDrift() {
-        val trim = MediaClockTrim(48_000, 14_400)
-        trim.sample(14_400, 0)
-        trim.rateDue(0)
-        // Five minutes later music resumes with a short first burst: one step, not 300 s, is integrated.
-        val resumeNs = 300_000_000_000L
-        trim.sample(10_080, resumeNs)
-        assertEquals(47_539, trim.rateDue(resumeNs))
-        assertEquals(-0.0006, MediaClockTrim.learnedTrim, 1e-9)
     }
 
     @Test fun aNewStreamStartsFromTheLearnedTrim() {
@@ -125,24 +152,79 @@ class MediaClockTrimTest {
     }
 
     @Test fun updatesComeAtMostOnceASecond() {
+        MediaClockTrim.learnedTrim = -0.0075
         val trim = MediaClockTrim(48_000, 14_400)
-        trim.sample(7_200, 0)
-        assertEquals(47_280, trim.rateDue(0))
-        trim.sample(14_400, 500_000_000L)
+        trim.sample(14_400, 0)
+        assertEquals(47_640, trim.rateDue(0))
         assertNull(trim.rateDue(500_000_000L))
     }
 
-    @Test fun aLargeCompressedQueueMustNotTrickClockControlIntoSlowingDownFurther() {
+    /** A head unit 1 % fast, with a stall or skip every 30 s that moves the level by up to a second. */
+    private fun driveFallingLevelWithJumps(trim: MediaClockTrim, restartOnJump: Boolean) {
+        var level = 30_000.0
+        for (step in 0 until 600 * 10) {
+            val nowNs = step * 100_000_000L
+            if (step % 300 == 299) {
+                level += 48_000.0 * ((step / 300) % 3 - 1)
+                level = level.coerceAtLeast(14_400.0)
+                if (restartOnJump) trim.restart(nowNs)
+            }
+            level += 4_800.0 - trim.rate * 1.01 / 10
+            trim.sample(level.toLong(), nowNs)
+            trim.rateDue(nowNs)
+        }
+    }
+
+    @Test fun aStallOrSkipThatMovesTheLevelIsNotDrift() {
+        val trim = MediaClockTrim(48_000, 14_400)
+        driveFallingLevelWithJumps(trim, restartOnJump = true)
+        // Only the slope between jumps counts: 48000 / 1.01.
+        assertEquals(47_525.0, trim.rate.toDouble(), 30.0)
+    }
+
+    @Test fun aMinuteOfSlowWiFiIsNotDrift() {
+        val trim = MediaClockTrim(48_000, 14_400)
+        var level = 14_400.0
+        for (step in 0 until 600 * 10) {
+            val nowNs = step * 100_000_000L
+            // The iPhone's audio arrives 0.1 % slow for a minute, then catches up for a minute, as a Galaxy S7 saw.
+            level += when ((step / 600) % 2) { 0 -> -4.8; else -> 4.8 }
+            trim.sample(level.toLong(), nowNs)
+            trim.rateDue(nowNs)
+        }
+        assertEquals(48_000, trim.rate)
+    }
+
+    @Test fun theTrimStaysWithinOnePointFivePercent() {
+        val trim = MediaClockTrim(48_000, 14_400)
+        var level = 1_000_000.0
+        for (step in 0 until 1800 * 10) {
+            val nowNs = step * 100_000_000L
+            level -= 480.0 // 10 % fast
+            trim.sample(level.toLong(), nowNs)
+            trim.rateDue(nowNs)
+        }
+        assertEquals(47_280, trim.rate)
+    }
+
+    @Test fun aPauseRestartsTheMeasurement() {
+        val trim = MediaClockTrim(48_000, 14_400)
+        // 15 s at 14,400, then 2 s with no write, then 15 s at 4,800: no slope within either stretch.
+        for (step in 0..150) { trim.sample(14_400, step * 100_000_000L); trim.rateDue(step * 100_000_000L) }
+        for (step in 170..320) { trim.sample(4_800, step * 100_000_000L); trim.rateDue(step * 100_000_000L) }
+        assertEquals(48_000, trim.rate)
+    }
+
+    @Test fun aLargeCompressedQueueMustNotTrickClockControlIntoSlowingDown() {
         val trim = MediaClockTrim(48_000, 14_400)
         // The #806 recording had 150-192 pending AAC packets while Android's track writes
-        // reported a small hardware PCM queue. Those packets are not 'missing' music.
-        for (second in 1..12) {
-            trim.sample(4_800, second * 1_000_000_000L, compressedFrames = 96 * 1024L)
-            trim.rateDue(second * 1_000_000_000L)
+        // reported a small hardware PCM queue. That backlog is decoder congestion, not the head unit's clock.
+        for (step in 0..600) {
+            val nowNs = step * 100_000_000L
+            trim.sample(4_800, nowNs, compressedFrames = 96 * 1024L + step * 200L)
+            trim.rateDue(nowNs)
         }
-        assertTrue("slow playback grows a 2-second packet backlog; rate=${trim.rate}", trim.rate >= 48_000)
-        // Decoder congestion is not a characteristic of the vehicle's playback clock. A future
-        // song should not inherit a +1.5% learned pitch error caused by a temporary stall.
-        assertEquals(0.0, MediaClockTrim.learnedTrim, 1e-8)
+        assertEquals(48_000, trim.rate)
+        assertEquals(0.0, MediaClockTrim.learnedTrim, 0.0)
     }
 }
