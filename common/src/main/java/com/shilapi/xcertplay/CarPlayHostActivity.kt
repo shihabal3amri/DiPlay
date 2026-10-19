@@ -125,6 +125,8 @@ import java.util.Date
 import java.util.Locale
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
+import java.util.concurrent.RejectedExecutionException
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.math.roundToInt
 
@@ -138,7 +140,8 @@ import kotlin.math.roundToInt
 class CarPlayHostActivity : ComponentActivity() {
     private data class SettingsBaseline(
         val safeAreaRects: MutableMap<DisplaySize, SafeAreaRect?>,
-        val customIconBytes: ByteArray?,
+        // Touched only on [iconExecutor].
+        val customIcon: CustomAirPlayIconRollback,
     )
 
     private data class PendingAssignedSiriDoublePress(
@@ -407,6 +410,9 @@ class CarPlayHostActivity : ComponentActivity() {
     private var settingsMenu: View? = null
     private var settingsMenuCategoryKey = "connection"
     private var settingsMenuContentScroll: ScrollView? = null
+    // The [settingsMenuState] the built menu's controls show, or null once they may show something else.
+    // Values, not a hash: a collision would show a discarded edit. It holds the fields' own strings.
+    private var settingsMenuShows: List<Any?>? = null
     private var mfiTargetGroup: RadioGroup? = null
     private var mfiI2cFields: View? = null
     private var mfiRemoteFields: View? = null
@@ -702,6 +708,9 @@ class CarPlayHostActivity : ComponentActivity() {
     }
     private val teardownExecutor: ExecutorService = Executors.newSingleThreadExecutor()
     private val airPlayCommandExecutor: ExecutorService = Executors.newSingleThreadExecutor()
+    // Reads, writes and decodes the custom car-button icon in order, away from the touch path.
+    private val iconExecutor: ExecutorService = Executors.newSingleThreadExecutor()
+    private var iconPreviewGeneration = 0
     private val logLines = ArrayDeque<LogEntry>()
     private val expireOldLogLines = Runnable { refreshLogView(System.currentTimeMillis()) }
     private val refreshTurnOverlay = object : Runnable {
@@ -1867,6 +1876,8 @@ class CarPlayHostActivity : ComponentActivity() {
 
     override fun onDestroy() {
         mainHandler.removeCallbacks(hideTemporarySystemBars)
+        // Queued icon work still finishes, so a discarded icon edit is not lost.
+        iconExecutor.shutdown()
         discardLastPicture()
         if (pictureCopyThreadStarted) pictureCopyThread.quitSafely()
         resetSidePanel()
@@ -3416,7 +3427,28 @@ class CarPlayHostActivity : ComponentActivity() {
         this.hotspotStatusView = hotspotStatusView
         updateHotspotStatusBlock()
         updateResolutionMenu()
+        settingsMenuShows = settingsMenuState()
         return overlay
+    }
+
+    /**
+     * Everything [buildSettingsMenu] reads that a driver or the session can change. While it equals
+     * [settingsMenuShows], the built menu already shows it.
+     */
+    private fun settingsMenuState(): List<Any?> = menuSettingsValues() + listOf(
+        hideBydCallPopup, sidePanelShown, sessionDisplay?.viewAreas?.sidePanel() != null,
+        advancedAudioChannelMappingSupported, appNight, settingsMenuCategoryKey,
+        resources.configuration.densityDpi, resources.configuration.fontScale,
+        resources.configuration.locales.toLanguageTags(), resources.configuration.layoutDirection,
+    )
+
+    /** Brings a reused menu's status lines, icon and messages up to date, as a new menu would show them. */
+    private fun refreshReusedSettingsMenu() {
+        updateMfiTargetFields()
+        updateManualHotspotFields()
+        manualHotspotErrorView?.visibility = View.GONE
+        updateHotspotStatusBlock()
+        updateAirPlayIconPreview()
     }
 
     private fun persistMenuSettings() {
@@ -3480,8 +3512,10 @@ class CarPlayHostActivity : ComponentActivity() {
         message.post { message.requestRectangleOnScreen(Rect(0, 0, message.width, message.height), true) }
     }
 
+    private fun menuSettingsSignature(): Int = menuSettingsValues().joinToString("|").hashCode()
+
     /** Mirrors [persistMenuSettings]: a field staged there belongs here too. */
-    private fun menuSettingsSignature(): Int = listOf(
+    private fun menuSettingsValues(): List<Any?> = listOf(
         gestureFingerCount, wirelessEnabled, mfiTarget, mfiI2cPath, remoteMfiServer, remoteMfiToken,
         wirelessHotspotMode, existingWifiSsid, existingWifiPassphrase, manualHotspotSsid,
         manualHotspotPassphrase, manualHotspotBand, manualHotspotChannel, manualHotspotSecurity,
@@ -3490,22 +3524,32 @@ class CarPlayHostActivity : ComponentActivity() {
         hevcSoftwareDecoderEnabled, manufacturer, model, oemLabel, debugLogsEnabled, rightHandDrive,
         carPlayDock, hideTopBar, hideBottomBar, temporarySystemBarsEnabled,
         safeAreaDrawOutside, mainDisplayDisableSafeArea, blackCornerRadiusDp,
-    ).joinToString("|").hashCode()
+    )
 
     private fun captureSettingsBaseline(): SettingsBaseline {
         val safeAreaSize = currentActivitySize()
-        val customIconBytes = try {
-            AirPlayPersistence.loadCustomAirPlayIconFile(this)?.readBytes()
-        } catch (error: Exception) {
-            Log.w(TAG, "Could not read the current AirPlay icon for settings rollback", error)
-            null
-        }
+        val customIcon = CustomAirPlayIconRollback(this)
+        runIconIo(customIcon::capture)
         return SettingsBaseline(
             safeAreaRects = mutableMapOf<DisplaySize, SafeAreaRect?>().apply {
                 safeAreaSize?.let { put(it, AirPlayPersistence.loadSafeAreaRect(this@CarPlayHostActivity, it.width, it.height)) }
             },
-            customIconBytes = customIconBytes,
+            customIcon = customIcon,
         )
+    }
+
+    private fun runIconIo(task: () -> Unit) {
+        try {
+            iconExecutor.execute(task)
+        } catch (_: RejectedExecutionException) {
+            // The activity is gone; nothing shows or keeps this icon work any more.
+        }
+    }
+
+    /** Keeps the icon the menu opened with before the menu replaces or removes it. */
+    private fun retainSettingsBaselineIcon() {
+        val customIcon = settingsBaseline?.customIcon ?: return
+        runIconIo(customIcon::retainOriginal)
     }
 
     private fun restoreSettingsBaseline() {
@@ -3529,13 +3573,7 @@ class CarPlayHostActivity : ComponentActivity() {
                 commit = true,
             )
         }
-        try {
-            baseline.customIconBytes?.let { bytes ->
-                AirPlayPersistence.saveCustomAirPlayIcon(this, bytes)
-            } ?: AirPlayPersistence.clearCustomAirPlayIcon(this)
-        } catch (error: Exception) {
-            Log.w(TAG, "Could not restore the previous AirPlay icon", error)
-        }
+        runIconIo { baseline.customIcon.restore() }
         settingsBaseline = null
         locationPermissionAvailable = hasFineLocationPermission()
         hotspotStatus = HotspotStatus(state = if (wirelessEnabled) getString(R.string.hotspot_state_stopped) else getString(R.string.hotspot_state_off))
@@ -3910,7 +3948,7 @@ class CarPlayHostActivity : ComponentActivity() {
         }
         row.addView(
             preview,
-            LinearLayout.LayoutParams(dp(72), dp(72)),
+            LinearLayout.LayoutParams(dp(ICON_PREVIEW_DP), dp(ICON_PREVIEW_DP)),
         )
         val actions = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -3921,6 +3959,7 @@ class CarPlayHostActivity : ComponentActivity() {
                 style(DiPlayButtonKind.SECONDARY, overlayPalette, overlay = true)
                 setOnClickListener {
                     externalActivityInProgress = true
+                    retainSettingsBaselineIcon()
                     launchCarButtonImagePicker(
                         openDocument = { imageDocumentPicker.launch(arrayOf("image/*")) },
                         getContent = { imagePicker.launch("image/*") },
@@ -3944,7 +3983,8 @@ class CarPlayHostActivity : ComponentActivity() {
                 text = getString(R.string.default_icon)
                 style(DiPlayButtonKind.SECONDARY, overlayPalette, overlay = true)
                 setOnClickListener {
-                    AirPlayPersistence.clearCustomAirPlayIcon(this@CarPlayHostActivity)
+                    retainSettingsBaselineIcon()
+                    runIconIo { AirPlayPersistence.clearCustomAirPlayIcon(this@CarPlayHostActivity) }
                     updateAirPlayIconPreview()
                 }
             },
@@ -5048,20 +5088,45 @@ class CarPlayHostActivity : ComponentActivity() {
         // Shown in CarPlay's app list as the "back to the car" button.
         resources.openRawResource(R.raw.ic_car_home).use { it.readBytes() }
 
+    /** Decodes the icon on [iconExecutor] at about the preview's size and shows it when ready. */
     private fun updateAirPlayIconPreview() {
         val preview = iconPreviewView ?: return
-        val custom = AirPlayPersistence.loadCustomAirPlayIconFile(this)
-        var customBitmap: Bitmap? = null
-        if (custom != null) {
-            customBitmap = BitmapFactory.decodeFile(custom.absolutePath)
-            if (customBitmap == null) {
-                AirPlayPersistence.clearCustomAirPlayIcon(this)
+        val generation = ++iconPreviewGeneration
+        val targetPixels = dp(ICON_PREVIEW_DP)
+        val customIcon = settingsBaseline?.customIcon
+        runIconIo {
+            var customBitmap: Bitmap? = null
+            val custom = AirPlayPersistence.loadCustomAirPlayIconFile(this)
+            if (custom != null) {
+                customBitmap = decodeIconPreview(targetPixels) { options ->
+                    BitmapFactory.decodeFile(custom.absolutePath, options)
+                }
+                if (customBitmap == null) {
+                    customIcon?.retainOriginal()
+                    AirPlayPersistence.clearCustomAirPlayIcon(this)
+                }
+            }
+            // A raw resource, so decode the stream: decodeResource would scale it up to the screen density.
+            val bitmap = customBitmap ?: decodeIconPreview(targetPixels) { options ->
+                resources.openRawResource(R.raw.placeholder_icon).use { BitmapFactory.decodeStream(it, null, options) }
+            }
+            val isCustom = customBitmap != null
+            mainHandler.post {
+                if (isDestroyed || generation != iconPreviewGeneration || iconPreviewView !== preview) return@post
+                preview.setImageBitmap(bitmap)
+                iconStatusView?.text =
+                    if (isCustom) getString(R.string.custom_1_1_icon) else getString(R.string.default_placeholder_icon)
             }
         }
-        val bitmap = customBitmap ?: BitmapFactory.decodeResource(resources, R.raw.placeholder_icon)
-        preview.setImageBitmap(bitmap)
-        iconStatusView?.text =
-            if (customBitmap != null) getString(R.string.custom_1_1_icon) else getString(R.string.default_placeholder_icon)
+    }
+
+    private fun decodeIconPreview(targetPixels: Int, decode: (BitmapFactory.Options) -> Bitmap?): Bitmap? {
+        val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+        decode(bounds)
+        if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return null
+        return decode(BitmapFactory.Options().apply {
+            inSampleSize = AirPlayIconSizing.previewSampleSize(bounds.outWidth, bounds.outHeight, targetPixels)
+        })
     }
 
     private fun currentActivitySize(): DisplaySize? {
@@ -6045,8 +6110,13 @@ class CarPlayHostActivity : ComponentActivity() {
         settingsBaseline = captureSettingsBaseline()
         menuSettingsSignature = menuSettingsSignature()
         menuWirelessNetworkSignature = wirelessNetworkSignature()
-        // Rebuild controls from saved values so a cancelled edit cannot reappear on reopening.
+        // Rebuild controls from saved values only when they may show something else, so a cancelled edit
+        // cannot reappear. Building every control froze a Nexus 7 for most of a second on each opening.
         settingsMenu?.let { previous ->
+            if (settingsMenuShows == settingsMenuState()) {
+                refreshReusedSettingsMenu()
+                return@let
+            }
             val parent = previous.parent as ViewGroup
             val index = parent.indexOfChild(previous)
             parent.removeView(previous)
@@ -6107,13 +6177,18 @@ class CarPlayHostActivity : ComponentActivity() {
             return
         }
         persistMenuSettings()
+        settingsMenuShows = settingsMenuState()
         settingsBaseline = null
         finishSettingsMenu("Settings saved", reconnect = true)
     }
 
     private fun cancelSettingsEdits() {
         if (!menuOpen) return
+        // Each control writes its field, so these are what the controls show until the restore below.
+        val shown = settingsMenuState()
         restoreSettingsBaseline()
+        // A discarded edit is still on its control: the next opening builds the menu again.
+        settingsMenuShows = shown.takeIf { it == settingsMenuState() }
         finishSettingsMenu("Settings changes discarded", reconnect = false)
     }
 
@@ -6220,7 +6295,12 @@ class CarPlayHostActivity : ComponentActivity() {
             applicationContext.stopService(Intent(applicationContext, DiPlaySessionService::class.java))
             teardownExecutor.shutdown()
             mainHandler.post { completion() }
-            if (terminateProcess) Process.killProcess(Process.myPid())
+            if (terminateProcess) {
+                // Let a discarded icon edit reach the disk before the process ends.
+                iconExecutor.shutdown()
+                runCatching { iconExecutor.awaitTermination(ICON_IO_EXIT_WAIT_MILLIS, TimeUnit.MILLISECONDS) }
+                Process.killProcess(Process.myPid())
+            }
         }
     }
 
@@ -6731,6 +6811,8 @@ class CarPlayHostActivity : ComponentActivity() {
         /** How long the side panel tab's pill (and the panel's grip) shows when it appears or is tapped. */
         const val SIDE_PANEL_TAB_HINT_MILLIS = 10_000L
         const val TAG = "xcertplay-usb"
+        const val ICON_PREVIEW_DP = 72
+        const val ICON_IO_EXIT_WAIT_MILLIS = 2_000L
         const val SCREEN_TYPE_MAIN = 110
         const val SCREEN_TYPE_ALT = 111
         // On the teardown thread: bounded sequencing wait. Release notification retains ownership beyond

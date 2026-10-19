@@ -7,6 +7,7 @@ import android.os.Build
 import android.content.res.Configuration
 import android.graphics.Bitmap
 import android.graphics.Canvas
+import android.graphics.drawable.BitmapDrawable
 import android.hardware.usb.UsbDevice
 import android.hardware.usb.UsbManager
 import android.os.Handler
@@ -14,6 +15,8 @@ import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
+import android.widget.EditText
+import android.widget.ImageView
 import android.widget.SeekBar
 import android.widget.Switch
 import android.widget.RadioButton
@@ -60,6 +63,8 @@ class CarPlayHostSettingsTest {
         controllers = mockConstruction(CarPlayController::class.java)
         (field("teardownExecutor") as ExecutorService).shutdownNow()
         setField("teardownExecutor", PausedExecutorService())
+        (field("iconExecutor") as ExecutorService).shutdownNow()
+        setField("iconExecutor", PausedExecutorService())
         setField("airPlayIdentity", AirPlayIdentity.generate())
         val sizeClass = Class.forName("com.shilapi.xcertplay.CarPlayHostActivity\$DisplaySize")
         val size = sizeClass.getDeclaredConstructor(Int::class.javaPrimitiveType, Int::class.javaPrimitiveType)
@@ -78,6 +83,8 @@ class CarPlayHostSettingsTest {
         (field("mainHandler") as Handler).removeCallbacksAndMessages(null)
         (field("teardownExecutor") as ExecutorService).shutdownNow()
         (field("airPlayCommandExecutor") as ExecutorService).shutdownNow()
+        (field("iconExecutor") as ExecutorService).shutdownNow()
+        AirPlayPersistence.clearCustomAirPlayIcon(activity)
         CarPlayBackgroundSession.clear()
         controllers.close()
     }
@@ -285,6 +292,45 @@ class CarPlayHostSettingsTest {
     @GraphicsMode(GraphicsMode.Mode.NATIVE)
     fun arabicGroupedMenuScreenshot() = checkSwipeMenuScreenshot("grouped-swipe-arabic-large-font.png", 600, 720)
 
+    @Test fun openingAndClosingLeavesAnUnchangedIconAloneAndDecodesItOffTheMainThread() {
+        val icon = activity.resources.openRawResource(R.raw.placeholder_icon).use { it.readBytes() }
+        AirPlayPersistence.saveCustomAirPlayIcon(activity, icon)
+        val file = AirPlayPersistence.loadCustomAirPlayIconFile(activity)!!.apply { setLastModified(1_000_000L) }
+        runIconWork()
+        val preview = field("iconPreviewView") as ImageView
+        val shown = preview.drawable
+        invoke("openSettingsMenu")
+        // Opening only queues the icon work; the main thread neither reads nor decodes the file.
+        assertSame(shown, preview.drawable)
+        assertTrue(runIconWork() > 0)
+        assertNotSame(shown, preview.drawable)
+        val bitmap = (preview.drawable as BitmapDrawable).bitmap
+        assertTrue("preview decoded at ${bitmap.width} px", bitmap.width < 1024)
+        assertTrue(bitmap.width >= activity.resources.displayMetrics.density * 72)
+        assertEquals(activity.getString(R.string.custom_1_1_icon), (field("iconStatusView") as TextView).text)
+
+        invoke("cancelSettingsEdits")
+        runIconWork()
+        assertEquals(1_000_000L, file.lastModified())
+        assertArrayEquals(icon, file.readBytes())
+    }
+
+    @Test fun cancellingPutsBackAnIconTheMenuReset() {
+        val icon = activity.resources.openRawResource(R.raw.placeholder_icon).use { it.readBytes() }
+        AirPlayPersistence.saveCustomAirPlayIcon(activity, icon)
+        invoke("openSettingsMenu")
+        runIconWork()
+        views(menu()).filterIsInstance<Button>()
+            .first { it.text == activity.getString(R.string.default_icon) }.performClick()
+        runIconWork()
+        assertNull(AirPlayPersistence.loadCustomAirPlayIconFile(activity))
+        assertEquals(activity.getString(R.string.default_placeholder_icon), (field("iconStatusView") as TextView).text)
+
+        invoke("cancelSettingsEdits")
+        runIconWork()
+        assertArrayEquals(icon, AirPlayPersistence.loadCustomAirPlayIconFile(activity)!!.readBytes())
+    }
+
     @Test fun closeButtonDiscardsEditsWithoutRestartingCarPlay() {
         val controller = attachController()
         invoke("openSettingsMenu")
@@ -482,6 +528,94 @@ class CarPlayHostSettingsTest {
         invoke("openSettingsMenu")
         assertEquals(original * 10 - CarPlayDisplayScale.MIN_PERCENT, resolutionSlider().progress)
         assertEquals(activity.getString(R.string.settings_gesture_fingers, 3), gestureButton().text)
+    }
+
+    @Test fun reopeningAnUneditedMenuShowsTheSameControlsWithoutBuildingThemAgain() {
+        attachController()
+        val built = menu()
+        invoke("openSettingsMenu")
+        assertSame(built, menu())
+        invoke("cancelSettingsEdits")
+        invoke("openSettingsMenu")
+        assertSame(built, menu())
+        // An edit put back by hand leaves nothing to discard either.
+        val debugLogs = switch(R.string.show_on_screen_debug_logs)
+        debugLogs.performClick()
+        debugLogs.performClick()
+        invoke("cancelSettingsEdits")
+        invoke("openSettingsMenu")
+        assertSame(built, menu())
+        assertEquals(AirPlayPersistence.loadDebugLogsEnabled(activity), switch(R.string.show_on_screen_debug_logs).isChecked)
+    }
+
+    @Test fun aCancelledEditDoesNotReappearWhenTheMenuOpensAgain() {
+        attachController()
+        val savedManufacturer = AirPlayPersistence.loadManufacturer(activity)
+        val savedDebugLogs = AirPlayPersistence.loadDebugLogsEnabled(activity)
+        val savedPercent = AirPlayPersistence.loadDisplayScalePercent(activity)
+        invoke("openSettingsMenu")
+        val edited = menu()
+        input(R.string.manufacturer).setText("Discarded maker")
+        switch(R.string.show_on_screen_debug_logs).performClick()
+        resolutionSlider().progress = 0
+        radio(activity.getString(R.string.existing_wifi_title)).performClick()
+        assertEquals(WirelessHotspotMode.EXISTING_WIFI, field("wirelessHotspotMode"))
+        invoke("cancelSettingsEdits")
+
+        invoke("openSettingsMenu")
+        assertNotSame(edited, menu())
+        assertEquals(savedManufacturer, input(R.string.manufacturer).text.toString())
+        assertEquals(savedDebugLogs, switch(R.string.show_on_screen_debug_logs).isChecked)
+        assertEquals(savedPercent - CarPlayDisplayScale.MIN_PERCENT, resolutionSlider().progress)
+        assertTrue(radio(activity.getString(R.string.wi_fi_p2p_5_ghz)).isChecked)
+        assertFalse(radio(activity.getString(R.string.existing_wifi_title)).isChecked)
+        // The rebuilt menu is reused from now on.
+        val rebuilt = menu()
+        invoke("cancelSettingsEdits")
+        invoke("openSettingsMenu")
+        assertSame(rebuilt, menu())
+    }
+
+    @Test fun reopeningShowsSavedValuesFromTheMenuAndFromFullSettings() {
+        attachController()
+        invoke("openSettingsMenu")
+        val built = menu()
+        input(R.string.manufacturer).setText("Saved maker")
+        invoke("saveSettingsAndReconnect")
+        assertEquals("Saved maker", AirPlayPersistence.loadManufacturer(activity))
+        invoke("openSettingsMenu")
+        // The menu already shows what it saved.
+        assertSame(built, menu())
+        assertEquals("Saved maker", input(R.string.manufacturer).text.toString())
+        invoke("cancelSettingsEdits")
+
+        // The full settings screen saves while this menu is closed.
+        AirPlayPersistence.saveManufacturer(activity, "Full settings maker")
+        AirPlayPersistence.saveDebugLogsEnabled(activity, !AirPlayPersistence.loadDebugLogsEnabled(activity))
+        invoke("openSettingsMenu")
+        assertNotSame(built, menu())
+        assertEquals("Full settings maker", input(R.string.manufacturer).text.toString())
+        assertEquals(AirPlayPersistence.loadDebugLogsEnabled(activity), switch(R.string.show_on_screen_debug_logs).isChecked)
+    }
+
+    @Test fun aReusedMenuDropsTheMessageOfARejectedSave() {
+        AirPlayPersistence.saveWirelessEnabled(activity, false)
+        AirPlayPersistence.saveWirelessHotspotMode(activity, WirelessHotspotMode.MANUAL)
+        AirPlayPersistence.saveManualHotspotSsid(activity, "")
+        attachController()
+        invoke("openSettingsMenu")
+        val built = menu()
+        // Switching to wireless checks the car hotspot, which is not set up, so Save is rejected.
+        setField("wirelessEnabled", true)
+        saveButton().performClick()
+        val message = field("manualHotspotErrorView") as TextView
+        assertTrue(field("menuOpen") as Boolean)
+        assertEquals(View.VISIBLE, message.visibility)
+        setField("wirelessEnabled", false)
+        invoke("cancelSettingsEdits")
+        invoke("openSettingsMenu")
+        assertSame(built, menu())
+        assertEquals(View.GONE, message.visibility)
     }
 
     @Test fun customResolutionSurvivesCancelAndUnrelatedSettingsSave() {
@@ -947,6 +1081,7 @@ class CarPlayHostSettingsTest {
         }
         if (name.contains("grouped")) setField("settingsMenuCategoryKey", "display")
         invoke("openSettingsMenu")
+        runIconWork()
         val root = menu()
         repeat(3) {
             root.measure(View.MeasureSpec.makeMeasureSpec(width, View.MeasureSpec.EXACTLY),
@@ -1010,6 +1145,13 @@ class CarPlayHostSettingsTest {
         .first { it.max == CarPlayDisplayScale.MAX_PERCENT - CarPlayDisplayScale.MIN_PERCENT }
     private fun gestureButton() = views(menu()).filterIsInstance<Button>()
         .first { it.text == activity.getString(R.string.settings_gesture_fingers, field("gestureFingerCount")) }
+    private fun switch(description: Int) = views(menu()).filterIsInstance<Switch>()
+        .single { it.contentDescription == activity.getString(description) }
+    private fun radio(label: String) = views(menu()).filterIsInstance<RadioButton>().single { it.text == label }
+    /** The text field beside a settings label. */
+    private fun input(label: Int) = views(menu()).filterIsInstance<ViewGroup>()
+        .filter { it.childCount == 2 && (it.getChildAt(0) as? TextView)?.text == activity.getString(label) }
+        .mapNotNull { it.getChildAt(1) as? EditText }.single()
     private fun fullSettingsButton() = views(menu()).filterIsInstance<Button>()
         .first { it.text == activity.getString(R.string.app_name) + " " + activity.getString(R.string.settings) }
     /** Answers the "Discard your changes?" dialog that an exit with staged edits now shows. */
@@ -1023,6 +1165,12 @@ class CarPlayHostSettingsTest {
     private fun views(view: View): Sequence<View> = sequence {
         yield(view)
         if (view is ViewGroup) for (index in 0 until view.childCount) yieldAll(views(view.getChildAt(index)))
+    }
+    /** Runs the queued icon I/O and shows its result; returns how many tasks ran. */
+    private fun runIconWork(): Int {
+        val ran = (field("iconExecutor") as PausedExecutorService).runAll()
+        shadowOf(Looper.getMainLooper()).idle()
+        return ran
     }
     private fun invoke(name: String): Any? = activity.javaClass.getDeclaredMethod(name)
         .apply { isAccessible = true }.invoke(activity)

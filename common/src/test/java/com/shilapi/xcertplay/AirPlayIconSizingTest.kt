@@ -36,6 +36,19 @@ class AirPlayIconSizingTest {
         assertTrue("${bytes.size} >= ${large.size}", bytes.size < large.size)
     }
 
+    @Test fun downscalingAveragesFineDetailInsteadOfSkippingPixels() {
+        // A one-pixel checkerboard averages to grey; dropping pixels turns it solid black or white.
+        val checkerboard = Bitmap.createBitmap(1024, 1024, Bitmap.Config.ARGB_8888)
+        for (y in 0 until 1024) for (x in 0 until 1024) checkerboard.setPixel(x, y, if ((x + y) % 2 == 0) Color.BLACK else Color.WHITE)
+        val encoded = ByteArrayOutputStream().use { checkerboard.compress(Bitmap.CompressFormat.PNG, 100, it); it.toByteArray() }
+        val (_, bytes) = AirPlayIconSizing.fit(encoded)!!
+        val icon = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+        for ((x, y) in listOf(0 to 0, 96 to 96, 191 to 191, 37 to 150)) {
+            val red = Color.red(icon.getPixel(x, y))
+            assertTrue("pixel ($x, $y) red=$red", red in 96..160)
+        }
+    }
+
     @Test fun smallIconsAreSentUnchangedAndNonSquareImagesAreRejected() {
         val small = png(128, 128)
         assertSame(small, AirPlayIconSizing.fit(small)!!.second)
