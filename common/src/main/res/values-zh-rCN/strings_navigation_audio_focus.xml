@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_navigation_audio_focus">导航音频焦点（实验性）</string>
+    <string name="settings_navigation_audio_focus_description">播报时申请临时导航音频焦点。如果所选导航输出无声，可尝试开启。可能压低或暂停音乐。此开关独立于媒体音频焦点设置，下次连接 CarPlay 时生效。</string>
+</resources>

@@ -219,6 +219,8 @@ class AndroidMediaSink(
     private val vendorLowLatencyDecoder: Boolean = false,
     /** Opt-in MTK ACodec low-latency/no-reorder modes, with per-session automatic fallback. */
     private val mtkDecoderTuningEnabled: Boolean = false,
+    /** Opt-in for head units whose navigation output requires guidance audio focus. */
+    private val navigationAudioFocusEnabled: Boolean = false,
 ) : MediaSink {
     // Each downlink publishes its own reference; a mic must match that stream and sample rate.
     private val callEchoReferences = ConcurrentHashMap<AudioStreamId, EchoReference>()
@@ -722,6 +724,9 @@ class AndroidMediaSink(
                 appContext != null && BydBluetoothSuspend.isSuspendedByUs(appContext),
             echoReference = echoReference,
             voiceFilter = callVoiceFilter && format.audioType == TELEPHONY_AUDIO_TYPE,
+            navigationAudioFocus = if (navigationAudioFocusEnabled) {
+                NavigationAudioFocus(appContext, onAudioDiagnostic)
+            } else null,
         ).also {
             it.setNavigationAttenuationDb(navigationAttenuationDb)
             if (format.audioType == TELEPHONY_AUDIO_TYPE) it.onRoutedToEarpiece = { moveCallToLoudspeaker(id) }
@@ -1743,6 +1748,7 @@ private class AudioRenderer(
     /** Receives the played call audio so the call microphone can cancel its echo. */
     private val echoReference: EchoReference? = null,
     voiceFilter: Boolean = false,
+    private val navigationAudioFocus: NavigationAudioFocus? = null,
 ) : Closeable {
     private data class AudioPacket(val rtp: ByteArray, val sample: Int)
 
@@ -2135,13 +2141,13 @@ private class AudioRenderer(
 
     /**
      * Shares a sink-level focus request across all active non-navigation renderers.
-     * Navigation guidance intentionally takes no focus: it overlays media without ducking it.
+     * Navigation guidance uses its own optional, prompt-scoped request in writePcm().
      */
     private fun requestAudioFocus() {
         val channel = mappedChannel ?: return
         val attributes = trackAttributes ?: return
         if (channel == AudioChannel.NAVIGATION) {
-            Log.i(TAG, "audio focus skipped channel=NAVIGATION; overlays without ducking")
+            Log.i(TAG, "audio focus channel=NAVIGATION; prompt focus enabled=${navigationAudioFocus != null}")
             return
         }
         track?.let { audioFocusCoordinator.acquire(it, channel, attributes) }
@@ -2374,6 +2380,9 @@ private class AudioRenderer(
 
     private fun writePcm(data: ByteArray, offset: Int = 0, length: Int = data.size) {
         val track = track ?: return
+        if (mappedChannel == AudioChannel.NAVIGATION && length > 0) {
+            navigationAudioFocus?.acquire()
+        }
         diagnosticStage = "track-write"
         if (!firstPcmLogged && length > 0) {
             firstPcmLogged = true
@@ -2490,6 +2499,12 @@ private class AudioRenderer(
 
     private fun maintainPlaybackBuffer() {
         val track = track ?: return
+        // The iPhone can keep a navigation stream open between spoken prompts.
+        if (mappedChannel == AudioChannel.NAVIGATION && queue.isEmpty() && lastPcmWriteNs != 0L &&
+            System.nanoTime() - lastPcmWriteNs > 750_000_000L &&
+            bufferProgress.queuedBytes(track.playbackHeadPosition) == 0L) {
+            navigationAudioFocus?.release("idle")
+        }
         if (bufferProgress.shouldRebuffer(mappedChannel == AudioChannel.MEDIA, playbackStarted,
                 track.underrunCount > underrunsAtPlaybackStart, queue.isEmpty(), track.playbackHeadPosition,
                 startThresholdBytes / 2L)) {
@@ -2605,6 +2620,7 @@ private class AudioRenderer(
     private fun release() {
         NavigationPlayback.close(navigationPlaybackToken)
         AmbientMusicController.closeRenderer(ambientRendererToken)
+        navigationAudioFocus?.release("closed")
         abandonAudioFocus()
         val codec = codec
         this.codec = null

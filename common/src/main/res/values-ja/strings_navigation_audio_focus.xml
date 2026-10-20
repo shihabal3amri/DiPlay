@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_navigation_audio_focus">ナビ音声フォーカス（実験的機能）</string>
+    <string name="settings_navigation_audio_focus_description">案内の再生中に一時的なナビ音声フォーカスを要求します。選択したナビ出力から音が出ない場合にお試しください。音楽の音量が下がるか、一時停止することがあります。メディアの音声フォーカスとは独立しています。次回の CarPlay 接続時に適用されます。</string>
+</resources>

@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_navigation_audio_focus">Аудіофокус навігації (експериментально)</string>
+    <string name="settings_navigation_audio_focus_description">Тимчасово запитує аудіофокус під час навігаційних підказок. Увімкніть, якщо вибраний вихід навігації не відтворює звук. Музика може стати тихішою або призупинитися. Не залежить від аудіофокусу мультимедіа. Застосовується під час наступного підключення CarPlay.</string>
+</resources>

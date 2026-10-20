@@ -22,6 +22,7 @@ object SettingsBackupCodec {
     private val AIRPLAY_KEYS = setOf(
         "display_scale_tenths", "ui_scale_percent", "hevc_enabled", "hevc_software_decoder",
         "advanced_audio_channel_mapping", "audio_focus_enabled", "audio_focus_auto_yield",
+        "navigation_audio_focus_enabled",
         "disable_media_key_audio_focus", "media_audio_channel", "navigation_audio_channel",
         "navigation_stream_type", "wireless_enabled", "wireless_hotspot_mode", "wifi_p2p_preferred_channel", "wifi_direct_scan_pause",
         "manual_hotspot_band", "manual_hotspot_channel", "manual_hotspot_security", "app_appearance",

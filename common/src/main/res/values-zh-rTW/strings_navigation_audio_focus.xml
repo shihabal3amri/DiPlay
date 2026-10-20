@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_navigation_audio_focus">導航音訊焦點（實驗性）</string>
+    <string name="settings_navigation_audio_focus_description">播報時要求暫時的導航音訊焦點。若所選導航輸出沒有聲音，可嘗試開啟。可能降低或暫停音樂。此開關獨立於媒體音訊焦點設定，下次連線 CarPlay 時生效。</string>
+</resources>

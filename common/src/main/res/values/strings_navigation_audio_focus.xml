@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_navigation_audio_focus">Navigation audio focus (experimental)</string>
+    <string name="settings_navigation_audio_focus_description">Requests temporary navigation audio focus while guidance plays. Enable if navigation is silent on the selected navigation output. May lower or pause music. Independent of media audio focus. Applies at the next CarPlay connection.</string>
+</resources>

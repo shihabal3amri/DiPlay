@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_navigation_audio_focus">تركيز صوت الملاحة (تجريبي)</string>
+    <string name="settings_navigation_audio_focus_description">يطلب تركيزًا صوتيًا مؤقتًا أثناء تشغيل إرشادات الملاحة. فعّله إذا كان مخرج الملاحة المحدد بلا صوت. قد يخفض صوت الموسيقى أو يوقفها مؤقتًا. هذا الخيار مستقل عن تركيز صوت الوسائط. يسري عند اتصال CarPlay التالي.</string>
+</resources>
