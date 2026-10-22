@@ -105,6 +105,7 @@ import com.shilapi.xcertplay.network.WirelessStartupFailure
 import com.shilapi.xcertplay.network.WirelessStartupPolicy
 import com.shilapi.xcertplay.orchestration.CarPlayStatus
 import com.shilapi.xcertplay.orchestration.CarPlayTransport
+import com.shilapi.xcertplay.orchestration.ConnectionFailureCause
 import com.shilapi.xcertplay.orchestration.ManualHotspotBand
 import com.shilapi.xcertplay.orchestration.ManualHotspotSecurity
 import com.shilapi.xcertplay.orchestration.MfiTarget
@@ -2012,8 +2013,7 @@ class CarPlayHostActivity : ComponentActivity() {
         }
         panel.addView(stage)
         val instructions = TextView(this).apply {
-            text = if (wirelessEnabled) getString(R.string.keep_your_iphone_nearby_with_bluetooth_and_wi_fi_on_allow)
-                else getString(R.string.use_a_usb_data_cable_and_unlock_your_iphone_allow_trust_an)
+            text = connectionInstructions(null)
             gravity = Gravity.CENTER
         }
         panel.addView(instructions)
@@ -5425,8 +5425,13 @@ class CarPlayHostActivity : ComponentActivity() {
         updateHotspotStatus(status)
         val description = status.describe()
         val englishDescription = status.describe(englishResources)
+        val knownCause = (status as? CarPlayStatus.Failed)?.knownCause
         // Once the retries stopped, a later failure of the same attempt, such as its cleanup, keeps the line saying so.
-        if (!startupRetryStopped || status !is CarPlayStatus.Failed) setConnectionStage(description, englishDescription)
+        if (!startupRetryStopped || status !is CarPlayStatus.Failed) {
+            if (knownCause != null) setConnectionStage(ConnectionFailureGuidance.stage(knownCause))
+            else setConnectionStage(description, englishDescription)
+        }
+        connectionInstructionsView?.text = connectionInstructions(status)
         // Keep the actionable tip readable while automatic retries are in progress.
         // Only a working AirPlay session, or a new failure, replaces it.
         if (status is CarPlayStatus.Failed) showConnectionHelp(status)
@@ -5439,7 +5444,7 @@ class CarPlayHostActivity : ComponentActivity() {
                     if (startupFailureGeneration == controllerGeneration) return@report
                     startupFailureGeneration = controllerGeneration
                 }
-                reconnectAfterLoss(description, status.startupFailure, englishDescription)
+                reconnectAfterLoss(description, status.startupFailure, englishDescription, status.knownCause)
             }
             else -> Unit
         }
@@ -5967,6 +5972,7 @@ class CarPlayHostActivity : ComponentActivity() {
         reason: String,
         startupFailure: WirelessStartupFailure? = null,
         englishReason: String = reason,
+        knownCause: ConnectionFailureCause? = null,
     ) {
         if (!CarPlayBackgroundSession.isOwner(this)) return
         // Also when a retry is already pending and this loss is dropped: that retry must not skip.
@@ -5979,7 +5985,10 @@ class CarPlayHostActivity : ComponentActivity() {
         if (startupFailure != null && startupDelay == null) {
             startupRetryStopped = true
             startupRetryButton?.visibility = View.VISIBLE
-            if (startupFailure == WirelessStartupFailure.HOTSPOT_CONFIGURATION) {
+            if (knownCause != null) {
+                setConnectionStage("${getString(ConnectionFailureGuidance.stage(knownCause))}\n" +
+                    getString(R.string.wireless_startup_retries_exhausted))
+            } else if (startupFailure == WirelessStartupFailure.HOTSPOT_CONFIGURATION) {
                 // Its cause is in English, for the report; the help line below says what to check.
                 setConnectionStage("${getString(R.string.hotspot_network_not_ready)}\n" +
                     getString(R.string.wireless_startup_retries_exhausted))
@@ -6647,6 +6656,13 @@ class CarPlayHostActivity : ComponentActivity() {
     private fun setConnectionStage(stringId: Int) =
         setConnectionStage(getString(stringId), englishResources.getString(stringId))
 
+    private fun connectionInstructions(status: CarPlayStatus?): String = getString(when {
+        status is CarPlayStatus.IphoneNotListed ->
+            if (status.nonHubDeviceListed) R.string.connection_help_usb_device_not_iphone else R.string.connection_help_no_usb_device
+        wirelessEnabled -> R.string.keep_your_iphone_nearby_with_bluetooth_and_wi_fi_on_allow
+        else -> R.string.use_a_usb_data_cable_and_unlock_your_iphone_allow_trust_an
+    })
+
     private fun showConnectionHelp(failure: CarPlayStatus.Failed?) {
         connectionInstructionsView?.visibility = if (failure == null) View.VISIBLE else View.GONE
         connectionHelpView?.apply {
@@ -6679,6 +6695,9 @@ class CarPlayHostActivity : ComponentActivity() {
         message == getString(R.string.hotspot_network_not_ready) || message == getString(R.string.first_tcp_timeout) ||
             message == getString(R.string.wifi_direct_refused_beside_hotspot) ||
             message.endsWith(getString(R.string.wireless_startup_retries_exhausted)) -> message
+        ConnectionFailureCause.entries.any { message == getString(ConnectionFailureGuidance.stage(it)) } -> message
+        message == getString(R.string.car_sees_no_usb_device) || message == getString(R.string.car_sees_usb_device_not_iphone) -> message
+        message == getString(R.string.status_waiting_reenumeration) -> getString(R.string.getting_carplay_ready)
         englishMessage.contains("CarPlay configuration request", true) -> getString(R.string.iphone_usb_mode_rejected)
         englishMessage.contains("Turn on Wi-Fi", true) -> getString(R.string.turn_on_wi_fi_in_the_head_unit_s_settings_to_connect)
         englishMessage.contains(BluetoothRadioCheck.RADIO_OFF_MARK, true) -> getString(R.string.turn_on_bluetooth_in_the_head_unit_s_settings_to_connect)
@@ -6819,6 +6838,8 @@ class CarPlayHostActivity : ComponentActivity() {
         CarPlayStatus.WirelessActive, CarPlayStatus.WirelessActiveFallback -> res.getString(R.string.wireless_carplay_active)
         CarPlayStatus.DiscoveringIphone -> res.getString(R.string.discovering_iphone)
         CarPlayStatus.WaitingForIphone -> res.getString(R.string.waiting_for_iphone_over_usb)
+        is CarPlayStatus.IphoneNotListed ->
+            res.getString(if (nonHubDeviceListed) R.string.car_sees_usb_device_not_iphone else R.string.car_sees_no_usb_device)
         CarPlayStatus.RequestingIphonePermission -> res.getString(R.string.requesting_iphone_usb_permission)
         CarPlayStatus.WaitingForReenumeration -> res.getString(R.string.status_waiting_reenumeration)
         CarPlayStatus.SelectingConfiguration -> res.getString(R.string.selecting_carplay_configuration)

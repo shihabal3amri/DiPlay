@@ -108,6 +108,10 @@ class IphoneUsbHost(
     fun listedDevices(): List<String> =
         usbManager.deviceList.values.map(Ch341UsbHost::describe).sorted()
 
+    fun listsNonHubDevice(): Boolean = usbManager.deviceList.values.any { device ->
+        !isHub(device.deviceClass, (0 until device.interfaceCount).map { device.getInterface(it).interfaceClass })
+    }
+
     @Throws(IphoneUsbException::class)
     fun requestPermission(device: UsbDevice, allowAdbFallback: Boolean = true): PermissionRequest {
         requireConfiguredDevice(device)
@@ -421,6 +425,10 @@ class IphoneUsbHost(
             return "CarPlay USB mode request rejected; current mode=$current " +
                 "usbVersion=${deviceVersion ?: "unknown"} configurations=$configurations"
         }
+
+        internal fun isHub(deviceClass: Int, interfaceClasses: List<Int>): Boolean =
+            deviceClass == UsbConstants.USB_CLASS_HUB ||
+                interfaceClasses.isNotEmpty() && interfaceClasses.all { it == UsbConstants.USB_CLASS_HUB }
     }
 
 }
