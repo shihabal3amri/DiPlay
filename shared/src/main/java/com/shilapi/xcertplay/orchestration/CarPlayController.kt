@@ -2330,6 +2330,17 @@ class CarPlayController(
             onStatus(CarPlayStatus.RunningControl)
             wiredSessionActive = false
             wiredStartSentAtNanos = null
+            fun startAgain(): Iap2WiredControlClient.StartAgain {
+                val opened = ncm.linkOpenedAtNanos
+                return WiredStartAgain.decide(
+                    nowNanos = System.nanoTime(),
+                    startSentAtNanos = wiredStartSentAtNanos ?: System.nanoTime(),
+                    linkOpenedAtNanos = opened,
+                    sessionActive = wiredSessionActive,
+                    connectionAttemptSinceLinkOpened =
+                        opened != null && ncm.connectionAttemptSince(endpoint.airPlayPort, opened),
+                )
+            }
             lateinit var startWatchdog: WiredStartWatchdog
             startWatchdog = WiredStartWatchdog(
                 schedule = { delay, action ->
@@ -2341,12 +2352,24 @@ class CarPlayController(
                 },
                 onTimeout = {
                     if (!closed && wiredStartWatchdog === startWatchdog) {
+                        val waitedSeconds = wiredStartSentAtNanos?.let {
+                            TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - it)
+                        }
                         debugLog(
-                            "wired start: no AirPlay session ${WiredStartWatchdog.TIMEOUT_MILLIS / 1000} s " +
+                            "wired start: no AirPlay session $waitedSeconds s " +
                                 "after carplay-start-session; NCM ${ncm.trafficSummary(endpoint.airPlayPort)}",
                         )
                         fail(IphoneUsbException.TimedOut("The iPhone did not open CarPlay over USB in time"))
                     }
+                },
+                secondRequestCanStillGoOut = { startAgain() != Iap2WiredControlClient.StartAgain.DONE },
+                onHold = {
+                    debugLog(
+                        "wired start: no AirPlay session ${WiredStartWatchdog.TIMEOUT_MILLIS / 1000} s " +
+                            "after carplay-start-session; holding the limit until " +
+                            "${WiredStartWatchdog.HELD_TIMEOUT_MILLIS / 1000} s for the second request; " +
+                            "NCM ${ncm.trafficSummary(endpoint.airPlayPort)}",
+                    )
                 },
             )
             wiredStartWatchdog = startWatchdog
@@ -2373,17 +2396,7 @@ class CarPlayController(
                     }
                     debugLog("wired $message")
                 },
-                startSessionAgain = {
-                    val opened = ncm.linkOpenedAtNanos
-                    WiredStartAgain.decide(
-                        nowNanos = System.nanoTime(),
-                        startSentAtNanos = wiredStartSentAtNanos ?: System.nanoTime(),
-                        linkOpenedAtNanos = opened,
-                        sessionActive = wiredSessionActive,
-                        connectionAttemptSinceLinkOpened =
-                            opened != null && ncm.connectionAttemptSince(endpoint.airPlayPort, opened),
-                    )
-                },
+                startSessionAgain = ::startAgain,
             )
             onStatus(
                 when (result.terminal) {
