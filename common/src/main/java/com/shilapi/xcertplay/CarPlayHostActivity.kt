@@ -1549,9 +1549,9 @@ class CarPlayHostActivity : ComponentActivity() {
                 clusterStreamOnDisplay = true
                 if (DiLink51ClusterLayout.supported()) {
                     val plan = DiLink51ClusterLayout.plan(size.x, size.y, theme) ?: return null
-                    return DiLink51ClusterLayout.streamConfig().also {
+                    return DiLink51ClusterLayout.streamConfig(plan.streamWidth, plan.streamHeight).also {
                         MapMirrors.streamAspect = it.widthPixels.toDouble() / it.heightPixels
-                        appendLog("Cluster map: fixed 1920x720 stream; layout=$theme viewport=$plan")
+                        appendLog("Cluster map: fixed ${it.widthPixels}x${it.heightPixels} stream; layout=$theme viewport=$plan")
                     }
                 }
                 if (GeelyClusterDisplay.supported() && GeelyClusterDisplay.matches(display, size.x, size.y)) {

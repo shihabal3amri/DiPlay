@@ -61,7 +61,7 @@ The optional centre-screen map card mirrors that same dashboard stream. **Keep t
 
 ### DiLink 5.1 theme profile
 
-The exact Android 13 firmware `BYD-AUTO/IVI/IVI:13/TP1A.220624.014/eng.build20260722.221155:user/release-keys` has a separate profile for its measured 1920×720 cluster. Other firmware retains the original PR display selection, renderer and settings.
+The exact Android 13 firmware `BYD-AUTO/IVI/IVI:13/TP1A.220624.014/eng.build20260722.221155:user/release-keys` has a separate profile for its measured 1920×720 cluster. The Leopard 5 Ultra firmware `…/eng.build20260705.021352` uses it unchanged, and the Denza N9 firmware `…/eng.build20260705.011226` uses it on a 2560×720 cluster with every position below scaled by 4/3 across and a 2560×720 stream (inferred from photos, not measured; see [compatibility](COMPATIBILITY.md)). Other firmware retains the original PR display selection, renderer and settings.
 
 - Map uses shared display `_0`, with a 1920×480 viewport at y=144 and contrast bands behind the instrument readouts.
 - Scenario and Simple use shared display `_1`, with a 600×720 side viewport at x=1320. Everything outside the side map is transparent. No white mini-map shading is added.
