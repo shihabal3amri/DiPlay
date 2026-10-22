@@ -947,6 +947,8 @@
     <string name="turn_card_theme_night">常に夜</string>
     <string name="settings_disable_media_key_audio_focus">メディアキーのオーディオフォーカスを無効化（実験的機能）</string>
     <string name="settings_disable_media_key_audio_focus_description">CarPlayで音楽再生中、DiPlayがメディアのオーディオフォーカスを要求しないようにします。車の物理音量キーがDiPlayに割り当てられ、音量調整できなくなる場合に使用してください。ステアリングの再生・停止・曲送りが動作しなくなる場合があります。</string>
+    <string name="settings_navigation_prompt_audio_focus">ナビ音声案内でオーディオフォーカスを要求</string>
+    <string name="settings_navigation_prompt_audio_focus_description">CarPlayのナビ音声案内のたびに、DiPlayは他の音を下げられる一時的なオーディオフォーカスを要求し、案内の終了後に解放します。音楽を再生するまで案内が聞こえない場合や、案内中に音楽を小さくしたい場合に使用してください。案内中は車両側の音声が小さくなったり一時停止したりすることがあります。次回のCarPlay接続時に適用されます。</string>
     <string name="settings_ambient_album">アルバムアートに合わせる</string>
     <string name="settings_ambient_album_description">アルバムアートの色または近い車載ライトの色を使用します。灰色・黒・画像なしでは31色全体を使い、ほぼ白い画像では白や寒色の白を使えます。</string>
     <string name="settings_cluster_speedometer">メーター内速度表示（実験的機能）</string>

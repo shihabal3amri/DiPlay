@@ -905,6 +905,8 @@
     <string name="turn_card_theme_night">始终夜间</string>
     <string name="settings_disable_media_key_audio_focus">禁用媒体按键音频焦点（实验性）</string>
     <string name="settings_disable_media_key_audio_focus_description">CarPlay 音乐播放时不再由 DiPlay 申请媒体音频焦点。若车机将实体音量键路由给 DiPlay，导致音量键无法调节音量，请开启此项。部分依赖音频焦点的车机可能无法继续使用方向盘播放、暂停和切歌键。下次连接 CarPlay 时生效。</string>
+    <string name="settings_navigation_prompt_audio_focus">导航播报申请音频焦点</string>
+    <string name="settings_navigation_prompt_audio_focus_description">每次 CarPlay 导航播报期间，DiPlay 申请可压低其他声音的临时音频焦点，播报结束后释放。适用于不放音乐时导航没有声音，或希望导航播报时压低音乐的情况。播报期间车机自身的声音可能变小或暂停。下次连接 CarPlay 时生效。</string>
     <string name="settings_ambient_album">跟随专辑封面</string>
     <string name="settings_ambient_album_description">按封面取色并近似匹配原车可用色号。灰黑或无封面时使用全部31色；大面积白色封面可使用白色或冷白。</string>
     <string name="settings_cluster_speedometer">仪表盘速度计（实验性）</string>

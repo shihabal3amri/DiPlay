@@ -219,6 +219,8 @@ class AndroidMediaSink(
     private val vendorLowLatencyDecoder: Boolean = false,
     /** Opt-in MTK ACodec low-latency/no-reorder modes, with per-session automatic fallback. */
     private val mtkDecoderTuningEnabled: Boolean = false,
+    /** Opt-in (#946): navigation prompts request duckable focus while the iPhone ducks audio. Needs [audioFocusEnabled]. */
+    navigationPromptAudioFocus: Boolean = false,
 ) : MediaSink {
     // Each downlink publishes its own reference; a mic must match that stream and sample rate.
     private val callEchoReferences = ConcurrentHashMap<AudioStreamId, EchoReference>()
@@ -231,6 +233,18 @@ class AndroidMediaSink(
         audioFocusAutoYield,
         onAudioDiagnostic,
     )
+
+    private val navigationPromptFocus = NavigationPromptFocus(
+        appContext,
+        promptFocusEnabled = navigationPromptAudioFocus,
+        audioFocusEnabled = audioFocusEnabled,
+        attributes = { navigationRouteAttributes(navigationChannel) },
+        report = onAudioDiagnostic,
+    )
+
+    override fun onAudioDuck(ducked: Boolean) {
+        if (ducked) navigationPromptFocus.onDuck() else navigationPromptFocus.onUnduck()
+    }
 
     /** The media-key session may own Android's current focus request for this same sink. */
     fun onMediaAudioFocusChanged(change: Int) {
@@ -652,6 +666,7 @@ class AndroidMediaSink(
         recoveryExecutor.shutdownNow()
         // Audio workers close asynchronously; none may reacquire focus after their sink closes.
         audioFocusCoordinator.close()
+        navigationPromptFocus.close()
         audioRenderers.values.forEach(AudioRenderer::close)
         audioRenderers.clear()
         callEchoReferences.clear()
@@ -2100,22 +2115,7 @@ private class AudioRenderer(
     private fun audioAttributesFor(
         selection: AudioChannelSelection,
         streamOverride: Int,
-    ): AudioAttributes {
-        if (streamOverride in AudioManager.STREAM_SYSTEM..AudioManager.STREAM_ACCESSIBILITY) {
-            // Android accepts only its defined legacy stream IDs here. BYD audio policy can
-            // map these standard streams to vehicle outputs; arbitrary channel numbers are
-            // not valid AudioAttributes legacy stream types.
-            try {
-                return AudioAttributes.Builder().setLegacyStreamType(streamOverride).build()
-            } catch (error: Exception) {
-                Log.w(TAG, "legacy audio stream $streamOverride rejected; keeping usage routing", error)
-            }
-        }
-        return AudioAttributes.Builder()
-            .setUsage(usageFor(selection.channel))
-            .setContentType(contentTypeFor(selection.contentType))
-            .build()
-    }
+    ): AudioAttributes = LegacyAudioFallback.attributes(streamOverride) ?: audioAttributesFor(selection)
 
     private fun mappedSelection(): AudioChannelSelection {
         val mode = if (advancedAudioChannelMapping) {
@@ -2139,7 +2139,8 @@ private class AudioRenderer(
 
     /**
      * Shares a sink-level focus request across all active non-navigation renderers.
-     * Navigation guidance intentionally takes no focus: it overlays media without ducking it.
+     * Navigation guidance takes no focus here: it overlays media without ducking it. The opt-in
+     * [NavigationPromptFocus] requests focus for each prompt, between duckAudio and unduckAudio.
      */
     private fun requestAudioFocus() {
         val channel = mappedChannel ?: return

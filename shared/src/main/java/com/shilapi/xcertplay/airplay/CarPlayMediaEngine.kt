@@ -13,6 +13,7 @@ import java.util.WeakHashMap
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ScheduledThreadPoolExecutor
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicReference
 
 /** Identity of one CarPlay audio stream: the stream type plus its CarPlay audio type. */
 data class AudioStreamId(val type: Int, val audioType: String)
@@ -34,6 +35,8 @@ interface MediaSink {
     fun onMicrophoneStarted(id: AudioStreamId, config: MicrophoneConfig) {}
     fun onMicrophoneStopped(id: AudioStreamId) {}
     fun onIapMessage(bytes: ByteArray) {}
+    /** The iPhone asked the car to duck its other audio for a navigation prompt (true), or to restore it. */
+    fun onAudioDuck(ducked: Boolean) {}
 }
 
 /**
@@ -99,6 +102,9 @@ class CarPlayMediaEngine(
     }
 
     private class BufferedStream(val stream: BufferedAudioStream, val connectionId: Any?)
+
+    /** The session whose last duck command started a navigation prompt. */
+    private val duckingSession = AtomicReference<AirPlaySession?>()
 
     // The sink has one type-103 renderer, even while old control sessions remain connected.
     // Never hold this lock when closing/controlling a stream: sink callbacks can reenter us.
@@ -531,7 +537,14 @@ class CarPlayMediaEngine(
         if (isScreenStreamType(type)) sink.onScreenStreamActive(type, false)
     }
 
+    override fun onAudioDuck(session: AirPlaySession, ducked: Boolean) {
+        if (ducked) duckingSession.set(session) else duckingSession.compareAndSet(session, null)
+        sink.onAudioDuck(ducked)
+    }
+
     override fun onSessionClosed(session: AirPlaySession) {
+        // A phone that disconnects during a prompt never sends unduckAudio.
+        if (duckingSession.compareAndSet(session, null)) sink.onAudioDuck(false)
         clearPendingIapTunnel(session)
         retireBuffered(session)
         videoSettingsChannels.remove(session)?.close()

@@ -59,6 +59,8 @@ interface AirPlayMediaHandler {
     fun onSessionClosed(session: AirPlaySession) {}
     fun setIapTunnelHandler(handler: ((BlockingDuplexByteStream) -> Boolean)?) {}
     fun onSetupResponseSent(session: AirPlaySession) {}
+    /** duckAudio (true) and unduckAudio (false): the iPhone marks the start and end of a navigation prompt. */
+    fun onAudioDuck(session: AirPlaySession, ducked: Boolean) {}
 }
 
 /**
@@ -760,6 +762,10 @@ class AirPlaySession(
             runCatching { asMap(BplistCodec.decode(data)) }.getOrNull()
                 ?.let { listener.onRemoteControlMessage(this, streamId, it) }
             return RtspMessage.Response(status = 200)
+        }
+        when (type) {
+            "duckAudio" -> media.onAudioDuck(this, true)
+            "unduckAudio" -> media.onAudioDuck(this, false)
         }
         if (type == "requestUI" && string(params["url"]) == VideoInCar.UI_URL) {
             listener.onVideoPlaybackUiRequested(this)

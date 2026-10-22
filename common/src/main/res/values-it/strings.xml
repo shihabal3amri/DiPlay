@@ -922,6 +922,8 @@
     <string name="turn_card_theme_night">Sempre notte</string>
     <string name="settings_disable_media_key_audio_focus">Disattiva il focus audio dei tasti multimediali (sperimentale)</string>
     <string name="settings_disable_media_key_audio_focus_description">Impedisce a DiPlay di richiedere il focus audio multimediale mentre la musica di CarPlay è attiva. Abilitalo se la head unit instrada a DiPlay i suoi pulsanti fisici del volume e questi non regolano più il volume. I comandi riproduci, pausa e brano del volante potrebbero smettere di funzionare su head unit che richiedono il focus. Si applica alla prossima connessione CarPlay.</string>
+    <string name="settings_navigation_prompt_audio_focus">Le indicazioni di navigazione richiedono il focus audio</string>
+    <string name="settings_navigation_prompt_audio_focus_description">Durante ogni indicazione di navigazione di CarPlay, DiPlay richiede un focus audio temporaneo che consente di abbassare gli altri suoni e lo rilascia al termine dell’indicazione. Provalo se le indicazioni restano mute finché non parte la musica, o se la musica deve abbassarsi durante le indicazioni. L’audio della head unit potrebbe abbassarsi o andare in pausa durante le indicazioni. Si applica alla prossima connessione CarPlay.</string>
     <string name="settings_ambient_album">Segui la copertina dell’album</string>
     <string name="settings_ambient_album_description">Usa il colore della copertina o i colori dell’auto disponibili più vicini. Le copertine grigie, nere o mancanti usano tutti i 31 colori; quelle in prevalenza bianche possono usare il bianco o il bianco freddo.</string>
     <string name="settings_cluster_speedometer">Tachimetro sul quadro strumenti (sperimentale)</string>
