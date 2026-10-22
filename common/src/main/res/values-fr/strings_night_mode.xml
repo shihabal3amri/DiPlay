@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="carplay_night_mode">Mode jour/nuit de CarPlay</string>
+    <string name="settings_app_appearance">Apparence de l’app</string>
+    <string name="settings_app_appearance_dark">Sombre</string>
+    <string name="settings_app_appearance_light">Clair</string>
+    <string name="settings_app_appearance_auto">Auto</string>
+    <string name="settings_app_appearance_description">Auto suit le réglage jour/nuit de CarPlay enregistré ; lorsque CarPlay est ouvert, il suit le résultat en direct. Clair et Sombre restent fixes et ne nécessitent pas de reconnexion.</string>
+    <string name="settings_switch_to_light_appearance">Passer à l’apparence claire</string>
+    <string name="settings_switch_to_dark_appearance">Passer à l’apparence sombre</string>
+    <string name="carplay_night_system">Suivre le système Android</string>
+    <string name="carplay_night_ambient">Suivre la luminosité ambiante</string>
+    <string name="carplay_night_day">Toujours jour</string>
+    <string name="carplay_night_night">Toujours nuit</string>
+    <string name="carplay_night_schedule">Programmé</string>
+    <string name="carplay_night_start">Début de la nuit</string>
+    <string name="carplay_night_end">Fin de la nuit</string>
+    <string name="carplay_night_schedule_hint">Utilise l’heure locale de l’autoradio. Définissez des heures de début et de fin différentes ; les plages qui passent minuit sont prises en charge.</string>
+    <string name="carplay_night_schedule_same_time">Les heures de début et de fin doivent être différentes.</string>
+    <string name="carplay_night_hint">Enregistrez et revenez à CarPlay pour appliquer.</string>
+    <string name="carplay_night_ambient_hint">Utilise le seuil et le délai ci-dessous. Sans capteur de luminosité, suit Android.</string>
+    <string name="carplay_night_time_note">Lorsque l’apparence est réglée sur Automatique dans les réglages de CarPlay, CarPlay tient aussi compte de l’heure de l’iPhone. Même si vous choisissez Toujours jour, CarPlay peut rester sombre la nuit.</string>
+</resources>

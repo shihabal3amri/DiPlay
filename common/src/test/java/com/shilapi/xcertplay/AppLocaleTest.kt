@@ -30,6 +30,15 @@ class AppLocaleTest {
         assertEquals(AppLocale.SYSTEM, AppLocale.preference(context))
     }
 
+    @Test fun frenchIsSelectableAndSavedAsTheAppLanguage() {
+        assertTrue(AppLocale.FRENCH in AppLocale.ALL)
+        assertEquals("Français", AppLocale.displayName(context, AppLocale.FRENCH))
+        AppLocale.save(context, AppLocale.FRENCH)
+        assertEquals("fr", manager.applicationLocales.toLanguageTags())
+        assertEquals(AppLocale.FRENCH, AppLocale.preference(context))
+        AppLocale.save(context, AppLocale.SYSTEM)
+    }
+
     @Test fun oldPreferenceMigratesOnceAndCannotOverrideLaterSystemChanges() {
         context.getSharedPreferences("diplay", Context.MODE_PRIVATE).edit()
             .putString("app_language", "ar").commit()

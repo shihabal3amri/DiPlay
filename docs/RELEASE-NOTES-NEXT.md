@@ -50,6 +50,7 @@ Changes through DiPlay 0.2.21 are documented in [0.2.21 release notes](RELEASE-N
 
 ## Settings and updates
 
+- DiPlay is available in French (Français), selectable in **Settings → Language** and in Android's app-language settings.
 - Home shows **Update available** when DiPlay comes back after the background check found a release, not only after DiPlay was closed and opened again. [#947](https://github.com/shihabal3amri/DiPlay/pull/947)
 - A settings backup now includes the resolution percentage, the ambient light delay, the third dashboard route, calls on speakerphone, the navigation voice level and the launcher bubble. [#928](https://github.com/shihabal3amri/DiPlay/pull/928)
 - Settings search finds sliders, such as **Navigation guidance volume**, and finds the HEVC switch, now titled **Efficient video (HEVC)** ([#965](https://github.com/shihabal3amri/DiPlay/issues/965)). [#935](https://github.com/shihabal3amri/DiPlay/pull/935), [#969](https://github.com/shihabal3amri/DiPlay/pull/969)

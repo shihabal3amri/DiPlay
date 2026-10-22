@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="hotspot_join_title">Connexion automatique au point d’accès (expérimental)</string>
+    <string name="hotspot_join_description">Réparation facultative pour les micrologiciels pris en charge sous Android 13 ou version ultérieure avec un point d’accès de voiture limité au 5 GHz. La vérification prépare une sauvegarde privée de restauration sans modifier le point d’accès. Nécessite un ADB local autorisé sur localhost:5555 ; l’appairage du débogage sans fil TLS n’est pas pris en charge.</string>
+    <string name="hotspot_join_check">Vérifier la réparation du point d’accès</string>
+    <string name="hotspot_join_apply">Ajouter les informations de connexion automatique</string>
+    <string name="hotspot_join_restore">Restaurer le point d’accès enregistré</string>
+    <string name="hotspot_join_working">Vérification ou mise à jour en cours… Une annulation peut nécessiter une nouvelle vérification pour confirmer le résultat.</string>
+    <string name="hotspot_join_confirm">Voiture à l’arrêt, déconnectez d’abord CarPlay et désactivez le point d’accès dans les paramètres de la voiture. Cette action ne modifie que la configuration enregistrée du point d’accès et en vérifie la relecture. Réactivez ensuite vous-même le point d’accès pour mettre à jour ses annonces. Les clients existants seront déconnectés lorsque vous le désactiverez. Conservez la sauvegarde privée pour pouvoir restaurer.</string>
+    <string name="hotspot_join_disconnect">Déconnectez CarPlay avant de modifier le point d’accès.</string>
+    <string name="hotspot_join_ready">Configuration 5 GHz prise en charge. Sauvegarde privée complète préparée ; aucune modification du point d’accès pour l’instant.</string>
+    <string name="hotspot_join_present">Les informations testées sont déjà présentes. Aucun doublon ajouté ; DiPlay n’est pas responsable de la restauration d’un élément existant.</string>
+    <string name="hotspot_join_applied">Configuration enregistrée vérifiée. Activez le point d’accès dans les paramètres de la voiture pour mettre à jour les annonces, puis testez la connexion automatique. La réussite de l’annonce et de CarPlay doit encore être confirmée par un test sur l’appareil.</string>
+    <string name="hotspot_join_restored">Configuration enregistrée complète restaurée et vérifiée. Activez le point d’accès dans les paramètres de la voiture.</string>
+    <string name="hotspot_join_unsupported">API, micrologiciel ou bande non pris en charge, ou informations constructeur contradictoires. Aucune réparation appliquée. Utilisez une configuration 5 GHz seule prise en charge ; les autres bandes ne sont pas vérifiées.</string>
+    <string name="hotspot_join_off_required">Le point d’accès doit être confirmé comme désactivé. Déconnectez les clients et désactivez-le dans les paramètres de la voiture, puis réessayez. DiPlay ne le redémarrera pas automatiquement.</string>
+    <string name="hotspot_join_drift">La configuration a changé depuis la sauvegarde. Rien n’a été écrasé. Vérifiez à nouveau ; une sauvegarde de restauration en attente est conservée.</string>
+    <string name="hotspot_join_firmware_changed">Le micrologiciel a changé. La sauvegarde privée est conservée, mais elle ne peut pas être restaurée en toute sécurité sur ce micrologiciel.</string>
+    <string name="hotspot_join_cancelled">Annulé avant l’écriture. Vérifiez à nouveau pour inspecter l’état de restauration conservé.</string>
+    <string name="hotspot_join_failed_restored">La réparation a échoué ou a été annulée après l’écriture. La configuration d’origine a été restaurée et sa relecture vérifiée.</string>
+    <string name="hotspot_join_busy">Une autre opération sur le point d’accès est encore en cours. Patientez, puis vérifiez à nouveau.</string>
+    <string name="hotspot_join_adb_required">Nécessite un ADB local simple approuvé sur localhost:5555. Activez-le et autorisez-le avec la configuration de voiture prise en charge. L’appairage du débogage sans fil TLS d’Android ne suffit pas.</string>
+    <string name="hotspot_join_recovery">Le résultat ou la vérification de la sauvegarde est incertain. Désactivez le point d’accès et vérifiez à nouveau avant de continuer. Une sauvegarde privée existante est conservée ; la restauration n’est autorisée que si la configuration correspond toujours.</string>
+</resources>
