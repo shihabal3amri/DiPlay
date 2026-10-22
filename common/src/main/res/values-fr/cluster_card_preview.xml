@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="card_preview_title">Aperçu de l’emplacement de la carte de virage</string>
+    <string name="card_preview_note">Position proportionnelle sur le panneau complet du combiné d’instruments. Le bord réel de la petite fenêtre varie selon la voiture.</string>
+    <string name="card_preview_full">Plein écran</string>
+    <string name="card_preview_small">Petite fenêtre</string>
+</resources>

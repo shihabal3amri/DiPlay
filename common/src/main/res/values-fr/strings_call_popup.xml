@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_hide_byd_call_popup">Masquer la fenêtre d’appel BYD (expérimental)</string>
+    <string name="settings_hide_byd_call_popup_description">Uniquement pour les autoradios BYD sous Android 10 ou version ultérieure. Nécessite un ADB local approuvé. Masque la fenêtre d’appel native lorsque CarPlay connecté est au premier plan ; la rétablit en arrière-plan. Ne modifie pas l’audio Bluetooth et ne masque pas l’application Téléphone complète.</string>
+</resources>
