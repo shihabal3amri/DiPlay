@@ -1905,7 +1905,7 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
             scheduleTimeControl(scheduleControls, start = false)
             card.addView(scheduleControls)
             card.addView(button(getString(R.string.picture_adjustments), false) {
-                OwnScreenStart.start(this, Intent(this, CarPlayHostActivity::class.java)
+                OwnScreenStart.start(this, CarPlayScreen.intent(this)
                     .putExtra("picture_controls", true).addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT))
             }, matchButton(0, 56).apply { bottomMargin = dp(24) })
             carPlaySizeControl(card)
@@ -1945,6 +1945,12 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
                 getString(R.string.settings_harman_fullscreen_experimental_description),
                 AirPlayPersistence.loadHarmanFullscreen(this)) { enabled ->
                 AirPlayPersistence.saveHarmanFullscreen(this, enabled)
+            }
+            toggle(card, getString(R.string.settings_carplay_same_task),
+                getString(R.string.settings_carplay_same_task_description),
+                AirPlayPersistence.loadCarPlaySameTask(this)) { enabled ->
+                AirPlayPersistence.saveCarPlaySameTask(this, enabled)
+                CarPlayScreen.closeIfElsewhere(this)
             }
             toggle(card, getString(R.string.split_screen_areas), getString(R.string.split_screen_areas_description),
                 SplitScreenSettings.enabled(this)) {
@@ -5734,7 +5740,7 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
         else open()
     }
     private fun openProjection() {
-        OwnScreenStart.start(this, Intent(this, CarPlayHostActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT))
+        OwnScreenStart.start(this, CarPlayScreen.intent(this).addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT))
     }
     private fun choosePhone() {
         if (Build.VERSION.SDK_INT >= 31 && checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
@@ -5959,6 +5965,7 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
         appendLine("CarPlay size: ${AirPlayPersistence.loadWidthPhysicalMm(appContext).let { mm -> "${com.shilapi.xcertplay.airplay.CarPlaySize.exact(mm)?.label ?: "Custom"}, $mm mm" }}")
         appendLine("Saved resolution preference (may differ from active session): ${AirPlayPersistence.loadDisplayScalePercent(appContext)}%")
         appendLine("Session: ${if (CarPlayBackgroundSession.active) "active" else if (CarPlayBackgroundSession.hasSession()) "connecting" else "stopped"}")
+        appendLine("CarPlay screen: ${CarPlayScreen.report(appContext)}")
         appendLine(PhoneWakeDiagnostics.report(appContext))
         appendLine("Head-unit board: ${Build.BOARD}; hardware: ${Build.HARDWARE}; build: ${Build.DISPLAY}")
         appendLine()

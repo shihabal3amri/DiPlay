@@ -915,6 +915,8 @@
     <string name="settings_cluster_speedometer_opacity">速度計不透明度</string>
     <string name="settings_harman_fullscreen_experimental">Harman 車機全螢幕（實驗性）</string>
     <string name="settings_harman_fullscreen_experimental_description">讓 CarPlay 佔用受支援 Harman 車機的原廠側欄區域。下次開啟 CarPlay 視窗時生效；其他韌體可能顯示異常。</string>
+    <string name="settings_carplay_same_task">在桌面卡片中保留 CarPlay（實驗性）</string>
+    <string name="settings_carplay_same_task_description">適用於在卡片或畫中畫視窗中顯示 DiPlay 的桌面，例如迪友桌面卡片、嘟嘟桌面畫中畫。CarPlay 會像 0.2.11 及更早版本一樣在 DiPlay 自己的視窗中開啟，不再另外以全螢幕開啟。下次開啟 CarPlay 時生效，不會中斷連線。</string>
     <string name="settings_hotspot_name_non_english">熱點名稱含中文或其他非英文字元時，部分車機廣播的名稱 iPhone 找不到，CarPlay 會停在「正在準備 CarPlay…」。如出現這種情況，請把車機熱點改為英文字母和數字的名稱。</string>
     <string name="settings_speech_without_low_rates">USB 下更清晰的導航語音（實驗性）</string>
     <string name="settings_speech_without_low_rates_description">USB 連線時，iPhone 可能以 8 kHz 電話音質傳送導航播報和 Siri 的語音回答。開啟後不再為這類聲音提供 8 和 16 kHz，讓 iPhone 選擇更高的取樣率。如果播報沒有聲音，請關閉。會重新連線 CarPlay。</string>

@@ -915,6 +915,8 @@
     <string name="settings_cluster_speedometer_opacity">速度计不透明度</string>
     <string name="settings_harman_fullscreen_experimental">哈曼车机全屏（实验性）</string>
     <string name="settings_harman_fullscreen_experimental_description">让 CarPlay 占用受支持哈曼车机的原厂侧栏区域。下次打开 CarPlay 窗口时生效；其他固件可能显示异常。</string>
+    <string name="settings_carplay_same_task">在桌面卡片中保留 CarPlay（实验性）</string>
+    <string name="settings_carplay_same_task_description">适用于在卡片或画中画窗口中显示 DiPlay 的桌面，例如迪友桌面卡片、嘟嘟桌面画中画。CarPlay 会像 0.2.11 及更早版本一样在 DiPlay 自己的窗口中打开，不再单独全屏打开。下次打开 CarPlay 时生效，不会断开连接。</string>
     <string name="settings_hotspot_name_non_english">热点名称含中文或其他非英文字符时，部分车机广播的名称 iPhone 找不到，CarPlay 会停在「正在准备 CarPlay…」。如出现这种情况，请把车机热点改为英文字母和数字的名称。</string>
     <string name="settings_speech_without_low_rates">USB 下更清晰的导航语音（实验性）</string>
     <string name="settings_speech_without_low_rates_description">USB 连接时，iPhone 可能以 8 kHz 电话音质发送导航播报和 Siri 的语音回答。开启后不再为这类声音提供 8 和 16 kHz，让 iPhone 选择更高的采样率。如果播报没有声音，请关闭。会重新连接 CarPlay。</string>

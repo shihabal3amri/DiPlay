@@ -957,6 +957,8 @@
     <string name="settings_cluster_speedometer_opacity">速度表示の不透明度</string>
     <string name="settings_harman_fullscreen_experimental">Harman車載端末の全画面表示（実験的機能）</string>
     <string name="settings_harman_fullscreen_experimental_description">対応するHarman車載端末で、純正サイドパネルの領域までCarPlayを表示します。次回CarPlay画面を開くと反映されます。ほかのファームウェアでは正常に表示されないことがあります。</string>
+    <string name="settings_carplay_same_task">ランチャーのカード内にCarPlayを表示（実験的機能）</string>
+    <string name="settings_carplay_same_task_description">DiPlayをカードやピクチャーインピクチャーのウィンドウで表示するランチャー（BYDのDiYouデスクトップなど）向けです。CarPlayを別の全画面ではなく、0.2.11以前と同じくDiPlay自身のウィンドウで開きます。次にCarPlayを開いたときに反映され、接続は切れません。</string>
     <string name="settings_hotspot_name_non_english">中国語など英数字以外の文字を含むホットスポット名では、CarPlayが「準備中」のままになる場合があります。一部の車載端末がiPhoneから検出できない形式で送信するためです。その場合はホットスポット名を英数字に変更してください。</string>
     <string name="settings_speech_without_low_rates">USBナビ案内の音声を明瞭にする（実験的機能）</string>
     <string name="settings_speech_without_low_rates_description">USBではiPhoneのナビ案内やSiriの応答が電話品質の8 kHz音声で送信される場合があります。8 kHzと16 kHzを使用候補から外し、より高い音質を選ばせます。案内音声が出なくなったらオフにしてください。CarPlayを再接続します。</string>

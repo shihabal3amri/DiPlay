@@ -855,6 +855,8 @@
     <string name="settings_cluster_speedometer_opacity">Непрозрачность спидометра</string>
     <string name="settings_harman_fullscreen_experimental">Полный экран Harman (экспериментально)</string>
     <string name="settings_harman_fullscreen_experimental_description">Позволяет CarPlay занять область штатной боковой панели на совместимых устройствах Harman. Применяется при следующем открытии окна CarPlay; на других прошивках возможны ошибки отображения.</string>
+    <string name="settings_carplay_same_task">CarPlay в карточке лаунчера (экспериментально)</string>
+    <string name="settings_carplay_same_task_description">Для лаунчеров, которые показывают DiPlay в карточке или окне «картинка в картинке», например рабочего стола DiYou от BYD. CarPlay открывается в собственном окне DiPlay, как в версии 0.2.11 и раньше, а не в отдельном полноэкранном. Применяется при следующем открытии CarPlay, без отключения.</string>
     <string name="settings_hotspot_name_non_english">Если в имени есть китайские или другие нелатинские символы, CarPlay может остановиться на «Подготовка CarPlay…»: некоторые головные устройства передают такое имя в виде, который iPhone не находит. В этом случае переименуйте точку доступа автомобиля латинскими буквами и цифрами.</string>
     <string name="settings_speech_without_low_rates">Более чёткий голос навигации по USB (экспериментально)</string>
     <string name="settings_speech_without_low_rates_description">По USB iPhone может передавать подсказки навигации и ответы Siri в телефонном качестве 8 кГц. Этот параметр перестаёт предлагать 8 и 16 кГц для такого звука, и iPhone выбирает более высокую частоту. Если подсказки пропадут, выключите его. Переподключает CarPlay.</string>

@@ -855,6 +855,8 @@
     <string name="settings_cluster_speedometer_opacity">عتامة عداد السرعة</string>
     <string name="settings_harman_fullscreen_experimental">ملء شاشة Harman (تجريبي)</string>
     <string name="settings_harman_fullscreen_experimental_description">يتيح لـ CarPlay شغل منطقة اللوحة الجانبية الأصلية في وحدات Harman المدعومة. يُطبّق عند فتح نافذة CarPlay التالية؛ وقد تظهر أخطاء على برامج ثابتة أخرى.</string>
+    <string name="settings_carplay_same_task">إبقاء CarPlay داخل بطاقة الشاشة الرئيسية (تجريبي)</string>
+    <string name="settings_carplay_same_task_description">لواجهات الشاشة الرئيسية التي تعرض DiPlay داخل بطاقة أو نافذة صورة داخل صورة، مثل سطح مكتب DiYou من BYD. يُفتح CarPlay في نافذة DiPlay نفسها كما في الإصدار 0.2.11 وما قبله، بدلاً من نافذة منفصلة بملء الشاشة. يُطبّق عند فتح CarPlay في المرة التالية دون قطع الاتصال.</string>
     <string name="settings_hotspot_name_non_english">قد يتوقف CarPlay عند «جارٍ تجهيز CarPlay…» إذا احتوى الاسم على أحرف صينية أو أحرف غير إنجليزية، لأن بعض وحدات السيارة تبث هذا الاسم بصيغة لا يجدها iPhone. إذا حدث ذلك، فأعد تسمية نقطة اتصال السيارة بأحرف إنجليزية وأرقام.</string>
     <string name="settings_speech_without_low_rates">صوت ملاحة أوضح عبر USB (تجريبي)</string>
     <string name="settings_speech_without_low_rates_description">عبر USB قد يرسل iPhone تعليمات الملاحة وردود Siri المنطوقة بجودة هاتفية 8 كيلوهرتز. يوقف هذا الخيار عرض 8 و16 كيلوهرتز لهذا الصوت ليختار iPhone معدلاً أعلى. إذا اختفت التعليمات الصوتية، فأوقفه. يعيد توصيل CarPlay.</string>

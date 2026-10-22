@@ -958,6 +958,8 @@
     <string name="settings_cluster_speedometer_opacity">Speedometer opacity</string>
     <string name="settings_harman_fullscreen_experimental">Harman head-unit full screen (experimental)</string>
     <string name="settings_harman_fullscreen_experimental_description">Let CarPlay occupy the OEM side-panel area on supported Harman head units. Applies when the CarPlay window next opens; other firmware may display incorrectly.</string>
+    <string name="settings_carplay_same_task">Keep CarPlay in the launcher card (experimental)</string>
+    <string name="settings_carplay_same_task_description">For launchers that show DiPlay in a card or picture-in-picture window, such as BYD\'s DiYou desktop. CarPlay opens in DiPlay\'s own window, as in 0.2.11 and earlier, instead of a separate full-screen one. Applies the next time CarPlay opens, without disconnecting.</string>
     <string name="settings_hotspot_name_non_english">Names with Chinese or other non-English characters can leave CarPlay on “Getting CarPlay ready…”: some head units broadcast them in a form the iPhone doesn’t find. If that happens, rename the car hotspot with English letters and digits.</string>
     <string name="settings_speech_without_low_rates">Clearer navigation voice over USB (experimental)</string>
     <string name="settings_speech_without_low_rates_description">Over USB the iPhone can send navigation prompts and Siri’s spoken replies as 8 kHz phone-quality audio. This stops offering 8 and 16 kHz for that audio so the iPhone picks a higher rate. If prompts go silent, turn it off. Reconnects CarPlay.</string>
