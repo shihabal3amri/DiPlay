@@ -16,6 +16,12 @@ object Byd13CatalogProbeMain {
                 addAll(field.symbolAliases)
                 add("BYDAutoConstants.BYDAUTO_DEVICE_${field.deviceName}")
             }
+            // Side-panel signals are remapped with the same firmware catalog so the DiLink 5 constants
+            // below line up with this car's numbers; a null symbol simply has no catalog address.
+            for (field in BydPanelFields.all) {
+                field.symbol?.let { add(it) }
+                add("BYDAutoConstants.BYDAUTO_DEVICE_${field.deviceName}")
+            }
         }
         println(HEADER)
         for (rootName in ROOTS) {
@@ -58,6 +64,10 @@ internal data class BydFirmwareCatalog(
         (listOf(field.symbol) + field.symbolAliases).firstNotNullOfOrNull(symbols::get)
 
     fun device(field: BydVehicleField): Int = devices[field.deviceName] ?: field.defaultDevice
+
+    /** Raw lookup for side-panel symbols that do not belong to the iPhone-forwarding `BydVehicleField` set. */
+    fun fidForSymbol(symbol: String?): Int? = symbol?.let(symbols::get)
+    fun deviceForName(name: String): Int? = devices[name]
 
     companion object {
         private const val DEVICE_PREFIX = "BYDAutoConstants.BYDAUTO_DEVICE_"
