@@ -345,6 +345,12 @@ class CarPlayController(
     }
 
     private val sessionListener = object : AirPlaySessionListener {
+        override fun onVideoFrameRendered(session: AirPlaySession) {
+            if (!closed && !session.isClosed && activeSession === session) {
+                uiListener?.onVideoFrameRendered(session)
+            }
+        }
+
         override fun onCornerMask(session: AirPlaySession, png: ByteArray, displayWidth: Int) {
             if (closed || session.isClosed) return
             if (activeSession != null && activeSession !== session) return
