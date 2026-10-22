@@ -46,6 +46,7 @@ import androidx.core.view.WindowCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
+import androidx.lifecycle.Lifecycle
 import com.shilapi.xcertplay.adb.LocalAdb
 import com.shilapi.xcertplay.airplay.AirPlayDisplaySettings
 import com.shilapi.xcertplay.airplay.CarPlayClusterDisplay
@@ -243,6 +244,10 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
     private var adbCheckGeneration = 0
     private var adbStatus: TextView? = null
     private var availableUpdate: UpdateRelease? = null
+    /** A dialog the driver opened on Home; the offer must not cover it. */
+    private var homeDialog: AlertDialog? = null
+    /** The offer the background check made; held so a returning Home does not stack a second one. */
+    private var updateDialog: AlertDialog? = null
     private var updateSavedPath: String? = null
     private var updateSavedUri: Uri? = null
     /** Runs the check of the public update copy; tests run it inline. */
@@ -438,7 +443,8 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
         if (isLauncherIntent(intent) && CarPlayBackgroundSession.hasSession()) {
             page = "home"; render(); openProjection(); return
         }
-        page = intent.getStringExtra("page") ?: "home"; render()
+        val requestedPage = intent.getStringExtra("page")
+        page = requestedPage ?: "home"; render()
         automaticVehicleValidationStarted = false
         scheduleAutomaticVehicleValidation()
         handleWirelessRecovery()
@@ -448,6 +454,11 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
                 startCarHotspotOnLaunch()
             }
             handler.post { connect(true) }
+        } else if (page == "home" && requestedPage != "wireless-recovery" &&
+            lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) {
+            // Home is already visible and came back through a new intent; a stopped activity is
+            // offered on the resume that follows.
+            maybeShowUpdateDialog()
         }
     }
     private fun consumeBluetoothAutoConnectIntent(intent: Intent): Boolean {
@@ -544,14 +555,18 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
             (page == "home" || page == "settings" || page == "connection" || page == "setup")) render()
         startAppearanceUpdates()
         pausedForAdbSwitchChange = false
+        var connectingOnLaunch = false
         if (initialLaunch) {
             initialLaunch = false
             startCarHotspotOnLaunch()
             if (setupError == null && !CarPlayBackgroundSession.hasSession() &&
                 DiPlayPreferences.autoConnect(this) && intent.getStringExtra("page") == null && page != "setup") {
+                connectingOnLaunch = true
                 handler.post { connect(DiPlayPreferences.autoConnectWireless(this)) }
             }
         }
+        // The connection flow takes the screen next, so the offer waits for the next return to Home.
+        if (!connectingOnLaunch) maybeShowUpdateDialog()
     }
     override fun onPause() {
         appearanceUpdatesResumed = false
@@ -565,6 +580,8 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
     }
 
     override fun onDestroy() {
+        updateDialog?.dismiss()
+        homeDialog?.dismiss()
         settingsSearchPopup?.dismiss()
         appearanceObserverRemoval?.invoke()
         appearanceObserverRemoval = null
@@ -653,6 +670,8 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
         enforceInterfaceSize()
         refreshAppearance()
         applyWindowAppearance()
+        // The offer belongs to Home; leaving the page closes it so it never covers another screen.
+        if (page != "home") updateDialog?.takeIf { it.isShowing }?.dismiss()
         // A pending assignment belongs to the widgets being replaced, never to another page.
         if (!appearanceOnly) cancelKeyLearning()
         // The backup server lives only while its page is shown, however the driver left it.
@@ -840,6 +859,8 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
             }
         }
         render()
+        // Back from Settings shows Home without resuming the activity, so the offer runs here too.
+        if (page == "home") maybeShowUpdateDialog()
     }
 
     private fun openConnectionSetupFromSettings() {
@@ -2491,6 +2512,15 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
     }
 
     private fun about(content: LinearLayout) {
+        // The offer tells the driver to install later from here, so a release the check already
+        // cached is offered directly instead of asking for another check.
+        if (updateStage == UpdateStage.IDLE && updateRelease == null) {
+            UpdateAvailability.available(this, version())?.let { release ->
+                updateRelease = release
+                updateStage = UpdateStage.AVAILABLE
+                availableUpdate = release
+            }
+        }
         settingsPageTitle(content, getString(R.string.about_diplay), getString(R.string.carplay_at_home_in_your_car))
         section(content, getString(R.string.about_public_preview_prefix, version())) { card ->
             card.addView(label(getString(R.string.an_independent_carplay_receiver_for_android_head_units_wir), 17, TEXT))
@@ -2687,6 +2717,56 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
         page = "settings"
         settingsCategory = SettingsCategory.ABOUT
         render()
+    }
+
+    /**
+     * Offers a release the background check found. Home's notice says the same, but the driver who asked
+     * to be told when a new version exists only reads it if it interrupts them once (#945). The saved
+     * release outlives this activity, so the offer waits here rather than in the worker.
+     *
+     * Every path that shows Home calls this, not only [onResume]: the background check runs minutes
+     * after open, so the common way back to Home is Back from Settings, which never resumes the activity.
+     *
+     * One offer per version: **Later** keeps the notice on Home and is not asked again until a newer
+     * version appears. The offer belongs to Home, so it never interrupts another page.
+     */
+    private fun maybeShowUpdateDialog() {
+        if (isFinishing || isDestroyed || page != "home") return
+        if (updateDialog?.isShowing == true || usbPermissionDialog?.isShowing == true ||
+            homeDialog?.isShowing == true) return
+        // The driver turned the check off; a release cached before that stays on the home notice.
+        if (!UpdateAvailability.backgroundChecksEnabled(this)) return
+        // About already carries this release: the driver is downloading it or it is ready to install.
+        if (updateStage != UpdateStage.IDLE) return
+        val release = UpdateAvailability.available(this, version()) ?: return
+        if (!UpdateAvailability.shouldPrompt(this, release)) return
+        // The check may have found the release after this page was drawn. Home must show the same
+        // notice the offer names, also after **Later** dismisses it.
+        if (availableUpdate?.tagName != release.tagName) {
+            availableUpdate = release
+            render()
+        }
+        val dialog = appDialogBuilder()
+            .setTitle(getString(R.string.update_available_home))
+            .setMessage(getString(R.string.update_available_dialog_message, release.tagName))
+            .setPositiveButton(getString(R.string.update_download)) { _, _ ->
+                availableUpdate = release
+                openAvailableUpdate(release)
+                downloadUpdate()
+            }
+            .setNegativeButton(getString(R.string.later), null)
+            .create()
+        // The offer has been made once its window closes: a process death or a failed show leaves it
+        // news, while **Later** and Back stop the interruption and keep the notice on Home.
+        dialog.setOnDismissListener {
+            if (updateDialog === dialog) updateDialog = null
+            UpdateAvailability.recordPrompt(this, release)
+        }
+        updateDialog = dialog
+        runCatching { dialog.show() }.onFailure {
+            Log.w("DiPlay-Update", "update offer could not be shown", it)
+            if (updateDialog === dialog) updateDialog = null
+        }
     }
 
     private fun scheduleBackgroundUpdateChecks() {
@@ -3157,7 +3237,7 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
                 CarHotspotSettings.setOffReportIgnored(this, true)
                 connect(true)
             }
-            .setNegativeButton(getString(R.string.cancel), null).show()
+            .setNegativeButton(getString(R.string.cancel), null).showHomeDialog()
     }
 
     // BYD maps the AOSP tether action to its own hotspot screen; other firmware falls back to Wi-Fi settings.
@@ -3279,7 +3359,9 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
         setupFromSettings = false
         setupStep = SetupGuide.STEP_CAR
         render()
+        // Connecting takes the screen next, so the offer waits for the next return to Home.
         if (connectNow) connect(AirPlayPersistence.loadWirelessEnabled(this))
+        else if (page == "home") maybeShowUpdateDialog()
     }
 
     private fun dilinkLabel(generation: DiLinkGeneration) = getString(when (generation) {
@@ -5736,6 +5818,14 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
     private fun openProjection() {
         OwnScreenStart.start(this, Intent(this, CarPlayHostActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT))
     }
+
+    /** Tracks a dialog the driver opened on Home so the update offer never stacks on it. */
+    private fun AlertDialog.Builder.showHomeDialog(): AlertDialog {
+        val dialog = show()
+        homeDialog = dialog
+        dialog.setOnDismissListener { if (homeDialog === dialog) homeDialog = null }
+        return dialog
+    }
     private fun choosePhone() {
         if (Build.VERSION.SDK_INT >= 31 && checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
             bluetoothPermission.launch(Manifest.permission.BLUETOOTH_CONNECT); return
@@ -5746,7 +5836,7 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
             pendingWireless = false
             appDialogBuilder().setTitle(getString(R.string.wireless_carplay_2))
                 .setMessage(getString(R.string.bluetooth_cannot_open_connections))
-                .setPositiveButton(getString(R.string.got_it), null).show(); return
+                .setPositiveButton(getString(R.string.got_it), null).showHomeDialog(); return
         }
         if (!adapter.isEnabled) {
             // Back from Bluetooth settings and still off: on some head units the switch will not stay on.
@@ -5758,14 +5848,14 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
                     bluetoothSettingsVisited = true
                     openBluetoothSettings()
                 }
-                .setNegativeButton(getString(R.string.later), null).show(); return
+                .setNegativeButton(getString(R.string.later), null).showHomeDialog(); return
         }
         val devices = runCatching { adapter.bondedDevices.sortedBy { it.name ?: "" } }.getOrDefault(emptyList())
         if (devices.isEmpty()) {
             appDialogBuilder().setTitle(getString(R.string.pair_your_iphone))
                 .setMessage(getString(R.string.on_your_iphone_open_settings_bluetooth_and_pair_with_the_c))
                 .setPositiveButton(getString(R.string.open_bluetooth)) { _, _ -> openBluetoothSettings() }
-                .setNegativeButton(getString(R.string.got_it), null).show(); return
+                .setNegativeButton(getString(R.string.got_it), null).showHomeDialog(); return
         }
         appDialogBuilder().setTitle(getString(R.string.choose_your_iphone))
             .setItems(devices.map { device ->
@@ -5778,7 +5868,7 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
                 render()
                 if (start) connect(true)
             }.setNeutralButton(getString(R.string.pair_another)) { _, _ -> openBluetoothSettings() }
-            .setNegativeButton(getString(R.string.cancel)) { _, _ -> pendingWireless = false }.show()
+            .setNegativeButton(getString(R.string.cancel)) { _, _ -> pendingWireless = false }.showHomeDialog()
     }
 
     private fun wirelessHelp() {
@@ -5801,7 +5891,7 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
             .setMessage(getString(R.string.this_ends_the_existing_wi_fi_direct_connection_including_o))
             .setPositiveButton(getString(R.string.reset_and_connect)) { _, _ ->
                 CarPlayBackgroundSession.stop { runOnUiThread { resetWirelessGroup() } }
-            }.setNegativeButton(getString(R.string.cancel), null).show()
+            }.setNegativeButton(getString(R.string.cancel), null).showHomeDialog()
     }
 
     private fun resetWirelessGroup() {

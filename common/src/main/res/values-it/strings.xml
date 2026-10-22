@@ -860,6 +860,7 @@
     <string name="update_install">Installa %1$s</string>
     <string name="update_failed">Aggiornamento non riuscito</string>
     <string name="update_available_home">Aggiornamento disponibile</string>
+    <string name="update_available_dialog_message">DiPlay %1$s è disponibile. Scaricalo ora o installalo più tardi in Impostazioni → Info.</string>
     <string name="update_saved_to">Salvato in %1$s</string>
     <string name="backup_title">Backup delle impostazioni</string>
     <string name="backup_open">Backup o ripristino su un telefono</string>
@@ -872,7 +873,7 @@
     <string name="backup_summary">Importate %1$d impostazioni, saltate %2$d.</string>
     <string name="backup_import_invalid">Questo file non è un backup delle impostazioni di DiPlay.</string>
     <string name="settings_background_update_checks">Controlla gli aggiornamenti in background</string>
-    <string name="settings_background_update_checks_description">Una volta al giorno, DiPlay controlla su GitHub se c’è una nuova versione e la mostra nella schermata Home. Non scarica mai nulla senza un tuo tocco.</string>
+    <string name="settings_background_update_checks_description">Una volta al giorno, DiPlay controlla su GitHub se c’è una nuova versione e la mostra nella schermata Home con un avviso una sola volta quando la trova. Non scarica mai nulla senza un tuo tocco.</string>
     <string name="setup_guide">Guida alla configurazione</string>
     <string name="setup_guide_description">Trova la tua versione di DiLink, scegli una connessione e attiva le funzioni adatte alla tua auto.</string>
     <string name="setup_step_of">PASSO %1$d DI %2$d</string>

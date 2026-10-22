@@ -843,6 +843,7 @@
     <string name="update_install">安装 %1$s</string>
     <string name="update_failed">更新失败</string>
     <string name="update_available_home">有可用更新</string>
+    <string name="update_available_dialog_message">DiPlay %1$s 已可下载。可以现在下载，也可以稍后在「设置 → 关于」中安装。</string>
     <string name="update_saved_to">已保存到 %1$s</string>
     <string name="backup_title">备份设置</string>
     <string name="backup_open">在手机上备份或恢复</string>
@@ -855,7 +856,7 @@
     <string name="backup_summary">已导入 %1$d 项设置，跳过 %2$d 项。</string>
     <string name="backup_import_invalid">这不是 DiPlay 设置备份文件。</string>
     <string name="settings_background_update_checks">在后台检查更新</string>
-    <string name="settings_background_update_checks_description">DiPlay 每天会在 GitHub 上检查一次新版本，并显示在主屏幕上。未经你点击，绝不会下载。</string>
+    <string name="settings_background_update_checks_description">DiPlay 每天会在 GitHub 上检查一次新版本，发现后显示在主屏幕并只提醒一次。未经你点击，绝不会下载。</string>
     <string name="setup_guide">设置向导</string>
     <string name="setup_guide_description">识别 DiLink 版本，选择连接方式，并开启适合你车辆的功能。</string>
     <string name="setup_step_of">第 %1$d 步，共 %2$d 步</string>

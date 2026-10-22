@@ -41,7 +41,8 @@ class UpdateAvailabilityTest {
 
     @Test fun reportShowsStateWithRelativeAges() {
         assertEquals(
-            "Update check: background=on; lastSuccess=never; cachedRelease=none; lastResult=none (never); lastInstall=none (never)",
+            "Update check: background=on; lastSuccess=never; cachedRelease=none; promptedFor=none; " +
+                "lastResult=none (never); lastInstall=none (never)",
             UpdateAvailability.report(context, 10_000_000L),
         )
         UpdateAvailability.save(context, release("v0.2.16"))
@@ -50,11 +51,37 @@ class UpdateAvailabilityTest {
         UpdateAvailability.recordInstall(context, 10_000_000L - 2 * 60_000, "chooser uri=public installers=2")
         UpdateAvailability.saveBackgroundChecksEnabled(context, false)
         assertEquals(
-            "Update check: background=off; lastSuccess=5 min ago; cachedRelease=v0.2.16; " +
+            "Update check: background=off; lastSuccess=5 min ago; cachedRelease=v0.2.16; promptedFor=none; " +
                 "lastResult=no validated network (attempt 2) (1 min ago); " +
                 "lastInstall=chooser uri=public installers=2 (2 min ago)",
             UpdateAvailability.report(context, 10_000_000L),
         )
+    }
+
+    @Test fun theOfferDialogIsShownOncePerVersion() {
+        val release = release("v0.2.16")
+        assertTrue(UpdateAvailability.shouldPrompt(context, release))
+        UpdateAvailability.recordPrompt(context, release)
+
+        assertFalse(UpdateAvailability.shouldPrompt(context, release))
+        // A newer release is news again.
+        assertTrue(UpdateAvailability.shouldPrompt(context, release("v0.2.17")))
+        // A release that disappears and comes back is not offered twice.
+        UpdateAvailability.clear(context)
+        assertFalse(UpdateAvailability.shouldPrompt(context, release))
+        assertEquals(
+            "Update check: background=on; lastSuccess=never; cachedRelease=none; promptedFor=v0.2.16; " +
+                "lastResult=none (never); lastInstall=none (never)",
+            UpdateAvailability.report(context, 10_000_000L),
+        )
+    }
+
+    @Test fun aRetaggedReleaseIsNotOfferedAgain() {
+        UpdateAvailability.recordPrompt(context, release("v0.2.16"))
+
+        // GitHub can retag the same build without making it news again.
+        assertFalse(UpdateAvailability.shouldPrompt(context, release("0.2.16")))
+        assertTrue(UpdateAvailability.shouldPrompt(context, release("v0.2.17")))
     }
 
     @Test fun checksAtMostOncePerDayButRecoversFromAClockReset() {
