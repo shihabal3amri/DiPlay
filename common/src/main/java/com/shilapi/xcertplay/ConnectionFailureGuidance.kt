@@ -4,6 +4,7 @@ import androidx.annotation.StringRes
 import com.shilapi.xcertplay.host.R
 import com.shilapi.xcertplay.network.WirelessStartupFailure
 import com.shilapi.xcertplay.orchestration.CarPlayStatus
+import com.shilapi.xcertplay.orchestration.ConnectionFailureCause
 import com.shilapi.xcertplay.orchestration.WirelessHotspotMode
 import java.util.Locale
 
@@ -22,6 +23,13 @@ internal object ConnectionFailureGuidance {
             WirelessStartupFailure.HOTSPOT_NOT_READY,
             WirelessStartupFailure.HOTSPOT_CONFIGURATION -> return network(mode)
             WirelessStartupFailure.FIRST_TCP_TIMEOUT -> return iphoneWifi(mode)
+            null -> Unit
+        }
+        when (failure.knownCause) {
+            ConnectionFailureCause.CHOSEN_IPHONE_NOT_PAIRED -> return R.string.connection_help_chosen_iphone_not_paired
+            ConnectionFailureCause.NO_PAIRED_IPHONE -> return R.string.on_your_iphone_open_settings_bluetooth_and_pair_with_the_c
+            ConnectionFailureCause.IPHONE_NOT_CHOSEN -> return R.string.connection_help_choose_iphone
+            ConnectionFailureCause.WIFI_DIRECT_CHANNEL_UNAVAILABLE -> return R.string.connection_help_wifi_direct_channel
             null -> Unit
         }
 
@@ -46,6 +54,14 @@ internal object ConnectionFailureGuidance {
             return iphoneWifi(mode)
         }
         return R.string.connection_help_general
+    }
+
+    @StringRes
+    fun stage(cause: ConnectionFailureCause): Int = when (cause) {
+        ConnectionFailureCause.CHOSEN_IPHONE_NOT_PAIRED -> R.string.chosen_iphone_not_paired
+        ConnectionFailureCause.NO_PAIRED_IPHONE -> R.string.pair_your_iphone
+        ConnectionFailureCause.IPHONE_NOT_CHOSEN -> R.string.choose_your_iphone
+        ConnectionFailureCause.WIFI_DIRECT_CHANNEL_UNAVAILABLE -> R.string.wifi_direct_channel_unavailable
     }
 
     /** The network the iPhone joins: the car hotspot, a Wi-Fi Direct group, or a shared Wi-Fi. */

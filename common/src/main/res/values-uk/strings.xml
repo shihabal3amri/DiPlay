@@ -888,6 +888,11 @@
     <string name="connection_help_bluetooth_unusable">Bluetooth цього пристрою не може передавати дані на iPhone. Бездротовий CarPlay тут не працюватиме. Використайте USB-кабель для даних.</string>
     <string name="connection_help_wifi_direct_beside_hotspot">Вимкніть точку доступу автомобіля й повторіть спробу або виберіть «Вбудована точка доступу автомобіля» в розділі «Налаштування підключення» та збережіть її назву й пароль.</string>
     <string name="wifi_direct_refused_beside_hotspot">Точку доступу автомобіля ввімкнено, і Wi-Fi Direct не може запуститися одночасно з нею</string>
+    <string name="chosen_iphone_not_paired">iPhone, вибраний у DiPlay, більше не спарений з автомобілем</string>
+    <string name="connection_help_chosen_iphone_not_paired">Знову спарте iPhone з Bluetooth автомобіля або поверніться до DiPlay, натисніть «Вибрати iPhone» і виберіть інший. Потім повторіть спробу.</string>
+    <string name="connection_help_choose_iphone">З автомобілем спарено кілька пристроїв. Поверніться до DiPlay, натисніть «Вибрати iPhone», виберіть свій і повторіть спробу.</string>
+    <string name="wifi_direct_channel_unavailable">Wi-Fi Direct не може використати бажаний канал</string>
+    <string name="connection_help_wifi_direct_channel">У розділі «Налаштування підключення» виберіть «Авто» для параметра «Бажаний канал Wi-Fi Direct» і повторіть спробу.</string>
     <string name="connection_help_hotspot">Перевірте, чи ввімкнено точку доступу авто та чи збігаються назва й пароль із налаштуваннями DiPlay. За можливості виберіть 5 ГГц і повторіть спробу.</string>
     <string name="connection_help_iphone_wifi">Увімкніть Wi-Fi і Bluetooth. Підключіть iPhone до точки доступу авто й увімкніть автопідключення. Повторіть спробу; за помилки збережіть звіт.</string>
     <string name="connection_help_permissions">Надайте DiPlay потрібні дозволи на USB, пристрої поблизу або геолокацію на головному пристрої та повторіть спробу.</string>

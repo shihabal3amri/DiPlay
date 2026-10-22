@@ -4,6 +4,7 @@ import android.os.Handler
 import android.widget.TextView
 import com.shilapi.xcertplay.host.R
 import com.shilapi.xcertplay.orchestration.CarPlayStatus
+import com.shilapi.xcertplay.orchestration.ConnectionFailureCause
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.atomic.AtomicBoolean
 import org.junit.After
@@ -53,6 +54,7 @@ class CarPlayStageTextTest {
         assertStage(R.string.iphone_usb_mode_rejected,
             CarPlayStatus.Failed("CarPlay configuration request transferred -1 of 1 bytes"))
         assertStage(R.string.connect_your_iphone_with_a_usb_cable, CarPlayStatus.WaitingForIphone)
+        assertStage(R.string.getting_carplay_ready, CarPlayStatus.WaitingForReenumeration)
         assertStage(R.string.allow_the_connection_permission_to_continue, CarPlayStatus.RequestingIphonePermission)
         assertStage(R.string.looking_for_your_paired_iphone, CarPlayStatus.WaitingForPairedIphone)
         assertStage(R.string.connecting_to_your_iphone, CarPlayStatus.ConnectingBluetooth)
@@ -60,6 +62,17 @@ class CarPlayStageTextTest {
         assertStage(R.string.reconnecting_to_your_iphone, CarPlayStatus.ControlEnded)
         assertStage(R.string.waiting_for_mfi_coprocessor, CarPlayStatus.WaitingForMfi)
         assertStage(R.string.getting_carplay_ready, CarPlayStatus.OpeningDataPaths)
+
+        val notPaired = "The selected iPhone is no longer paired. Choose it again in DiPlay."
+        assertStage(R.string.chosen_iphone_not_paired,
+            CarPlayStatus.Failed(notPaired, knownCause = ConnectionFailureCause.CHOSEN_IPHONE_NOT_PAIRED))
+        assertStage(R.string.connection_interrupted_retrying, CarPlayStatus.Failed(notPaired))
+        val ambiguous = "No unambiguous bonded iPhone found; pair one iPhone and retry"
+        assertStage(R.string.pair_your_iphone, CarPlayStatus.Failed(ambiguous, knownCause = ConnectionFailureCause.NO_PAIRED_IPHONE))
+        assertStage(R.string.choose_your_iphone, CarPlayStatus.Failed(ambiguous, knownCause = ConnectionFailureCause.IPHONE_NOT_CHOSEN))
+        assertStage(R.string.wifi_direct_channel_unavailable, CarPlayStatus.Failed("Could not establish WIFI_P2P hotspot: " +
+            "Wi-Fi Direct could not use channel 149. Choose Auto or another channel. Wi-Fi P2P createGroup failed: ERROR (code=0)",
+            knownCause = ConnectionFailureCause.WIFI_DIRECT_CHANNEL_UNAVAILABLE))
     }
 
     private fun assertStage(expected: Int, status: CarPlayStatus) {

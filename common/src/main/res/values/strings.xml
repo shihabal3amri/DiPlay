@@ -979,6 +979,11 @@
     <string name="connection_help_bluetooth_unusable">This head unit cannot send Bluetooth data to the iPhone. Wireless CarPlay cannot work here. Use a USB data cable.</string>
     <string name="connection_help_wifi_direct_beside_hotspot">Turn the car hotspot off and retry, or choose Built-in car hotspot in Connection setup and save its name and password.</string>
     <string name="wifi_direct_refused_beside_hotspot">The car hotspot is on, and Wi-Fi Direct cannot start beside it</string>
+    <string name="chosen_iphone_not_paired">The iPhone chosen in DiPlay is no longer paired with the car</string>
+    <string name="connection_help_chosen_iphone_not_paired">Pair the iPhone with the car\'s Bluetooth again, or return to DiPlay and tap Choose iPhone to pick another one. Then retry.</string>
+    <string name="connection_help_choose_iphone">Several devices are paired with the car. Return to DiPlay, tap Choose iPhone and pick yours, then retry.</string>
+    <string name="wifi_direct_channel_unavailable">Wi-Fi Direct cannot use the preferred channel</string>
+    <string name="connection_help_wifi_direct_channel">Set Preferred Wi-Fi Direct channel to Auto in Connection setup, then retry.</string>
     <string name="connection_help_hotspot">Check that the car hotspot is on and its name and password match DiPlay settings. If available, use 5 GHz, then retry.</string>
     <string name="connection_help_iphone_wifi">Keep Wi-Fi and Bluetooth on. On the iPhone, join the car hotspot and enable Auto-Join, then retry. Save a diagnostic report if it still fails.</string>
     <string name="connection_help_permissions">Allow the requested USB, Nearby devices or Location permissions for DiPlay on the head unit, then retry.</string>

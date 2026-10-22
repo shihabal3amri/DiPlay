@@ -925,6 +925,11 @@
     <string name="connection_help_bluetooth_unusable">لا يستطيع بلوتوث هذه الوحدة إرسال البيانات إلى iPhone، لذا لن يعمل CarPlay اللاسلكي هنا. استخدم كابل USB لنقل البيانات.</string>
     <string name="connection_help_wifi_direct_beside_hotspot">أوقف نقطة اتصال السيارة ثم اضغط «إعادة محاولة الاتصال»، أو اختر «نقطة اتصال السيارة المدمجة» في «إعداد الاتصال» واحفظ اسمها وكلمة مرورها.</string>
     <string name="wifi_direct_refused_beside_hotspot">نقطة اتصال السيارة قيد التشغيل، ولا يمكن تشغيل Wi-Fi Direct معها في الوقت نفسه</string>
+    <string name="chosen_iphone_not_paired">لم يعد iPhone المختار في DiPlay مقترنًا بالسيارة</string>
+    <string name="connection_help_chosen_iphone_not_paired">اقرن iPhone ببلوتوث السيارة مرة أخرى، أو ارجع إلى DiPlay واضغط «اختر iPhone» لاختيار جهاز آخر. ثم أعد المحاولة.</string>
+    <string name="connection_help_choose_iphone">عدة أجهزة مقترنة بالسيارة. ارجع إلى DiPlay واضغط «اختر iPhone» واختر جهازك، ثم أعد المحاولة.</string>
+    <string name="wifi_direct_channel_unavailable">لا يستطيع Wi-Fi Direct استخدام القناة المفضلة</string>
+    <string name="connection_help_wifi_direct_channel">اضبط «قناة Wi-Fi Direct المفضلة» على «تلقائي» في «إعداد الاتصال»، ثم أعد المحاولة.</string>
     <string name="connection_help_hotspot">تأكد من تشغيل نقطة اتصال السيارة وأن اسمها وكلمة مرورها يطابقان إعدادات DiPlay. استخدم تردد 5 غيغاهرتز إن توفر ثم أعد المحاولة.</string>
     <string name="connection_help_iphone_wifi">أبقِ Wi-Fi وبلوتوث قيد التشغيل. اتصل بنقطة اتصال السيارة من iPhone وفعّل الانضمام التلقائي ثم حاول مجددًا. احفظ تقرير تشخيص إذا استمر الفشل.</string>
     <string name="connection_help_permissions">اسمح لـ DiPlay بأذونات USB أو الأجهزة القريبة أو الموقع المطلوبة على وحدة السيارة، ثم أعد المحاولة.</string>

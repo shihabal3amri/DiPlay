@@ -142,7 +142,7 @@ sealed class CarPlayStatus {
     data object RunningControl : CarPlayStatus()
     data object ControlEnded : CarPlayStatus()
     data class Failed(val message: String, val wifiResetRequired: Boolean = false,
-        val startupFailure: WirelessStartupFailure? = null) : CarPlayStatus()
+        val startupFailure: WirelessStartupFailure? = null, val knownCause: ConnectionFailureCause? = null) : CarPlayStatus()
 }
 
 internal fun isWirelessHandoffInProgress(
@@ -2540,7 +2540,8 @@ class CarPlayController(
         val bonded = adapter.bondedDevices.orEmpty()
         config.wirelessBluetoothDeviceAddress?.let { selected ->
             return bonded.firstOrNull { it.address.equals(selected, ignoreCase = true) }
-                ?: throw IOException("The selected iPhone is no longer paired. Choose it again in DiPlay.")
+                ?: throw ConnectionFailureException(ConnectionFailureCause.CHOSEN_IPHONE_NOT_PAIRED,
+                    "The selected iPhone is no longer paired. Choose it again in DiPlay.")
         }
         val iPhones = bonded.filter { device ->
             device.name?.contains("iPhone", ignoreCase = true) == true
@@ -2561,20 +2562,21 @@ class CarPlayController(
         }
         if (connectedIPhones.size == 1) return connectedIPhones.single()
         if (connectedIPhones.size > 1) {
-            throw IOException(
+            throw ConnectionFailureException(ConnectionFailureCause.IPHONE_NOT_CHOSEN,
                 "Multiple connected iPhones found: " +
                     connectedIPhones.joinToString { "${it.name ?: "iPhone"} (${it.address})" },
             )
         }
         if (iPhones.size == 1) return iPhones.single()
         if (iPhones.size > 1) {
-            throw IOException(
+            throw ConnectionFailureException(ConnectionFailureCause.IPHONE_NOT_CHOSEN,
                 "Multiple bonded iPhones found and none is currently connected; " +
                     "connect one iPhone and retry",
             )
         }
         if (bonded.size == 1) return bonded.single()
-        throw IOException(
+        throw ConnectionFailureException(
+            if (bonded.isEmpty()) ConnectionFailureCause.NO_PAIRED_IPHONE else ConnectionFailureCause.IPHONE_NOT_CHOSEN,
             "No unambiguous bonded iPhone found; pair one iPhone and retry",
         )
     }
@@ -3021,7 +3023,8 @@ class CarPlayController(
             val causes = generateSequence(error) { it.cause }.toList()
             onStatus(CarPlayStatus.Failed(error.message ?: error.javaClass.simpleName,
                 causes.any { it is com.shilapi.xcertplay.network.P2pResetRequiredException },
-                causes.filterIsInstance<WirelessStartupException>().firstOrNull()?.reason),
+                causes.filterIsInstance<WirelessStartupException>().firstOrNull()?.reason,
+                causes.filterIsInstance<ConnectionFailureException>().firstOrNull()?.reason),
                 if (wireless) wirelessGeneration.get() else null)
         }
     }

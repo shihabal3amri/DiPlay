@@ -978,6 +978,11 @@
     <string name="connection_help_bluetooth_unusable">この車載端末のBluetoothはiPhoneとデータ通信できません。ワイヤレスCarPlayは利用できないため、データ通信対応のUSBケーブルで接続してください。</string>
     <string name="connection_help_wifi_direct_beside_hotspot">車載ホットスポットをオフにして「接続を再試行」をタップするか、「接続設定」で「車載ホットスポット」を選び、名前とパスワードを保存してください。</string>
     <string name="wifi_direct_refused_beside_hotspot">車載ホットスポットがオンのため、Wi-Fi Directを同時に開始できません</string>
+    <string name="chosen_iphone_not_paired">DiPlayで選択したiPhoneは、もう車とペアリングされていません</string>
+    <string name="connection_help_chosen_iphone_not_paired">iPhoneを車のBluetoothともう一度ペアリングするか、DiPlayに戻って「iPhoneを選択」をタップし、別のiPhoneを選んでください。その後、再試行してください。</string>
+    <string name="connection_help_choose_iphone">車に複数の端末がペアリングされています。DiPlayに戻って「iPhoneを選択」をタップし、お使いのiPhoneを選んでから再試行してください。</string>
+    <string name="wifi_direct_channel_unavailable">Wi-Fi Directで優先チャンネルを使用できません</string>
+    <string name="connection_help_wifi_direct_channel">「接続設定」で「優先するWi-Fi Directチャンネル」を「自動」にしてから再試行してください。</string>
     <string name="connection_help_hotspot">車載端末のテザリングがオンで、名前とパスワードがDiPlayの設定と一致するか確認してください。可能なら5 GHzにして再試行してください。</string>
     <string name="connection_help_iphone_wifi">Wi-FiとBluetoothをオンにしてください。iPhoneで車載端末のWi-Fiに接続し、「自動接続」を有効にして再試行してください。改善しない場合は診断レポートを保存してください。</string>
     <string name="connection_help_permissions">車載端末でDiPlayにUSB、「付近のデバイス」、位置情報の権限を必要に応じて許可してから、再試行してください。</string>

@@ -12,6 +12,7 @@ import com.shilapi.xcertplay.host.R
 import com.shilapi.xcertplay.network.WirelessStartupException
 import com.shilapi.xcertplay.network.WirelessStartupFailure
 import com.shilapi.xcertplay.orchestration.CarPlayStatus
+import com.shilapi.xcertplay.orchestration.ConnectionFailureCause
 import com.shilapi.xcertplay.transport.BluetoothLinkCheck
 import com.shilapi.xcertplay.transport.BluetoothRadioCheck
 import org.junit.After
@@ -26,6 +27,7 @@ import org.robolectric.annotation.Config
 import org.robolectric.annotation.LooperMode
 import org.robolectric.util.ReflectionHelpers
 import org.robolectric.util.ReflectionHelpers.ClassParameter.from
+import java.io.File
 import java.util.concurrent.atomic.AtomicBoolean
 
 @RunWith(RobolectricTestRunner::class)
@@ -242,6 +244,21 @@ class WirelessStartupRecoveryTest {
         assertEquals(stopped, stage.text.toString())
         assertFalse(ReflectionHelpers.getField(activity, "reconnectScheduled"))
         assertEquals(View.VISIBLE, retry.visibility)
+    }
+
+    @Test fun aKnownCauseIsNamedAndRetriedAsBefore() {
+        val stage = TextView(activity)
+        ReflectionHelpers.setField(activity, "stageStatusView", stage)
+        val log = File(activity.filesDir, "known-cause.log")
+        ReflectionHelpers.setField(activity, "sessionLog", SessionLogFile(log))
+        val notPaired = "The selected iPhone is no longer paired. Choose it again in DiPlay."
+        report(status = CarPlayStatus.Failed(notPaired, knownCause = ConnectionFailureCause.CHOSEN_IPHONE_NOT_PAIRED))
+        assertEquals(activity.getString(R.string.chosen_iphone_not_paired), stage.text.toString())
+        assertEquals(0, budget().retries)
+        assertTrue(ReflectionHelpers.getField(activity, "reconnectScheduled"))
+        assertFalse(ReflectionHelpers.getField(activity, "startupRetryStopped"))
+        assertEquals(View.GONE, retry.visibility)
+        assertTrue(log.readText(), log.readText().contains("Failed: $notPaired; retrying in 2000ms generation=0 startupFailure=null"))
     }
 
     @Test fun staleGenerationUserDisconnectMenuAndDifferentOwnerCannotSchedule() {
