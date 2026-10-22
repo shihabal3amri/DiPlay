@@ -22,6 +22,8 @@
     <!-- The centre card also follows whichever launcher is the default home. -->
     <queries>
         <package android:name="com.byd.carsettings" />
+        <!-- The cluster ADAS pane setting looks for BYD's cluster test receiver. -->
+        <package android:name="com.byd.clusterdebug" />
         <intent>
             <action android:name="android.intent.action.VIEW" />
             <data android:scheme="content" android:mimeType="application/vnd.android.package-archive" />

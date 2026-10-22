@@ -58,6 +58,7 @@ import com.shilapi.xcertplay.backup.SettingsBackupServer
 import com.shilapi.xcertplay.backup.SettingsQrCode
 import com.shilapi.xcertplay.compat.closeCompat
 import com.shilapi.xcertplay.hud.BydAdbAccess
+import com.shilapi.xcertplay.hud.BydClusterAdasPane
 import com.shilapi.xcertplay.hud.BydNavigationOutputs
 import com.shilapi.xcertplay.hud.BydFieldSource
 import com.shilapi.xcertplay.hud.BydOutputSettings
@@ -128,6 +129,7 @@ internal enum class SettingsSection {
     NAVIGATION_WHEEL,
     LOCATION,
     CLUSTER_MAP,
+    CLUSTER_ADAS_PANE,
     LAUNCHER_BUBBLE,
     BYD_NAVIGATION,
     PERMISSIONS_AND_HELP,
@@ -157,6 +159,7 @@ internal object SettingsInformationArchitecture {
         SettingsCategory.DIAGNOSTICS to setOf(SettingsSection.DIAGNOSTICS),
         SettingsCategory.ADVANCED to setOf(
             SettingsSection.CLUSTER_MAP,
+            SettingsSection.CLUSTER_ADAS_PANE,
             SettingsSection.LAUNCHER_BUBBLE,
             SettingsSection.EXPERIMENTAL_DISPLAY,
             SettingsSection.ADVANCED_MEDIA,
@@ -2140,6 +2143,11 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
                 card.addView(label(if (overlay) getString(R.string.center_map_overlay_allowed)
                     else getString(R.string.center_map_overlay_missing, packageName), 14, if (overlay) MUTED else WARNING))
             }
+        }
+        // BYD's cluster ADAS pane, hidden or restored by hand while parked (experimental; hides its warnings too).
+        if (BydOutputSettings.available(this)) filteredSection(content, SettingsSection.CLUSTER_ADAS_PANE,
+            getString(R.string.settings_adas_pane_title), R.drawable.ic_dp_dashboard) { card ->
+            clusterAdasPaneControls(card)
         }
         // Cluster video does not require a BYD navigation broadcast receiver.
         filteredSection(content, SettingsSection.CLUSTER_MAP,
@@ -6050,6 +6058,60 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
         }.setNegativeButton(getString(R.string.later), null).show()
     }
     private fun openSystem(intent: Intent) { runCatching { startActivity(intent) }.onFailure { toast(getString(R.string.open_this_setting_from_your_car_s_settings_app)) } }
+    // The cluster's whole ADAS pane, with its distance and lane warnings: hidden only on request while the car is
+    // known to be in P, restored at any time. Nothing is remembered or repeated automatically.
+    internal var adasPaneAvailable: (Context) -> Boolean = BydClusterAdasPane::available
+    internal var adasParkedCheck: (Context) -> Boolean? = com.shilapi.xcertplay.hud.BydNavigationOutputs::parked
+    internal var adasRestore: (Context) -> Boolean = BydClusterAdasPane::restore
+    internal var adasBackground: (() -> Unit) -> Unit = { work -> Thread(work, "diplay-adas-pane").start() }
+
+    private fun clusterAdasPaneControls(card: LinearLayout) {
+        val available = adasPaneAvailable(applicationContext)
+        card.addView(label(getString(R.string.settings_adas_pane_description), 14, MUTED))
+        if (!available) card.addView(label(getString(R.string.settings_adas_pane_unavailable), 14, WARNING))
+        card.addView(button(getString(R.string.settings_adas_pane_hide), false) { confirmHideAdasPane() }
+            .apply { isEnabled = available }, matchButton(10, 60))
+        card.addView(button(getString(R.string.settings_adas_pane_restore), false) { restoreAdasPane() }
+            .apply { isEnabled = available }, matchButton(10, 60))
+    }
+
+    private fun restoreAdasPane() {
+        val app = applicationContext
+        adasBackground {
+            val restored = adasRestore(app)
+            runOnUiThread {
+                if (isFinishing || isDestroyed) return@runOnUiThread
+                toast(getString(if (restored) R.string.settings_adas_pane_restore_sent else R.string.settings_adas_pane_restore_failed))
+            }
+        }
+    }
+
+    private fun confirmHideAdasPane() {
+        appDialogBuilder().setTitle(R.string.settings_adas_pane_hide)
+            .setMessage(R.string.settings_adas_pane_confirm)
+            .setPositiveButton(R.string.settings_adas_pane_hide_action) { _, _ -> hideAdasPaneIfParked() }
+            .setNegativeButton(R.string.cancel, null)
+            .show()
+    }
+
+    private fun hideAdasPaneIfParked() {
+        val app = applicationContext
+        adasBackground {
+            val decision = BydClusterAdasPane.hideDecision(adasPaneAvailable(app), adasParkedCheck(app))
+            val sent = decision == BydClusterAdasPane.HideDecision.ALLOWED && BydClusterAdasPane.hide(app)
+            runOnUiThread {
+                if (isFinishing || isDestroyed) return@runOnUiThread
+                toast(getString(when (decision) {
+                    BydClusterAdasPane.HideDecision.UNAVAILABLE -> R.string.settings_adas_pane_unavailable
+                    BydClusterAdasPane.HideDecision.NOT_PARKED -> R.string.settings_adas_pane_not_parked
+                    BydClusterAdasPane.HideDecision.GEAR_UNKNOWN -> R.string.settings_adas_pane_gear_unknown
+                    BydClusterAdasPane.HideDecision.ALLOWED ->
+                        if (sent) R.string.settings_adas_pane_hide_sent else R.string.settings_adas_pane_send_failed
+                }))
+            }
+        }
+    }
+
     private fun toast(message: String) { Toast.makeText(this, message, Toast.LENGTH_LONG).show() }
 
     private fun playTestTone(streamType: Int) {

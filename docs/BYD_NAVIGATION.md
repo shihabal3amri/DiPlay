@@ -200,6 +200,18 @@ Log tag `DiPlay-PhoneAudio` shows when the state is entered and left. If the car
 
 While the CarPlay call holds the state, DiPlay records the call from `VOICE_RECOGNITION` instead of `VOICE_COMMUNICATION`, which clipped. The stock CarPlay service opens its microphone stream without an input preset, which AAudio treats as `VOICE_RECOGNITION`. Geely/Lynk head units, where that source records silence, keep `VOICE_COMMUNICATION`. One Han owner described the call voice with `VOICE_COMMUNICATION` as very bassy with far too much gain; after listening to recordings of each source on a PC, they preferred `VOICE_RECOGNITION`, which they described as clear and natural.
 
+### Cluster ADAS pane (experimental, manual)
+
+Settings → Advanced has **Cluster ADAS pane** on BYD head units. **Hide the ADAS pane** removes the instrument cluster's ADAS tile, which also removes the distance and lane warnings it shows; **Restore the ADAS pane** gives it back. Nothing runs on its own, and nothing is remembered.
+
+- **Hiding** asks for confirmation and only runs when the car's network ADB reads the gear as P. A gear that cannot be read counts as not parked.
+- **Restoring** needs the car's network ADB but neither the gear nor a confirmation. After a restore the cluster may show the large ADAS scene once; the steering wheel's menu button closes it.
+- Both buttons are disabled when the head unit has no exported `com.byd.clusterdebug/.BroadcastReceiverCAN`.
+
+**Hide** sends the frame `43,20,00,00,01,01` 50 times, as the broadcast `com.byd.cluster.spi` with the extra `wholeFrame` to BYD's ClusterDebug receiver, which passes it to the car's test channel. **Restore** runs the AutoContainer commands 12, then 53 after 1.2 s (`service call AutoContainer 2 i32 1000 i32 <n> s16 ""`), the cluster's own reset; frames alone do not bring the pane back. Both steps were verified on a BYD Han (DiLink 3.0, `eng.build.20260204.025317`), parked and in D. What a hidden pane does across ignition cycles is unknown, and the cluster does not confirm either step. Log tag `DiPlay-AdasPane`.
+
+On a Han the pane is drawn by the cluster's own app (`/system/lib64/libBydCluster.so`, QML in `cluster_theme1.rcc`): a small tile when its `adasInterfaceDisplay` is 2, a large centre scene when it is 1, and nothing otherwise. No frame is known that switches between the two.
+
 ## ADB vehicle-data settings and firmware scope
 
 Settings → Location contains **Advanced vehicle data**, collapsed by default, with two saved modes.
