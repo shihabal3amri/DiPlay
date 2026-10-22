@@ -18,6 +18,7 @@ import android.view.Surface
 import com.shilapi.xcertplay.airplay.AudioCodecKind
 import com.shilapi.xcertplay.airplay.AudioFormat
 import com.shilapi.xcertplay.airplay.AudioStreamId
+import com.shilapi.xcertplay.airplay.BufferedAudioStream
 import com.shilapi.xcertplay.airplay.MediaSink
 import com.shilapi.xcertplay.telecom.PhoneAudioRoute
 import com.shilapi.xcertplay.airplay.MicrophoneConfig
@@ -1785,6 +1786,7 @@ private class AudioRenderer(
     private var firstPcmLogged = false
     private val packetsReceived = AtomicInteger()
     private val packetsDropped = AtomicInteger()
+    private val packetsDroppedTotal = AtomicInteger()
     private val lastArrivalNs = AtomicLong()
     private val maxArrivalGapMs = AtomicLong()
     private val frameBytes = if (format.channels >= 2) 4 else 2
@@ -1806,6 +1808,8 @@ private class AudioRenderer(
     private var bytesPerSecond = 0
     private val bufferProgress = AudioBufferProgress(if (format.channels >= 2) 4 else 2)
     private var underrunsAtPlaybackStart = 0
+    private var headAtPlaybackStart = 0
+    private var droppedAtLastTrim = 0
     private var clockTrim: MediaClockTrim? = null
     /** Called when this call's track is routed to the earpiece; the sink moves the call to the loudspeaker. */
     @Volatile var onRoutedToEarpiece: (() -> Unit)? = null
@@ -1838,6 +1842,7 @@ private class AudioRenderer(
             val removed = mediaLagGuard?.recover(queue, sample, AudioPacket::sample, now) ?: 0
             if (removed > 0) {
                 packetsDropped.addAndGet(removed)
+                packetsDroppedTotal.addAndGet(removed)
                 if (lagRecoveryReports < MAX_REBUFFER_REPORTS) {
                     lagRecoveryReports++
                     report("Audio: stale media packet backlog recovered audioType=${format.audioType} " +
@@ -1846,7 +1851,10 @@ private class AudioRenderer(
             }
         }
         if (!started || !queue.offer(AudioPacket(rtp, sample))) {
-            if (started) packetsDropped.incrementAndGet()
+            if (started) {
+                packetsDropped.incrementAndGet()
+                packetsDroppedTotal.incrementAndGet()
+            }
             if (started && !droppedPacketsLogged) {
                 droppedPacketsLogged = true
                 Log.w(TAG, "audio queue full; dropping newest packets to bound latency")
@@ -2033,7 +2041,8 @@ private class AudioRenderer(
         val capacityBytes = built.bufferSizeInFrames * frameBytes
         startThresholdBytes = MediaAudioBuffer.startBytesFor(plan.startBytes, capacityBytes, PREBUFFER_WRITE_CHUNK_BYTES)
         // Only music plays long enough for the clocks to drift apart; calls keep their echo reference exact.
-        clockTrim = if (mappedChannel == AudioChannel.MEDIA) MediaClockTrim(format.sampleRate, (startThresholdBytes / frameBytes).toLong()) else null
+        clockTrim = if (mappedChannel == AudioChannel.MEDIA) MediaClockTrim(format.sampleRate, (startThresholdBytes / frameBytes).toLong(),
+            measuresTarget = format.payloadType == BufferedAudioStream.STREAM_TYPE) else null
         val trackMetadata = runCatching {
             "api=${Build.VERSION.SDK_INT} trackState=${built.state} trackRate=${built.sampleRate} " +
                 "usage=${trackAttributes?.usage} contentType=${trackAttributes?.contentType} " +
@@ -2449,6 +2458,8 @@ private class AudioRenderer(
     private fun startPlayback(track: AudioTrack) {
         diagnosticStage = "track-play"
         underrunsAtPlaybackStart = track.underrunCount
+        headAtPlaybackStart = track.playbackHeadPosition
+        clockTrim?.measureAgain()
         track.play()
         playbackStarted = true
         reportNavigationPlayback(track)
@@ -2481,8 +2492,15 @@ private class AudioRenderer(
             ?: 0L
         val compressedPcmFrames = compressedRtpFrames * format.sampleRate /
             format.rtpClockRate.coerceAtLeast(1)
-        trim.sample(bufferProgress.queuedBytes(track.playbackHeadPosition) / frameBytes,
-            now, compressedPcmFrames)
+        // Lost audio lowers the level for good: buffered music, which holds a measured level, measures again.
+        val dropped = packetsDroppedTotal.get() + inputDropped
+        if (dropped != droppedAtLastTrim) {
+            droppedAtLastTrim = dropped
+            trim.measureAgain()
+        }
+        val head = track.playbackHeadPosition
+        trim.sample(bufferProgress.queuedBytes(head) / frameBytes, now, compressedPcmFrames,
+            headMoving = head != headAtPlaybackStart)
         val rate = trim.rateDue(now) ?: return
         val result = runCatching { track.setPlaybackRate(rate) }.getOrDefault(AudioTrack.ERROR)
         if (result != AudioTrack.SUCCESS) {
