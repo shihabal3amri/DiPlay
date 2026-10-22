@@ -733,6 +733,13 @@
     <string name="update_failed">Не вдалося оновити</string>
     <string name="update_available_home">Доступне оновлення</string>
     <string name="update_saved_to">Збережено в %1$s</string>
+    <string name="update_installed_version">Встановлена версія: %1$s</string>
+    <string name="update_latest_version">Остання доступна версія: %1$s</string>
+    <string name="update_release_notes">Примітки до випуску:</string>
+    <string name="update_no_release_notes">Примітки до випуску відсутні.</string>
+    <string name="update_release_notes_more">Показати всі примітки</string>
+    <string name="update_release_notes_less">Згорнути</string>
+    <string name="update_no_internet">Немає підключення до інтернету. Перевірте мережу та спробуйте ще раз.</string>
     <string name="backup_title">Резервна копія налаштувань</string>
     <string name="backup_open">Резервна копія на телефоні</string>
     <string name="backup_open_description">Показує QR-код, щоб браузер телефона в тій самій мережі міг експортувати або імпортувати налаштування DiPlay. Сервіс зупиняється під час виходу зі сторінки.</string>
