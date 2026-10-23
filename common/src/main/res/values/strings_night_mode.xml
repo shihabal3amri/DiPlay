@@ -18,6 +18,9 @@
     <string name="carplay_night_schedule_hint">Uses the head unit’s local time. Set different start and end times; overnight ranges are supported.</string>
     <string name="carplay_night_schedule_same_time">Start and end times must differ.</string>
     <string name="carplay_night_hint">Save and return to CarPlay to apply.</string>
-    <string name="carplay_night_ambient_hint">Uses the threshold and delay below. Without a light sensor, it follows Android.</string>
+    <string name="carplay_night_ambient_hint">Uses the threshold and delay below. Without a usable light sensor, the day/night schedule is used instead.</string>
+    <string name="ambient_sensor_status_unavailable">Light sensor: unavailable</string>
+    <string name="ambient_sensor_status_waiting">Light sensor: available, waiting for readings</string>
+    <string name="ambient_sensor_status_reading">Light sensor: available, current %1$d lux</string>
     <string name="carplay_night_time_note">When appearance is set to Automatic in CarPlay settings, CarPlay also considers the iPhone time. Even if you select Always day, CarPlay may still appear dark at night.</string>
 </resources>

@@ -171,6 +171,8 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
     private val handler = Handler(Looper.getMainLooper())
     private var appNight = true
     override val currentAppNight: Boolean get() = appNight
+    private var ambientLightStatus: TextView? = null
+    private var ambientLightProbe: AndroidAmbientLight? = null
     private var palette = DiPlayPalette.DARK
     private var appearanceObserverRemoval: (() -> Unit)? = null
     private var appearanceUpdatesResumed = false
@@ -568,6 +570,7 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
         settingsSearchPopup?.dismiss()
         appearanceObserverRemoval?.invoke()
         appearanceObserverRemoval = null
+        stopAmbientLightProbe()
         handler.removeCallbacks(appearancePoll)
         hotspotJoinControls?.close()
         cancelUsbPermissionSetup()
@@ -1883,6 +1886,7 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
                 AirPlayPersistence.saveCarPlayNightMode(this, nightModes[index])
                 ambientControls.visibility = if (nightModes[index] == CarPlayNightMode.AMBIENT) View.VISIBLE else View.GONE
                 scheduleControls.visibility = if (nightModes[index] == CarPlayNightMode.SCHEDULE) View.VISIBLE else View.GONE
+                if (nightModes[index] == CarPlayNightMode.AMBIENT) ensureAmbientLightProbe() else stopAmbientLightProbe()
                 handler.post(::checkForAppearanceChange)
             }
             val sentenceSeparator = if (resources.configuration.locales[0].language == "zh") "" else " "
@@ -1890,6 +1894,7 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
                 getString(R.string.carplay_night_time_note), 14, MUTED).apply {
                 setPadding(0, 0, 0, dp(18))
             })
+            if (nightMode == CarPlayNightMode.AMBIENT) ambientLightStatusControl(ambientControls)
             ambientControls.addView(label(getString(R.string.carplay_night_ambient_hint), 14, MUTED).apply {
                 setPadding(0, 0, 0, dp(18))
             })
@@ -5465,6 +5470,39 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
         }
         parent.addView(control, matchButton(0, 60))
         parent.addView(space(12))
+    }
+
+    private fun ambientLightStatusControl(parent: LinearLayout) {
+        val status = label("", 14, MUTED).apply { setPadding(0, 0, 0, dp(6)) }
+        parent.addView(status)
+        ambientLightStatus = status
+        ensureAmbientLightProbe()
+    }
+
+    /**
+     * Shows whether the head unit exposes a TYPE_LIGHT sensor to apps and what it reports. Many
+     * units (e.g. BYD DiLink) hide the sensor or deliver no events, which silently disables the
+     * ambient day/night mode; this makes that visible instead of a mode that never switches.
+     */
+    private fun ensureAmbientLightProbe() {
+        val status = ambientLightStatus ?: return
+        val probe = ambientLightProbe ?: AndroidAmbientLight(this).also { ambientLightProbe = it }
+        val started = probe.start { lux ->
+            if (lux.isFinite() && lux >= 0f) {
+                handler.post {
+                    ambientLightStatus?.text =
+                        getString(R.string.ambient_sensor_status_reading, lux.roundToInt())
+                }
+            }
+        }
+        status.text =
+            if (probe.available && started) getString(R.string.ambient_sensor_status_waiting)
+            else getString(R.string.ambient_sensor_status_unavailable)
+    }
+
+    private fun stopAmbientLightProbe() {
+        ambientLightProbe?.stop()
+        ambientLightStatus = null
     }
 
     private fun ambientLightThresholdControl(parent: LinearLayout) {
