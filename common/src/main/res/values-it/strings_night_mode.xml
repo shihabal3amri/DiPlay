@@ -18,6 +18,6 @@
     <string name="carplay_night_schedule_hint">Usa l’ora locale della head unit. Imposta orari di inizio e fine diversi; sono supportati intervalli che superano la mezzanotte.</string>
     <string name="carplay_night_schedule_same_time">Gli orari di inizio e fine devono essere diversi.</string>
     <string name="carplay_night_hint">Salva e torna a CarPlay per applicare.</string>
-    <string name="carplay_night_ambient_hint">Usa la soglia e il ritardo qui sotto. Senza un sensore di luce, segue Android.</string>
+    <string name="carplay_night_ambient_hint">Usa la soglia e il ritardo qui sotto. Senza un sensore di luce utilizzabile, si applica la programmazione giorno/notte.</string>
     <string name="carplay_night_time_note">Quando l’aspetto è impostato su Automatico nelle impostazioni di CarPlay, CarPlay considera anche l’ora dell’iPhone. Anche se selezioni Sempre giorno, CarPlay potrebbe comunque apparire scuro di notte.</string>
 </resources>
