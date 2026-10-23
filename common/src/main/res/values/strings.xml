@@ -444,6 +444,10 @@
     <string name="use_software_hevc_decoder">Use software HEVC decoder</string>
     <string name="use_usage_content_type_routing_instead_of_stream_type">Use usage / content-type routing instead of stream type</string>
     <string name="use_your_last_connection_type_and_selected_iphone">Use your last connection type and selected iPhone.</string>
+    <string name="vpn_authorization_adb_unusable">This head unit cannot open VPN authorization, and DiPlay cannot use its ADB over network to allow the VPN itself.</string>
+    <string name="vpn_authorization_adb_not_approved">This head unit cannot open VPN authorization, and its ADB has not approved DiPlay, so DiPlay cannot allow the VPN itself.</string>
+    <string name="vpn_authorization_adb_did_not_allow">This head unit cannot open VPN authorization, and allowing the VPN over its ADB did not work.</string>
+    <string name="vpn_authorization_adb_command">Run this ADB command once from a computer connected to the head unit, then plug in the iPhone again:\nadb shell appops set %1$s ACTIVATE_VPN allow</string>
     <string name="vpn_authorization_unavailable">This head unit cannot open VPN authorization. Return to DiPlay to check connection permissions or use wireless.</string>
     <string name="vpn_consent_was_denied">VPN consent was denied</string>
     <string name="waiting_for_iphone_over_usb">Waiting for iPhone over USB</string>

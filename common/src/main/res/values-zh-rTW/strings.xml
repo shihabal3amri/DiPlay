@@ -403,6 +403,10 @@
     <string name="use_software_hevc_decoder">使用 HEVC 軟體解碼器</string>
     <string name="use_usage_content_type_routing_instead_of_stream_type">使用 usage / content-type 路由取代串流類型</string>
     <string name="use_your_last_connection_type_and_selected_iphone">使用上次的連線方式和已選擇的 iPhone。</string>
+    <string name="vpn_authorization_adb_unusable">此車機無法開啟 VPN 授權畫面，DiPlay 也無法使用車機的網路 ADB 自行允許 VPN。</string>
+    <string name="vpn_authorization_adb_not_approved">此車機無法開啟 VPN 授權畫面，車機的 ADB 也尚未授權 DiPlay，所以 DiPlay 無法自行允許 VPN。</string>
+    <string name="vpn_authorization_adb_did_not_allow">此車機無法開啟 VPN 授權畫面，透過車機的 ADB 允許 VPN 也沒有成功。</string>
+    <string name="vpn_authorization_adb_command">請在連接車機的電腦上執行一次以下 ADB 指令，然後重新插上 iPhone：\nadb shell appops set %1$s ACTIVATE_VPN allow</string>
     <string name="vpn_authorization_unavailable">此車機無法開啟 VPN 授權畫面。請返回 DiPlay 檢查連線權限，或使用無線連線。</string>
     <string name="vpn_consent_was_denied">VPN 授權遭拒</string>
     <string name="waiting_for_iphone_over_usb">正在等待透過 USB 連線的 iPhone</string>

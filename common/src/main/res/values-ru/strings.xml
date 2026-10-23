@@ -392,6 +392,10 @@
     <string name="use_software_hevc_decoder">Использовать программный декодер HEVC</string>
     <string name="use_usage_content_type_routing_instead_of_stream_type">Маршрутизация по использованию/типу контента вместо типа потока</string>
     <string name="use_your_last_connection_type_and_selected_iphone">Использовать последний способ подключения и выбранный iPhone.</string>
+    <string name="vpn_authorization_adb_unusable">Головное устройство не может открыть разрешение VPN, а DiPlay не может использовать его ADB по сети, чтобы разрешить VPN самостоятельно.</string>
+    <string name="vpn_authorization_adb_not_approved">Головное устройство не может открыть разрешение VPN, а его ADB ещё не разрешил DiPlay, поэтому DiPlay не может разрешить VPN самостоятельно.</string>
+    <string name="vpn_authorization_adb_did_not_allow">Головное устройство не может открыть разрешение VPN, а разрешить VPN через его ADB не удалось.</string>
+    <string name="vpn_authorization_adb_command">Один раз выполните эту команду ADB с компьютера, подключённого к головному устройству, затем заново подключите iPhone по USB:\nadb shell appops set %1$s ACTIVATE_VPN allow</string>
     <string name="vpn_authorization_unavailable">Головное устройство не может открыть разрешение VPN. Вернитесь в DiPlay, чтобы проверить разрешения на подключение, или используйте беспроводное подключение.</string>
     <string name="vpn_consent_was_denied">Согласие на VPN отклонено</string>
     <string name="waiting_for_iphone_over_usb">Ожидание iPhone по USB</string>

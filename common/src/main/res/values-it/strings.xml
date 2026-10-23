@@ -438,6 +438,10 @@
     <string name="use_software_hevc_decoder">Usa il decoder HEVC software</string>
     <string name="use_usage_content_type_routing_instead_of_stream_type">Usa l’instradamento per utilizzo / tipo di contenuto invece del tipo di stream</string>
     <string name="use_your_last_connection_type_and_selected_iphone">Usa l’ultimo tipo di connessione e l’iPhone selezionato.</string>
+    <string name="vpn_authorization_adb_unusable">Questa head unit non può aprire l’autorizzazione VPN, e DiPlay non può usare il suo ADB via rete per consentire la VPN da solo.</string>
+    <string name="vpn_authorization_adb_not_approved">Questa head unit non può aprire l’autorizzazione VPN, e il suo ADB non ha ancora approvato DiPlay, quindi DiPlay non può consentire la VPN da solo.</string>
+    <string name="vpn_authorization_adb_did_not_allow">Questa head unit non può aprire l’autorizzazione VPN, e consentire la VPN tramite il suo ADB non ha funzionato.</string>
+    <string name="vpn_authorization_adb_command">Esegui una volta questo comando ADB da un computer collegato alla head unit, poi ricollega l’iPhone via USB:\nadb shell appops set %1$s ACTIVATE_VPN allow</string>
     <string name="vpn_authorization_unavailable">Questa head unit non può aprire l’autorizzazione VPN. Torna a DiPlay per controllare i permessi di connessione oppure usa il wireless.</string>
     <string name="vpn_consent_was_denied">Il consenso VPN è stato negato</string>
     <string name="waiting_for_iphone_over_usb">In attesa dell’iPhone via USB</string>

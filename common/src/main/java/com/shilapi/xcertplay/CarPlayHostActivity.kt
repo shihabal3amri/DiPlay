@@ -1030,6 +1030,8 @@ class CarPlayHostActivity : ComponentActivity() {
         }
         if (consent == null) {
             vpnReady = true
+            // Consent can arrive after the ADB step was shown, from the command run on a computer; the step is done.
+            showConnectionHelp(null)
             maybeStartCarPlay()
             return
         }
@@ -1081,6 +1083,13 @@ class CarPlayHostActivity : ComponentActivity() {
                 if (granted && !awaitingVpnConsent && !vpnReady) {
                     vpnReady = true
                     maybeStartCarPlay()
+                } else if (!granted && !awaitingVpnConsent && !wirelessEnabled) {
+                    setStatus(VpnPreConsent.stage(access))
+                    connectionInstructionsView?.visibility = View.GONE
+                    connectionHelpView?.apply {
+                        text = getString(R.string.vpn_authorization_adb_command, packageName)
+                        visibility = View.VISIBLE
+                    }
                 }
             }
         }, "diplay-vpn-adb-consent").start()
@@ -6669,7 +6678,8 @@ class CarPlayHostActivity : ComponentActivity() {
 
     // The keywords are English; matching the English text keeps the result the same in every UI language.
     private fun friendlyStage(message: String, englishMessage: String = message): String = when {
-        message == getString(R.string.vpn_authorization_unavailable) -> message
+        message == getString(R.string.vpn_authorization_unavailable) ||
+            LocalAdb.Access.entries.any { message == getString(VpnPreConsent.stage(it)) } -> message
         // It says where to look itself; its word "permissions" would turn it into the generic permission line.
         message == getString(R.string.could_not_start_carplay_return_to_diplay_and_check_app_per) -> message
         message == getString(R.string.waiting_for_mfi_coprocessor) ||
