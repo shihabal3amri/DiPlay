@@ -282,6 +282,7 @@
     <string name="open_connection_setup">Открыть настройку подключения</string>
     <string name="open_this_setting_from_your_car_s_settings_app">Откройте эту настройку в приложении «Настройки» автомобиля.</string>
     <string name="opening_carplay">Открытие CarPlay…</string>
+    <string name="iphone_sent_no_picture">iPhone не передал изображение с момента запуска CarPlay. Перезагрузите iPhone (выключите и включите), затем подключите его снова.</string>
     <string name="opening_usb_data_paths">Открытие каналов данных USB</string>
     <string name="pair_another">Связать другое устройство</string>
     <string name="pair_your_iphone">Свяжите iPhone</string>

@@ -291,6 +291,7 @@
     <string name="open_connection_setup">Open connection setup</string>
     <string name="open_this_setting_from_your_car_s_settings_app">Open this setting from your car’s Settings app.</string>
     <string name="opening_carplay">Opening CarPlay…</string>
+    <string name="iphone_sent_no_picture">The iPhone has not sent a picture since CarPlay started. Restart the iPhone (turn it off and on), then connect again.</string>
     <string name="opening_usb_data_paths">Opening USB data paths</string>
     <string name="pair_another">Pair another</string>
     <string name="pair_your_iphone">Pair your iPhone</string>

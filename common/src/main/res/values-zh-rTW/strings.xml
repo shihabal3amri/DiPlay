@@ -289,6 +289,7 @@
     <string name="open_connection_setup">開啟連線設定</string>
     <string name="open_this_setting_from_your_car_s_settings_app">請在車機的設定 App 中開啟此設定。</string>
     <string name="opening_carplay">正在開啟 CarPlay…</string>
+    <string name="iphone_sent_no_picture">CarPlay 啟動後，iPhone 一直沒有傳送畫面。請將 iPhone 重新開機（關機再開機），然後重新連線。</string>
     <string name="opening_usb_data_paths">正在開啟 USB 資料通道</string>
     <string name="pair_another">配對其他裝置</string>
     <string name="pair_your_iphone">配對 iPhone</string>

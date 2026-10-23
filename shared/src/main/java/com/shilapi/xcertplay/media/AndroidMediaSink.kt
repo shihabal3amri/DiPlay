@@ -409,6 +409,13 @@ class AndroidMediaSink(
     /** True when this sink paces main-screen frames (smooth video); fixed for its lifetime. */
     val videoPacingEnabled: Boolean get() = videoPacingDelayMillis > 0
 
+    /**
+     * False until the main screen's first video frame. The screen stream's keepalives never reach the sink,
+     * so a stream that carries only those, as from the stuck iPhones in #975 and #249, leaves it false.
+     */
+    @Volatile var mainVideoReceived = false
+        private set
+
     /** Requests a keyframe for stream [type], e.g. after its surface came back. */
     /** Running totals of the main screen's decoder for a live FPS counter; null while it has none. */
     fun liveVideoCounters(): LiveVideoCounters? = videoDecoders[MAIN_SCREEN_TYPE]?.liveCounters()
@@ -471,6 +478,7 @@ class AndroidMediaSink(
     }
 
     override fun onVideoFrame(type: Int, naluBytes: ByteArray) {
+        if (type == MAIN_SCREEN_TYPE) mainVideoReceived = true
         synchronized(videoOwnershipLock) {
             if (videoClosed) return
             videoDecoder(type).submit(naluBytes)
@@ -479,6 +487,7 @@ class AndroidMediaSink(
     }
 
     override fun onVideoFrame(type: Int, naluBytes: ByteArray, senderNanos: Long, arrivalNanos: Long) {
+        if (type == MAIN_SCREEN_TYPE) mainVideoReceived = true
         synchronized(videoOwnershipLock) {
             if (videoClosed) return
             videoDecoder(type).submit(naluBytes, senderNanos, arrivalNanos)

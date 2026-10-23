@@ -282,6 +282,7 @@
     <string name="open_connection_setup">فتح إعداد الاتصال</string>
     <string name="open_this_setting_from_your_car_s_settings_app">افتح هذا الإعداد من تطبيق الإعدادات في سيارتك.</string>
     <string name="opening_carplay">جارٍ فتح CarPlay…</string>
+    <string name="iphone_sent_no_picture">لم يرسل iPhone أي صورة منذ بدء CarPlay. أعد تشغيل iPhone (أوقفه ثم شغّله)، ثم اتصل من جديد.</string>
     <string name="opening_usb_data_paths">جارٍ فتح مسارات بيانات USB</string>
     <string name="pair_another">اقترن بآخر</string>
     <string name="pair_your_iphone">اقترن iPhone الخاص بك</string>
