@@ -10,7 +10,9 @@ object AmbientMusicSettings {
         val colorSource: AmbientColorSource = AmbientColorSource.SELECTED,
         val idle: AmbientIdleBehavior = AmbientIdleBehavior.STEADY,
         // The car's own music rhythm while CarPlay music plays; DiPlay then leaves the lamps to the car.
-        val carRhythm: Boolean = false)
+        val carRhythm: Boolean = false,
+        // Sends the played music's spectrum to the car for that rhythm, where the car makes none of its own.
+        val carRhythmFeed: Boolean = false)
     fun load(context: Context): Values {
         val p = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
         fun boolean(key: String, fallback: Boolean) = runCatching { p.getBoolean(key, fallback) }.getOrDefault(fallback)
@@ -31,6 +33,7 @@ object AmbientMusicSettings {
             colorSource = runCatching { AmbientColorSource.valueOf(text("colorSource", "SELECTED")) }.getOrDefault(AmbientColorSource.SELECTED),
                         idle = runCatching { AmbientIdleBehavior.valueOf(text("idle", "STEADY")) }.getOrDefault(AmbientIdleBehavior.STEADY),
             carRhythm = boolean("carRhythm", false),
+            carRhythmFeed = boolean("carRhythmFeed", false),
                     )
     }
     fun save(context: Context, values: Values) {
@@ -42,7 +45,8 @@ object AmbientMusicSettings {
             .putStringSet("selectedColors", normalizeAmbientPalette(values.selectedColors, values.color).map { it.toString() }.toSet())
             .putInt("color", values.color.coerceIn(1, 31))
             .putInt("brightness", values.brightness.coerceIn(0, 6))
-            .putInt("area", values.area.coerceIn(1, 3)).putBoolean("carRhythm", values.carRhythm).apply()
+            .putInt("area", values.area.coerceIn(1, 3)).putBoolean("carRhythm", values.carRhythm)
+            .putBoolean("carRhythmFeed", values.carRhythmFeed).apply()
         AmbientMusicController.settingsChanged(context)
     }
 }

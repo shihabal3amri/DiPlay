@@ -65,6 +65,7 @@ object AmbientMusicController {
     // The 20 Hz lamp update, scheduled only while the feature (or the car's own rhythm) is on; turning it off
     // restores the lamps by itself.
     private var ticking: ScheduledFuture<*>? = null
+    private const val BAND_INTERVAL_MILLIS = 90L
 
     /** On the executor, after [settings] changed. */
     private fun updateTicking() {
@@ -113,7 +114,13 @@ object AmbientMusicController {
         return token
     }
 
-    internal fun wantsPcm(token: Long): Boolean = token != 0L && token == activeRenderer.get() && settings.enabled && settings.music
+    private fun feeding() = settings.carRhythm && settings.carRhythmFeed
+
+    internal fun wantsPcm(token: Long): Boolean = token != 0L && token == activeRenderer.get() &&
+        ((settings.enabled && settings.music) || feeding())
+
+    /** Whether the played PCM should also be reduced to the 16 rhythm bands for the car. */
+    internal fun wantsBands(token: Long): Boolean = token != 0L && token == activeRenderer.get() && feeding()
 
     /** Binds phone playback callbacks to the current CarPlay media owner. */
     @Synchronized fun claimPlaybackOwner(owner: Any) {
@@ -257,12 +264,24 @@ object AmbientMusicController {
 
     private fun restoreOriginal() { lampSession.setEnabled(false) }
 
-    // The car's own rhythm follows CarPlay music while it plays; DiPlay does not set the lamps meanwhile.
+    // The car's own rhythm follows CarPlay music while it plays; DiPlay does not set the lamps meanwhile. On head
+    // units whose audio service makes no spectrum of its own, the feed option sends the played music's 16 bands.
+    private var lastBandsMillis = 0L
     private fun carRhythm() {
         restoreOriginal()
         val app = context ?: return
         val rendererActive = activeRenderer.get() != 0L && playback != null
-        val trackPlaying = if (rendererActive) playback?.invoke()?.second else null
-        BydCarMusicRhythm.setPlaying(app, carRhythmPlaying(rendererActive, trackPlaying, phonePlayback.current()))
+        val playbackState = if (rendererActive) playback?.invoke() else null
+        val playing = carRhythmPlaying(rendererActive, playbackState?.second, phonePlayback.current())
+        BydCarMusicRhythm.setPlaying(app, playing)
+        if (!settings.carRhythmFeed) return
+        val (head, headPlaying) = playbackState ?: return
+        val now = android.os.SystemClock.uptimeMillis()
+        // Not read between two sends: what plays then stays in the envelope's peak for the next send.
+        if (playing && now - lastBandsMillis < BAND_INTERVAL_MILLIS) return
+        val bands = envelope?.playedBands(head, playing && headPlaying)
+        if (!playing || bands == null) return
+        lastBandsMillis = now
+        BydCarMusicRhythm.sendBands(app, bands)
     }
 }

@@ -56,6 +56,10 @@
     <string name="preview_oem_label">OEM 标签：</string>
     <string name="preview_empty">（空）</string>
     <string name="preview_frame_rate">帧率：</string>
+    <string name="preview_transport_hevc">HEVC（H.265，%1$s）</string>
+    <string name="preview_decoder_hardware">硬件</string>
+    <string name="preview_decoder_software">软件</string>
+    <string name="preview_list_separator">，</string>
     <string name="preview_detected_maximum">检测到的最大值：</string>
     <string name="preview_physical_reference">物理参考：</string>
     <string name="basis_widest_width">最宽宽度</string>
@@ -88,7 +92,7 @@
     <string name="audio_stream_unavailable">流类型 %1$d 在此不可用（状态=%2$s）</string>
     <string name="resolution_handshake_prefix">握手分辨率：</string>
     <string name="safe_area_full_screen_at">安全区域：全屏，</string>
-    <string name="settings_android9_compat">以下设置在 Android 9（API 28）上不可用且已隐藏：\n• Wi-Fi P2P（5 GHz）— 将改用 LocalOnlyHotspot。\n• HEVC 软解码器 — 将改用硬件解码。</string>
+    <string name="settings_android9_compat">以下设置在 Android 9（API 28）上不可用且已隐藏：\n• HEVC 软解码器 — 将改用硬件解码。</string>
     <string name="settings_mfi_address_hint">地址必须以 http:// 或 https:// 开头。令牌为可选项，将作为 Authorization bearer token 发送。</string>
     <string name="a_familiar_drive">熟悉的驾乘体验。</string>
     <string name="a_previous_wi_fi_direct_connection_is_still_running_reset">之前的 Wi-Fi Direct 连接仍在运行。请重置后再连接。</string>
@@ -200,7 +204,7 @@
     <string name="rect_fill_disable_safe_area_description">请求 iPhone 发送直角的全屏画面。若 CarPlay 在屏幕边缘留下空白条，或在圆角处显示壁纸颜色，可以尝试开启。开启时不使用上方的安全区域。保存并重新连接后生效。</string>
     <string name="safe_area_disabled_rect_fill_summary">安全区域：已关闭（直角铺满）</string>
     <string name="driving_side">驾驶方向</string>
-    <string name="efficient_video">高效视频</string>
+    <string name="efficient_video">高效视频（HEVC）</string>
     <string name="enable_the_car_s_bluetooth_and_pair_your_iphone_first">请先打开车机蓝牙并配对 iPhone。</string>
     <string name="error">错误</string>
     <string name="exit_application">退出应用</string>
@@ -432,6 +436,8 @@
     <string name="option_size_large">大</string>
     <string name="option_size_medium">中</string>
     <string name="option_size_small">小</string>
+    <string name="option_size_custom">自定义</string>
+    <string name="size_option_millimeters">%1$s · %2$d mm</string>
     <string name="option_theme_scenario">场景 · 侧边地图</string>
     <string name="option_theme_map">地图 · 全屏地图</string>
     <string name="option_theme_simple">简约 · 侧边地图</string>
@@ -495,6 +501,7 @@
     <string name="adb_dashboard_does_not_send_map">仪表盘：%1$s，因此 iPhone 不发送地图。</string>
     <string name="adb_not_approved">DiPlay 尚未获得授权。点按“检查 ADB 访问”，然后在车机屏幕上允许 DiPlay。</string>
     <string name="adb_off">网络 ADB 已关闭。请在车机的开发者选项中开启。</string>
+    <string name="adb_network_not_answering">USB 调试已开启，但网络 ADB 没有回应。请在车机的开发者选项中开启网络 ADB；如果已经开启，请关掉再重新打开。</string>
     <string name="adb_pairing_only">此车机仅提供需要配对的无线调试，DiPlay 暂不支持。</string>
     <string name="navi_mode_off">关闭</string>
     <string name="navi_mode_turn_on_by_navi">导航时开启</string>
@@ -552,6 +559,8 @@
     <string name="video_while_parked_description">iOS 27：在 iPhone 上投送到 CarPlay 的视频会在车辆处于 P 挡时在车机屏幕上播放。挂出 P 挡时播放器会关闭；没有 ADB 时视频保持关闭，iPhone 只播放声音。普通 HTTPS 视频（例如来自 Safari）可以播放；受 FairPlay 保护的视频（例如 Apple TV+）需要获得授权的接收器，在这里无法播放。会重新连接 CarPlay。需要车机开启网络 ADB。</string>
     <string name="cluster_song">仪表盘显示歌曲</string>
     <string name="cluster_song_description">CarPlay 正在播放的歌曲名和歌手会显示在仪表盘的音乐卡片中，并同步播放和暂停状态。卡片以比亚迪的“其他”音源显示，因为仪表盘不会绘制 CarPlay 自身的音源。立即生效。需要车机开启网络 ADB。</string>
+    <string name="cluster_song_gate">自动激活音乐卡片</string>
+    <string name="cluster_song_gate_description">音乐卡片默认不显示，必须车机的媒体栈先被激活过才显示。打开此开关会替你激活媒体栈，过程中媒体界面会短暂盖屏，随后回到 DiPlay。关闭可避免这一闪屏，立即生效。</string>
     <string name="video_back_to_carplay">返回 CarPlay</string>
     <string name="video_play">播放</string>
     <string name="video_pause">暂停</string>
@@ -721,13 +730,13 @@
     <string name="split_screen_areas">分屏中的 CarPlay</string>
     <string name="split_screen_areas_description">车机以分屏显示 DiPlay 时，CarPlay 会按该窗口重新绘制，而不是缩小并留黑边；返回全屏也无需重新连接。首次使用时会记住窗口大小，下次连接起画面完全贴合。程序栏设为“自动”时，CarPlay 会把它放在底部。下次连接时生效。</string>
     <string name="carplay_rotation">随屏幕旋转 CarPlay，无需重新连接</string>
-    <string name="carplay_rotation_description">适用于屏幕可旋转的车机。CarPlay 会获得包含横屏和竖屏的方形画面，旋转屏幕时直接重新绘制，无需重新连接。更大的方形画面可能增加视频处理负担并降低流畅度，尤其是在大屏上选择“更清晰”时。如果很少旋转屏幕，关闭此选项可能有所帮助。自定义安全区域不适用于方形画面。下次连接时生效。</string>
+    <string name="carplay_rotation_description">适用于屏幕可旋转的车机。CarPlay 会获得包含横屏和竖屏的方形画面，旋转屏幕时直接重新绘制，无需重新连接。更大的方形画面可能增加视频处理负担并降低流畅度，尤其是在大屏上选择“更清晰”时。如果很少旋转屏幕，关闭此选项可能有所帮助。自定义安全区域不适用于方形画面。在 iPhone 上截取的 CarPlay 截图会包含整个方形画面，包括这块屏幕上看不到的部分。下次连接时生效。</string>
     <string name="carplay_rotation_picture">方形画面</string>
     <string name="carplay_rotation_smoother">更流畅（1920）</string>
     <string name="carplay_rotation_sharper">更清晰（屏幕尺寸）</string>
     <string name="auto_grant_incomplete">未验证全部请求权限。请检查下方各项状态；开启网络 ADB 后重试，或使用手动设置。现有权限保持不变。</string>
-    <string name="carplay_call_controls_experimental">CarPlay 通话按键（实验性）</string>
-    <string name="carplay_call_controls_experimental_description">启用尚未验证的 DiLink 3 通话、语音和播放/暂停按键。仍需实车测试。CarPlay 来电响铃时，下一曲接听、上一曲拒接。默认关闭；仪表通话卡片为独立设置。</string>
+    <string name="carplay_call_controls_experimental">CarPlay 通话、Siri 与媒体按键（实验性）</string>
+    <string name="carplay_call_controls_experimental_description">电话键接听 CarPlay 来电，挂断键／模式键拒接或挂断。来电响铃时，也可用下一曲接听、上一曲拒接；通话接通后，上下曲不用于挂断。同时启用 DiLink 3 专用 Siri 和播放／暂停按键。默认关闭，车型与固件支持情况需实车确认；仪表通话显示单独设置。</string>
     <string name="side_panel">CarPlay 旁的侧边面板（实验性）</string>
     <string name="side_panel_description">CarPlay 可移到屏幕的三分之二，DiPlay 在其余部分显示自己的面板：横屏时在乘客一侧，竖屏时在底部（时钟，以及已读取时的电量）。可在会话菜单中显示或隐藏。下次连接时生效。</string>
     <string name="side_panel_show">侧边面板</string>
@@ -822,6 +831,8 @@
     <string name="settings_ambient_car_rhythm">车辆原厂音乐律动</string>
     <string name="settings_ambient_car_rhythm_description">播放 CarPlay 音乐时，启用车辆原厂的氛围灯音乐律动，颜色和效果使用车辆氛围灯菜单中的设置（需在其中开启音乐律动）。期间 DiPlay 不直接控制灯光。开启时会检查。仅当车机不允许 DiPlay 自行启动律动时，才需要车机网络 ADB。</string>
     <string name="settings_ambient_car_rhythm_unavailable">车辆音乐律动不可用：DiPlay 无法自行启动律动，并且没有网络 ADB 权限或车机音频服务不支持所需调用。未保存任何设置。</string>
+    <string name="settings_ambient_car_rhythm_feed">向车辆律动发送音乐数据（较旧的车机）</string>
+    <string name="settings_ambient_car_rhythm_feed_description">在部分车机（如 2023 款汉）上，车辆的律动会启动但灯光保持熄灭，因为车辆不会为 CarPlay 音乐生成自己的频谱。此选项会把正在播放音乐的 16 个频段发送给车辆的灯光控制器，让车辆自身的律动（包括副驾驶一侧的仪表台）随之变化。仅在上方的车辆音乐律动开启时有效，并且需要车辆的网络 ADB。</string>
     <string name="settings_interface_size">界面大小</string>
     <string name="settings_interface_size_auto">自动</string>
     <string name="settings_interface_size_hint">DiPlay 自身界面中文字和控件的大小。自动模式会在大尺寸低密度屏幕上放大它们。不影响 CarPlay。</string>
@@ -868,6 +879,7 @@
     <string name="setup_iphone_none">尚未选择 iPhone</string>
     <string name="setup_features_title">功能</string>
     <string name="setup_features_description">为 %1$s 推荐。现在开启你需要的功能；所有选项都保留在设置中，之后可随时更改。</string>
+    <string name="setup_features_description_unknown">现在开启你需要的功能；所有选项都保留在设置中，之后可随时更改。</string>
     <string name="setup_cluster_route_conflict">DiLink 4 仪表路线已开启。在 DiLink 3 上，它会阻止 CarPlay 地图显示在仪表上。</string>
     <string name="setup_cluster_route_turn_off">关闭它</string>
     <string name="setup_badge_tested">已在部分车辆上测试</string>
@@ -924,6 +936,8 @@
     <string name="settings_cluster_music_unknown">未知艺人</string>
     <string name="connection_help_reset_wifi">旧的 Wi-Fi Direct 连接可能阻止新连接。点击下方的“重置 CarPlay Wi-Fi”，然后重新连接。</string>
     <string name="connection_help_bluetooth_unusable">此车机的蓝牙无法向 iPhone 传输数据，因此无法使用无线 CarPlay。请使用支持数据传输的 USB 线。</string>
+    <string name="connection_help_wifi_direct_beside_hotspot">请关闭车载热点后点“重新连接”；或在“连接设置”中选择“车载热点”，并保存热点名称和密码。</string>
+    <string name="wifi_direct_refused_beside_hotspot">车载热点已开启，Wi-Fi Direct 无法同时启动</string>
     <string name="connection_help_hotspot">请确认车机热点已开启，且名称和密码与 DiPlay 设置一致。若支持，使用 5 GHz 后重试。</string>
     <string name="connection_help_iphone_wifi">保持 Wi-Fi 和蓝牙开启。在 iPhone 上连接车机热点并启用自动加入，然后重试。若仍失败，请保存诊断报告。</string>
     <string name="connection_help_permissions">请在车机上允许 DiPlay 所需的 USB、附近设备或位置信息权限，然后重试。</string>
@@ -965,4 +979,13 @@
     <string name="settings_launcher_bubble_unlocked">位置已解锁</string>
     <string name="settings_launcher_bubble_hold_to_lock">长按 锁定</string>
     <string name="settings_launcher_bubble_hold_to_unlock">长按 解锁</string>
+
+    <string name="settings_hotspot_interface">热点网络接口（可选）</string>
+    <string name="settings_hotspot_interface_description">仅用于把热点放在 Android 不认为是 Wi-Fi 热点的网络接口上的车机，例如部分吉利、领克及其它高通车机上的 eth0.3。留空则自动查找。</string>
+    <string name="cluster_projection_shape">仪表盘地图形态</string>
+    <string name="cluster_projection_shape_half">半屏（小屏导航）</string>
+    <string name="cluster_projection_shape_full">全屏（全屏导航）</string>
+    <string name="cluster_projection_shape_description">半屏会在仪表盘地图旁保留仪表原本的车速与状态信息；全屏则让地图占满整个仪表盘。CarPlay 地图出现时 DiPlay 会设置该形态，否则会覆盖你在车机上选好的导航模式。需要车机已授权网络 ADB。</string>
+    <string name="settings_cluster_speedometer_album_color">速度表背景使用专辑颜色</string>
+    <string name="settings_cluster_speedometer_album_color_description">平滑过渡到专辑边框的颜色，并保留所选的不透明度。</string>
 </resources>

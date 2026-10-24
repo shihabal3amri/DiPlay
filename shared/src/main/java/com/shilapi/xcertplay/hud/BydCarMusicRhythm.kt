@@ -52,6 +52,24 @@ object BydCarMusicRhythm {
     }
 
     /**
+     * Sends the played music's 16 band magnitudes (1 to 15) to the car's lamp controller while the rhythm runs. On
+     * a head unit whose audio service starts no spectrum of its own, the rhythm stays dark without them. The latest
+     * bands replace any still waiting, so a slow shell never builds a queue.
+     */
+    fun sendBands(context: Context, bands: IntArray) {
+        if (!BydCarMusicRhythmBands.valid(bands)) return
+        val app = context.applicationContext
+        if (waitingBands.getAndSet(bands) != null) return
+        executor.execute {
+            val latest = waitingBands.getAndSet(null) ?: return@execute
+            if (startedBy == null) return@execute
+            if (!helper.sendBands(app, latest)) Log.w(TAG, "rhythm bands not sent")
+        }
+    }
+
+    private val waitingBands = java.util.concurrent.atomic.AtomicReference<IntArray?>(null)
+
+    /**
      * Whether this head unit's audio service has the call, reachable from DiPlay itself or else over DiPlay's ADB
      * access; nothing is started.
      */
@@ -100,6 +118,8 @@ internal interface BydCarMusicRhythmCall {
     fun start(context: Context): Boolean
     /** Stops the rhythm this way started. */
     fun stop(context: Context)
+    /** Sends the 16 rhythm bands to the lamp controller; false when this way cannot (it needs the shell user). */
+    fun sendBands(context: Context, bands: IntArray): Boolean = false
 }
 
 /**
@@ -122,7 +142,7 @@ internal object BydCarMusicRhythmDirect : BydCarMusicRhythmCall {
 
     private fun call(start: Boolean): Boolean = runCatching {
         val audio = BydCarMusicRhythmTool.audio()
-        (if (start) audio.start else audio.stop).invoke(audio.service, BydCarMusicRhythmTool.MEDIA_CENTRE, token)
+        if (start) audio.startRhythm(token) else audio.stopRhythm(token)
     }.onFailure { Log.w(TAG, "direct ${if (start) "start" else "stop"} failed: ${describe(it)}") }.isSuccess
 
     private fun describe(error: Throwable): String = (error.cause ?: error).let { "${it.javaClass.simpleName}: ${it.message}" }
@@ -159,6 +179,15 @@ internal object BydCarMusicRhythmHelper : BydCarMusicRhythmCall {
         }
     }
 
+    override fun sendBands(context: Context, bands: IntArray): Boolean {
+        val open = shell ?: open(context) ?: return false
+        val reply = BydAmbientLightWorkerProtocol.reply(open.exchangeBounded("bands " + bands.joinToString(" ")))
+        if (reply == "bands") return true
+        Log.w(TAG, "helper replied $reply to bands")
+        if (reply == null) close()
+        return false
+    }
+
     private fun open(context: Context): LocalAdb.InteractiveShell? {
         close()
         val client = LocalAdb(AdbKeys.load(context)).also { adb = it }
@@ -193,14 +222,26 @@ internal object BydCarMusicRhythmHelper : BydCarMusicRhythmCall {
 
 /**
  * Runs under the head unit's adb shell through app_process, not in DiPlay. `--probe` prints `supported` when the
- * audio service has BYD's start/stop calls. `--stdin` serves one request per line (`ping`, `start`, `stop`), each
- * answered with one line and `done`; stdin closing stops the rhythm.
+ * audio service has BYD's start/stop calls. `--stdin` serves one request per line (`ping`, `start`, `stop`, and
+ * `bands` with 16 values from 1 to 15), each answered with one line and `done`; stdin closing stops the rhythm.
  */
 object BydCarMusicRhythmTool {
     /** BYD's media centre: the head unit starts its music rhythm only for its own music apps. */
     const val MEDIA_CENTRE = "com.byd.mediacenter"
 
-    internal class Audio(val service: Any, val start: Method, val stop: Method)
+    internal class Audio(val service: Any, val start: Method, val stop: Method) {
+        /** Names the media centre, as BYD's own music apps do. */
+        fun startRhythm(token: IBinder) { start.invoke(service, MEDIA_CENTRE, token) }
+
+        /**
+         * The 2024 Tang's `stopAudioOutput` takes the start's token; the 2023 Han's takes only the package and
+         * stops the session that package opened.
+         */
+        fun stopRhythm(token: IBinder) {
+            if (stop.parameterTypes.size == 2) stop.invoke(service, MEDIA_CENTRE, token)
+            else stop.invoke(service, MEDIA_CENTRE)
+        }
+    }
 
     @JvmStatic
     fun main(args: Array<String>) {
@@ -224,28 +265,43 @@ object BydCarMusicRhythmTool {
             .invoke(null, "audio") as IBinder
         val service = checkNotNull(Class.forName("android.media.IAudioService\$Stub")
             .getMethod("asInterface", IBinder::class.java).invoke(null, binder))
-        return Audio(service,
-            service.javaClass.getMethod("startAudioOutput", String::class.java, IBinder::class.java),
-            service.javaClass.getMethod("stopAudioOutput", String::class.java, IBinder::class.java))
+        return find(service)
     }
+
+    /** BYD's calls on [service]: `startAudioOutput(String, IBinder)` and either form of `stopAudioOutput`. */
+    internal fun find(service: Any): Audio = Audio(service,
+        service.javaClass.getMethod("startAudioOutput", String::class.java, IBinder::class.java),
+        runCatching { service.javaClass.getMethod("stopAudioOutput", String::class.java, IBinder::class.java) }
+            .getOrElse { service.javaClass.getMethod("stopAudioOutput", String::class.java) })
 
     private fun serve() {
         val audio = audio()
         val token = Binder()
         var started = false
+        var feed: BydCarMusicRhythmBands.Feed? = null
         val input = System.`in`.bufferedReader()
         while (true) {
-            val reply = when ((input.readLine() ?: break).trim()) {
-                "ping" -> "ready"
-                "start" -> {
-                    if (!started) audio.start.invoke(audio.service, MEDIA_CENTRE, token)
+            val request = (input.readLine() ?: break).trim()
+            val reply = when {
+                request == "ping" -> "ready"
+                request == "start" -> {
+                    if (!started) audio.startRhythm(token)
                     started = true
                     "started"
                 }
-                "stop" -> {
-                    if (started) audio.stop.invoke(audio.service, MEDIA_CENTRE, token)
+                request == "stop" -> {
+                    if (started) audio.stopRhythm(token)
                     started = false
                     "stopped"
+                }
+                request.startsWith("bands ") -> {
+                    val bands = BydCarMusicRhythmBands.parse(request.removePrefix("bands "))
+                    if (bands == null) "error bands" else try {
+                        val open = feed ?: BydCarMusicRhythmBands.Feed().also { feed = it }
+                        if (open.send(bands) == 0) "bands" else "error send"
+                    } catch (error: Throwable) {
+                        "error ${(error.cause ?: error).javaClass.simpleName}"
+                    }
                 }
                 else -> "error request"
             }
@@ -253,6 +309,55 @@ object BydCarMusicRhythmTool {
             println("done")
             System.out.flush()
         }
-        if (started) audio.stop.invoke(audio.service, MEDIA_CENTRE, token)
+        if (started) audio.stopRhythm(token)
+    }
+}
+
+/**
+ * The 16 band magnitudes the car's lamp controller takes for its music rhythm. BYD's audio service sends them as
+ * `BYDAutoAudioDevice.setAmbientLightFreq` for its own music apps: values 1 to 15, one per feature id from
+ * [FIRST_FEATURE_ID], 4 apart.
+ */
+internal object BydCarMusicRhythmBands {
+    const val COUNT = 16
+    private const val FIRST_FEATURE_ID = 774897672
+    private const val FEATURE_STEP = 4
+
+    fun valid(bands: IntArray): Boolean = bands.size == COUNT && bands.all { it in 1..15 }
+
+    /** Sixteen space-separated values from 1 to 15, or null. */
+    fun parse(text: String): IntArray? {
+        val fields = text.trim().split(' ').filter { it.isNotEmpty() }
+        if (fields.size != COUNT) return null
+        val values = IntArray(COUNT) { fields[it].toIntOrNull() ?: return null }
+        return values.takeIf(::valid)
+    }
+
+    fun featureIds(): IntArray = IntArray(COUNT) { FIRST_FEATURE_ID + FEATURE_STEP * it }
+
+    /** Writes the bands as the shell user, through the generic device manager and the audio device's type. */
+    class Feed {
+        private val manager: Any
+        private val setIntArray: Method
+        private val type: Int
+
+        init {
+            runCatching { android.os.Looper.prepareMainLooper() }
+            val thread = Class.forName("android.app.ActivityThread")
+            val main = thread.getMethod("systemMain").invoke(null)
+            val system = thread.getMethod("getSystemContext").invoke(main) as Context
+            val context = system.createPackageContext("com.android.shell", 0)
+            val managerClass = Class.forName("android.hardware.bydauto.BYDAutoDeviceManager")
+            manager = checkNotNull(managerClass.getMethod("getInstance", Context::class.java).invoke(null, context))
+            setIntArray = managerClass.methods.first {
+                it.name == "setIntArray" && it.parameterTypes.contentEquals(
+                    arrayOf(Int::class.javaPrimitiveType, IntArray::class.java, IntArray::class.java))
+            }
+            val audio = Class.forName("android.hardware.bydauto.audio.BYDAutoAudioDevice")
+            val device = checkNotNull(audio.getMethod("getInstance", Context::class.java).invoke(null, context))
+            type = (audio.getMethod("getDevicetype").invoke(device) as Number).toInt()
+        }
+
+        fun send(bands: IntArray): Int = (setIntArray.invoke(manager, type, featureIds(), bands) as Number).toInt()
     }
 }

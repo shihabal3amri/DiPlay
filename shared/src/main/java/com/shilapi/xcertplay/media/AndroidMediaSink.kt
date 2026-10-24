@@ -270,7 +270,6 @@ class AndroidMediaSink(
     private val microphoneUplinks = ConcurrentHashMap<AudioStreamId, MicrophoneUplink>()
     private val audioModeLock = Any()
     private var communicationModeStream: AudioStreamId? = null
-    private var savedAudioMode = AudioManager.MODE_NORMAL
     private var callSpeaker: CallSpeaker? = null // guarded by audioModeLock
     private var earpieceFallbackTried = false // guarded by audioModeLock
     private val pendingVideoCodec = ConcurrentHashMap<Int, VideoCodec>()
@@ -550,7 +549,8 @@ class AndroidMediaSink(
                     inputSource = microphoneInputSource(),
                     configureInput = { recorder -> MicrophoneInput.applyDevice(recorder, audioManager, selectedDevice) },
                     speakerphoneCall = speakerphoneCall,
-                    echoReference = if (config.audioType == TELEPHONY_AUDIO_TYPE) callEchoReferences[id] else null)
+                    echoReference = if (config.audioType == TELEPHONY_AUDIO_TYPE) callEchoReferences[id] else null,
+                    audioManager = audioManager)
             }
             if (!uplink.start()) {
                 microphoneUplinks.remove(id, uplink)
@@ -576,18 +576,18 @@ class AndroidMediaSink(
         synchronized(audioModeLock) {
             if (communicationModeStream != null) return
             // Select the HAL communication path before AudioRecord is created.
-            savedAudioMode = manager.mode
+            val before = manager.mode
             manager.mode = AudioManager.MODE_IN_COMMUNICATION
             communicationModeStream = id
             earpieceFallbackTried = false
             val speakerRequested = runCatching(callSpeakerphone).getOrDefault(false)
             if (speakerRequested) callSpeaker = CallSpeaker.on(manager)
-            Log.i("xcertplay-usb", "audio mode $savedAudioMode -> ${manager.mode} for telephony stream=$id")
+            Log.i("xcertplay-usb", "audio mode $before -> ${manager.mode} for telephony stream=$id")
             // The report, not just logcat: a head unit left in the voice path plays no media,
             // and that cannot be diagnosed from a car without adb. A failing report must not
             // disturb the mode, so it is the last thing done and it cannot throw out of here.
             runCatching {
-                onAudioDiagnostic("Audio: mode entered communication from=$savedAudioMode" +
+                onAudioDiagnostic("Audio: mode entered communication from=$before" +
                     " now=${manager.mode} stream=$id" +
                     if (speakerRequested) " loudspeaker=${callSpeaker != null}" else "")
             }
@@ -622,13 +622,17 @@ class AndroidMediaSink(
             // The report is built inside the try but sent outside it: reporting from in there
             // would let a failing callback be caught as a failed restore.
             val line = try {
-                manager.mode = savedAudioMode
+                // AudioService keeps one mode request per process and uses the newest. Setting back the mode found
+                // at the start would keep DiPlay asking for it after the process that set it, such as the Telecom
+                // call for the car's phone audio, lets go, and the head unit stays in the voice path (#987).
+                // MODE_NORMAL withdraws DiPlay's request: the mode returns to another process's, or to normal.
+                manager.mode = AudioManager.MODE_NORMAL
                 Log.i("xcertplay-usb", "audio mode restored to ${manager.mode}")
-                "Audio: mode restored requested=$savedAudioMode now=${manager.mode} stream=$active"
+                "Audio: mode restored requested=${AudioManager.MODE_NORMAL} now=${manager.mode} stream=$active"
             } catch (error: RuntimeException) {
-                Log.w("xcertplay-usb", "could not restore audio mode $savedAudioMode", error)
+                Log.w("xcertplay-usb", "could not restore audio mode", error)
                 val currentMode = runCatching { manager.mode.toString() }.getOrDefault("unknown")
-                "Audio: mode restore failed requested=$savedAudioMode now=$currentMode" +
+                "Audio: mode restore failed requested=${AudioManager.MODE_NORMAL} now=$currentMode" +
                     " error=${error.javaClass.simpleName}"
             }
             runCatching { onAudioDiagnostic(line) }
@@ -1776,9 +1780,6 @@ private class AudioRenderer(
     private var track: AudioTrack? = null
     @Volatile private var navigationAttenuationDb = 0
     private var appliedNavigationAttenuationDb: Int? = null
-    private var lastNavigationGainAttemptDb: Int? = null
-    private var lastNavigationGainFailureNs = 0L
-    private var reportedNavigationGainFailureDb: Int? = null
     private var pcm = ByteArray(64 * 1024)
     private var playbackStarted = false
     private var prebufferBytes = 0
@@ -1803,6 +1804,7 @@ private class AudioRenderer(
     private val ambientMedia = AmbientMusicActivityPolicy.acceptsAudio(format.audioType, format.payloadType)
     private val ambientEnvelope = AmbientMusicEnvelope()
     private val ambientBass = AmbientMusicBassAnalyzer(format.sampleRate, pcmChannels)
+    private val ambientBands = AmbientMusicBandAnalyzer(format.sampleRate, pcmChannels)
     private var ambientRendererToken = 0L
     private var writtenFramesThisWindow = 0L
     private var writeErrorsThisWindow = 0
@@ -2105,33 +2107,25 @@ private class AudioRenderer(
         navigationAttenuationDb = NavigationAudioGain.clamp(db)
     }
 
-    /** Worker-thread only: never call AudioTrack APIs from a Settings callback. */
+    /**
+     * Worker-thread only. The guidance is scaled in [attenuateNavigation] as it is written, not with
+     * AudioTrack.setVolume: on a BYD DiLink 3.0 the track accepted every setVolume and the guidance on
+     * stream 14 stayed as loud (#719). Each change is reported once, when it reaches this stream.
+     */
     private fun applyNavigationAttenuation() {
         if (mappedChannel != AudioChannel.NAVIGATION) return
-        val playingTrack = track ?: return
         val requestedDb = navigationAttenuationDb
         // Leave default playback exactly as it was before this setting existed.
         if (requestedDb == 0 && appliedNavigationAttenuationDb == null) return
         if (appliedNavigationAttenuationDb == requestedDb) return
-        // Some head units reject setVolume for an entire stream. Avoid retrying on every
-        // 10 ms poll/PCM write and flooding diagnostics, but recover from transient failures.
-        if (lastNavigationGainAttemptDb == requestedDb && lastNavigationGainFailureNs != 0L &&
-            System.nanoTime() - lastNavigationGainFailureNs < NAVIGATION_GAIN_RETRY_NS) return
-        val gain = NavigationAudioGain.linear(requestedDb)
-        val success = runCatching { playingTrack.setVolume(gain) == AudioTrack.SUCCESS }.getOrDefault(false)
-        lastNavigationGainAttemptDb = requestedDb
-        if (success) {
-            appliedNavigationAttenuationDb = requestedDb
-            lastNavigationGainFailureNs = 0L
-            reportedNavigationGainFailureDb = null
-            runCatching { report("Audio: navigation attenuation=" + requestedDb + "dB applied=true") }
-        } else {
-            lastNavigationGainFailureNs = System.nanoTime()
-            if (reportedNavigationGainFailureDb != requestedDb) {
-                reportedNavigationGainFailureDb = requestedDb
-                runCatching { report("Audio: navigation attenuation=" + requestedDb + "dB applied=false") }
-            }
-        }
+        appliedNavigationAttenuationDb = requestedDb
+        runCatching { report("Audio: navigation attenuation=" + requestedDb + "dB applied=true") }
+    }
+
+    /** Lowers navigation guidance in the PCM itself; other channels and 0 dB pass through untouched. */
+    private fun attenuateNavigation(data: ByteArray, offset: Int, length: Int) {
+        if (mappedChannel != AudioChannel.NAVIGATION) return
+        NavigationAudioGain.scalePcm16(data, offset, length, navigationAttenuationDb)
     }
 
     private fun audioAttributesFor(
@@ -2449,14 +2443,14 @@ private class AudioRenderer(
             )
         }
         voiceFilter?.process(data, offset, length)
+        applyNavigationAttenuation()
+        attenuateNavigation(data, offset, length)
         if (!fadeApplied) {
             applyFadeIn(data, offset, length)
             fadeApplied = true
         }
         var written = 0
         while (written < length && running) {
-            // Long-running PCM writes may span several slider adjustments.
-            applyNavigationAttenuation()
             val writeLength = if (playbackStarted) {
                 length - written
             } else {
@@ -2480,7 +2474,8 @@ private class AudioRenderer(
             if (ambientMedia && AmbientMusicController.wantsPcm(ambientRendererToken)) {
                 ambientEnvelope.append(totalWrittenFrames, framesWritten.toLong(),
                     AmbientMusicEnvelope.pcmRms(data, offset + written, count),
-                    ambientBass.rms(data, offset + written, count))
+                    ambientBass.rms(data, offset + written, count),
+                    if (AmbientMusicController.wantsBands(ambientRendererToken)) ambientBands.analyze(data, offset + written, count) else null)
             }
             written += count
             totalWrittenFrames += framesWritten
@@ -2737,7 +2732,6 @@ private class AudioRenderer(
         const val INPUT_TIMEOUT_US = 10_000L
         const val AUDIO_INPUT_WAIT_NS = 100_000_000L
         const val AUDIO_POLL_MILLIS = 10L
-        const val NAVIGATION_GAIN_RETRY_NS = 500_000_000L
         const val BUFFER_TAIL_WAIT_NS = 500_000_000L
         // Holds a burst after a Wi-Fi gap (~4 s of AAC) instead of dropping it.
         const val MAX_QUEUED_PACKETS = 192

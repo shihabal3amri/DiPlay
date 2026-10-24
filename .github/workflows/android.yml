@@ -1,7 +1,7 @@
 name: Android checks
 on:
   push:
-    branches: [main]
+    branches: [main, fx11]
   pull_request:
   workflow_dispatch:
 permissions:

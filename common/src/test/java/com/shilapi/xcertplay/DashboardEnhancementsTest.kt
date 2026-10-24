@@ -17,7 +17,7 @@ import org.robolectric.util.ReflectionHelpers
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [29])
 class DashboardEnhancementsTest {
-    @Test fun positionUpdatesKeepCoverButNewTrackTransferAndDisconnectClearIt() {
+    @Test fun positionAndPendingTrackUpdatesKeepCoverButDisconnectAndRecycledArtClearIt() {
         var latest = ClusterMusicState.Snapshot()
         val stop = ClusterMusicState.observe { latest = it }
         fun publish(info: CarPlayNowPlaying, art: Bitmap? = null) {
@@ -32,9 +32,9 @@ class DashboardEnhancementsTest {
             publish(first.copy(durationMillis = 123000)); assertSame(art, latest.artwork)
             publish(first.copy(durationMillis = 123500)); assertSame(art, latest.artwork)
             publish(first.copy(elapsedMillis = 60000))
-            publish(first.copy(title = "Two", elapsedMillis = 0)); assertNull(latest.artwork)
+            publish(first.copy(title = "Two", elapsedMillis = 0)); assertSame(art, latest.artwork)
             publish(first, art)
-            publish(first.copy(artworkTransferId = 5)); assertNull(latest.artwork)
+            publish(first.copy(artworkTransferId = 5)); assertSame(art, latest.artwork)
             publish(first, art)
             publish(CarPlayNowPlaying()); assertNull(latest.artwork)
             publish(first); assertNull(latest.artwork)

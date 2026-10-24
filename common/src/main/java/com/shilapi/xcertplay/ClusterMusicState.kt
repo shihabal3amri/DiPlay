@@ -27,14 +27,13 @@ internal object ClusterMusicState {
     fun publish(info: CarPlayNowPlaying, artwork: Bitmap?) {
         main.post {
             val changed = trackChanged(state.info, info)
-            // A position-only update may have no cache entry after LRU eviction or a failed
-            // duplicate artwork transfer. Keep the current cover only for the same track/id.
+            // Keep the previous decoded cover while a new transfer is pending, including
+            // metadata-only updates. An empty disconnect snapshot clears it.
             val hasTrack = !info.title.isNullOrBlank() || !info.artist.isNullOrBlank() || !info.album.isNullOrBlank()
-            // Use the publisher's album identity: title may carry lyrics and source/album metadata
-            // may arrive after the picture. Strict title equality used to clear a valid cover.
+            // Keep album identity in diagnostics without clearing a valid pending cover.
             val sameCover = !albumTrackChanged(state.info, info)
             val cover = if (!hasTrack) null else artwork?.takeUnless { it.isRecycled }
-                ?: state.artwork?.takeIf { !it.isRecycled && sameCover }
+                ?: state.artwork?.takeIf { !it.isRecycled }
             if (artwork == null && cover != null) retainedCoverUpdates++
             if (state.artwork !== cover) {
                 lastCoverChange = when {

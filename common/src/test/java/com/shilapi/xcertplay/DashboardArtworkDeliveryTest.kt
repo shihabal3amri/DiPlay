@@ -52,15 +52,15 @@ class DashboardArtworkDeliveryTest {
             deliver(null)
             update(info.copy(elapsedMillis = 110000)); assertSame(art, latest.artwork)
             assertSame(art, ReflectionHelpers.getField<Bitmap>(CarPlayMediaKeys, "artwork"))
-            // Reused artwork IDs must not carry the old cover across a confirmed song restart.
+            // Metadata arriving after artwork must not invalidate the decode owner.
+            // Keep the previous cover until a replacement arrives.
             val oldOwner: Any = ReflectionHelpers.getField(CarPlayMediaKeys, "artworkOwner")
             update(info.copy(title = "Next song", elapsedMillis = 0))
-            assertNull(latest.artwork)
-            val stale = Bitmap.createBitmap(2, 2, Bitmap.Config.ARGB_8888)
-            deliver(stale, oldOwner); assertTrue(stale.isRecycled); assertNull(latest.artwork)
+            assertSame(art, latest.artwork)
+            assertSame(oldOwner, ReflectionHelpers.getField<Any>(CarPlayMediaKeys, "artworkOwner"))
             deliver(secondArt); assertSame(secondArt, latest.artwork)
             update(info.copy(elapsedMillis = 1000)); assertSame(secondArt, latest.artwork)
-            update(info.copy(artworkTransferId = 8)); assertNull(latest.artwork)
+            update(info.copy(artworkTransferId = 8)); assertSame(secondArt, latest.artwork)
             deliver(art); assertSame(art, latest.artwork)
             // The new reference/cover can arrive before the new artist, album and duration.
             // Retained fields still describe the preceding song until these later packets arrive.
@@ -71,6 +71,10 @@ class DashboardArtworkDeliveryTest {
             update(info.copy(artist = "Next singer", album = "Next album", durationMillis = 240000))
             assertSame(art, latest.artwork)
             CarPlayMediaKeys.detach(controller); shadowOf(Looper.getMainLooper()).idle()
+            assertNull(latest.artwork)
+            val stale = Bitmap.createBitmap(2, 2, Bitmap.Config.ARGB_8888)
+            deliver(stale, oldOwner)
+            assertTrue(stale.isRecycled)
             assertNull(latest.artwork)
         } finally {
             CarPlayMediaKeys.detach(controller); shadowOf(Looper.getMainLooper()).idle(); stop()

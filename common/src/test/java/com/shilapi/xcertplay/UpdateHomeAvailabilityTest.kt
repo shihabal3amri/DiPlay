@@ -90,6 +90,22 @@ class UpdateHomeAvailabilityTest {
         } finally { controller.pause().stop().destroy() }
     }
 
+    @Test fun anUpdateFoundWhileDiPlayWasInTheBackgroundShowsWhenHomeReturns() {
+        val controller = Robolectric.buildActivity(DiPlayActivity::class.java).setup()
+        val activity = controller.get()
+        val text = activity.getString(R.string.update_available_home)
+        fun shown() = descendants(activity.window.decorView).filterIsInstance<TextView>().any { it.text == text }
+        assertFalse(shown())
+
+        // The check after opening finds a release while CarPlay is in front.
+        controller.pause().stop()
+        UpdateAvailability.save(application, release())
+        controller.start().resume()
+
+        assertTrue(shown())
+        controller.pause().stop().destroy()
+    }
+
     private fun release() = UpdateRelease(
         tagName = "v99.0.0",
         apkName = "DiPlay.apk",
