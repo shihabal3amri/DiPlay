@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="picture_adjustments">Réglages de l’image</string>
+    <string name="picture_live_hint">Appliqués en direct sur la vidéo CarPlay principale. Les modifications sont enregistrées immédiatement. « Original » est une comparaison temporaire.</string>
+    <string name="picture_show_original">Afficher l’original</string>
+    <string name="picture_done">Terminé</string>
+    <string name="picture_brightness">Luminosité</string>
+    <string name="picture_contrast">Contraste</string>
+    <string name="picture_saturation">Saturation</string>
+    <string name="picture_warmth">Chaleur</string>
+    <string name="picture_reset">Réinitialiser l’image</string>
+</resources>

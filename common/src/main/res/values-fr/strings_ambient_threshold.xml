@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ambient_light_threshold_title">Seuil de luminosité</string>
+    <string name="ambient_light_threshold_summary">%1$d lux</string>
+    <string name="ambient_light_threshold_value">Seuil de basculement (lux)</string>
+    <string name="ambient_light_threshold_hint">En dessous du seuil (lux), le mode nuit est choisi ; à partir du seuil, c’est le mode jour. Les mesures doivent rester du nouveau côté pendant le délai choisi. Saisissez un nombre entier de 1 à 200000.</string>
+    <string name="ambient_light_threshold_error">Saisissez un nombre entier de 1 à 200000.</string>
+    <string name="ambient_light_reset_defaults">Rétablir la valeur par défaut</string>
+</resources>

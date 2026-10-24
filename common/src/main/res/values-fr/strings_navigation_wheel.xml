@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_navigation_wheel_volume">Volume au volant pendant le guidage de navigation (expérimental)</string>
+    <string name="settings_navigation_wheel_volume_description">Pendant le guidage vocal de CarPlay, les touches de volume règlent le flux audio de navigation sélectionné. Sinon, les touches suivent l’autoradio. Nécessite l’autorisation d’accessibilité des touches du volant. Les appels, le zoom de la carte et le joystick restent prioritaires. Testé en local sur un autoradio Tang plateforme 21 ; le test en voiture en amont est en attente. Le routage automatique ou média n’est pas intercepté.</string>
+    <string name="settings_navigation_wheel_service_required">Autorisez le service d’accessibilité des touches du volant dans les paramètres d’Android, ou utilisez le bouton d’autorisation ADB existant.</string>
+</resources>
