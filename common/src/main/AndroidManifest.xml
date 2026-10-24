@@ -89,6 +89,22 @@
                 android:resource="@xml/usb_device_filter" />
         </activity>
 
+        <!-- The same CarPlay screen declared with the application's default task affinity (no
+             android:taskAffinity), so launchers whose picture-in-picture card shows only the main
+             page's task (e.g. Dudu desktop) keep showing CarPlay. CarPlayHostLauncher picks this
+             component when the "same task" setting is on. A real activity is required rather than
+             an activity-alias: an alias always inherits the target activity's taskAffinity at
+             package parse time (AOSP PackageParser.parseActivityAlias), so it cannot change it. -->
+        <activity
+            android:name="com.shilapi.xcertplay.CarPlayHostActivityMainTask"
+            android:configChanges="density|keyboardHidden|orientation|screenLayout|screenSize|smallestScreenSize|uiMode"
+            android:exported="false"
+            android:launchMode="singleTask"
+            android:resizeableActivity="true"
+            android:screenOrientation="fullSensor"
+            android:theme="@style/Theme.Xcertplay"
+            android:windowSoftInputMode="adjustResize" />
+
         <activity
             android:name="com.shilapi.xcertplay.AdbClusterActivity"
             android:label="@string/adb_cluster_activity_label"

@@ -27,6 +27,7 @@ Changes through DiPlay 0.2.21 are documented in [0.2.21 release notes](RELEASE-N
 - **Settings → Display → Frame rate** shows a rate set in the quick menu, such as 45 fps, instead of "30 fps", and 30 fps can be chosen from it again. [#934](https://github.com/shihabal3amri/DiPlay/pull/934)
 - The quick menu's display summary names the size DiPlay actually requests, and its video and full-screen lines are in the menu's language. [#923](https://github.com/shihabal3amri/DiPlay/pull/923)
 - After the CarPlay screen is recreated during a session, for example by a language change, day/night changes and the Siri and wheel keys reach the iPhone again. [#933](https://github.com/shihabal3amri/DiPlay/pull/933)
+- **CarPlay picture-in-picture support (experimental)**, off by default under **Settings → Advanced → Third-party launcher support**, keeps the CarPlay screen in the main page's task so third-party desktops whose picture-in-picture card can only show that task (e.g. Dudu desktop) keep showing CarPlay after it opens. Since 0.2.12 the CarPlay screen runs in a task of its own, which the card cannot display; this restores the 0.2.11 behavior on request. Takes effect the next time CarPlay opens; leave disabled to keep CarPlay in its own task. ([#1003](https://github.com/shihabal3amri/DiPlay/issues/1003), [#463](https://github.com/shihabal3amri/DiPlay/issues/463))
 
 ## Audio, calls and Siri
 

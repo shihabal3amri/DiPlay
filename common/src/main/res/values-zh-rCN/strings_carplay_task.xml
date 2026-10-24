@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_launcher_support">三方启动器支持</string>
+    <string name="carplay_same_task">CarPlay 画中画支持（实验性）</string>
+    <string name="carplay_same_task_hint">第三方桌面（如嘟嘟桌面）将 CarPlay 画面显示在其画中画卡片内，而卡片只能显示 DiPlay 主页面所在的任务。自 0.2.12 起 CarPlay 页面运行在独立任务中，打开 CarPlay 后卡片即失去画面。开启后 CarPlay 页面与主页面保持同一任务，可在卡片内持续显示。下次打开 CarPlay 时生效。</string>
+</resources>

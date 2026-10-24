@@ -125,6 +125,7 @@ object AirPlayPersistence {
     private const val KEY_MAIN_DISPLAY_DISABLE_SAFE_AREA = "main_display_disable_safe_area"
     private const val KEY_BLACK_CORNER_RADIUS = "black_corner_radius_dp"
     private const val KEY_ADAPT_PIP_RESOLUTION = "adapt_pip_resolution"
+    private const val KEY_CARPLAY_SAME_TASK = "carplay_same_task"
     private const val KEY_AUTO_START_ON_BOOT = "auto_start_on_boot"
     private const val KEY_BT_SUSPEND_DURING_CARPLAY = "bt_suspend_during_carplay"
     private const val KEY_HIDE_BYD_CALL_POPUP = "hide_byd_call_popup"
@@ -992,6 +993,14 @@ object AirPlayPersistence {
 
     fun saveAdaptPipResolution(context: Context, enabled: Boolean) {
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putBoolean(KEY_ADAPT_PIP_RESOLUTION, enabled).apply()
+    }
+
+    /** Whether to run the CarPlay screen in the same task as the main page (launcher picture-in-picture compatibility). */
+    fun loadCarPlaySameTask(context: Context): Boolean =
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getBoolean(KEY_CARPLAY_SAME_TASK, false)
+
+    fun saveCarPlaySameTask(context: Context, enabled: Boolean) {
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putBoolean(KEY_CARPLAY_SAME_TASK, enabled).apply()
     }
 
     fun loadClusterContent(context: Context): CarPlayClusterDisplay.Content =

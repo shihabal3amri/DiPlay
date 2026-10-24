@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_launcher_support">Compatibilidad con lanzadores de terceros</string>
+    <string name="carplay_same_task">Compatibilidad de imagen en imagen de CarPlay (experimental)</string>
+    <string name="carplay_same_task_hint">Los escritorios de terceros (p. ej. Dudu desktop) muestran CarPlay en su tarjeta de imagen en imagen, que solo puede mostrar la tarea de la página principal de DiPlay. Desde la versión 0.2.12 la pantalla de CarPlay se ejecuta en una tarea propia, por lo que la tarjeta pierde la imagen en cuanto CarPlay se abre. Activa esta opción para mantener la pantalla de CarPlay en la misma tarea que la página principal y que siga visible dentro de la tarjeta. Se aplica la próxima vez que abras CarPlay.</string>
+</resources>

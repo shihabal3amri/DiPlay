@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_launcher_support">Third-party launcher support</string>
+    <string name="carplay_same_task">CarPlay picture-in-picture support (experimental)</string>
+    <string name="carplay_same_task_hint">Third-party desktops (e.g. Dudu desktop) show CarPlay in their picture-in-picture card, which can only display the task of DiPlay\'s main page. Since 0.2.12 the CarPlay screen runs in a task of its own, so the card loses it as soon as CarPlay opens. Enable this to keep the CarPlay screen in the main page\'s task so it stays visible inside the card. Takes effect the next time CarPlay opens.</string>
+</resources>

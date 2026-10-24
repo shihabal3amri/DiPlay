@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_launcher_support">دعم مشغّلات الطرف الثالث</string>
+    <string name="carplay_same_task">دعم صورة داخل صورة لـ CarPlay (تجريبي)</string>
+    <string name="carplay_same_task_hint">تعرض أجهزة سطح المكتب من الطرف الثالث (مثل دودو ديسكتوب) CarPlay داخل بطاقة الصورة داخل الصورة، لكن البطاقة لا يمكنها عرض سوى مهمة الصفحة الرئيسية لتطبيق DiPlay. منذ الإصدار 0.2.12 تعمل شاشة CarPlay في مهمة منفصلة، لذلك تفقد البطاقة الشاشة بمجرد فتح CarPlay. فعّل هذا الخيار لتظل شاشة CarPlay في نفس مهمة الصفحة الرئيسية وتظهر داخل البطاقة باستمرار. يسري التغيير عند فتح CarPlay في المرة القادمة.</string>
+</resources>

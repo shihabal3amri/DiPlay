@@ -129,6 +129,7 @@ internal enum class SettingsSection {
     LOCATION,
     CLUSTER_MAP,
     LAUNCHER_BUBBLE,
+    LAUNCHER_SUPPORT,
     BYD_NAVIGATION,
     PERMISSIONS_AND_HELP,
     LANGUAGE,
@@ -158,6 +159,7 @@ internal object SettingsInformationArchitecture {
         SettingsCategory.ADVANCED to setOf(
             SettingsSection.CLUSTER_MAP,
             SettingsSection.LAUNCHER_BUBBLE,
+            SettingsSection.LAUNCHER_SUPPORT,
             SettingsSection.EXPERIMENTAL_DISPLAY,
             SettingsSection.ADVANCED_MEDIA,
             SettingsSection.NAVIGATION_WHEEL,
@@ -1905,8 +1907,8 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
             scheduleTimeControl(scheduleControls, start = false)
             card.addView(scheduleControls)
             card.addView(button(getString(R.string.picture_adjustments), false) {
-                OwnScreenStart.start(this, Intent(this, CarPlayHostActivity::class.java)
-                    .putExtra("picture_controls", true).addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT))
+                OwnScreenStart.start(this, CarPlayHostLauncher.intent(this, Intent.FLAG_ACTIVITY_REORDER_TO_FRONT)
+                    .putExtra("picture_controls", true))
             }, matchButton(0, 56).apply { bottomMargin = dp(24) })
             carPlaySizeControl(card)
             resolutionSettingControl(
@@ -2139,6 +2141,16 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
                 val overlay = LauncherBubble.permitted(this)
                 card.addView(label(if (overlay) getString(R.string.center_map_overlay_allowed)
                     else getString(R.string.center_map_overlay_missing, packageName), 14, if (overlay) MUTED else WARNING))
+            }
+        }
+        // Third-party launchers (e.g. Dudu desktop on BYD head units) embed DiPlay's main task in
+        // their picture-in-picture card, which can only show that task; since 0.2.12 the CarPlay
+        // screen runs in a task of its own, so the card loses it when CarPlay opens. This switch
+        // keeps CarPlay in the main page's task instead.
+        filteredSection(content, SettingsSection.LAUNCHER_SUPPORT,
+            getString(R.string.settings_launcher_support), R.drawable.ic_dp_bubble) { card ->
+            toggle(card, getString(R.string.carplay_same_task), getString(R.string.carplay_same_task_hint), AirPlayPersistence.loadCarPlaySameTask(this)) {
+                AirPlayPersistence.saveCarPlaySameTask(this, it)
             }
         }
         // Cluster video does not require a BYD navigation broadcast receiver.
@@ -5734,7 +5746,7 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
         else open()
     }
     private fun openProjection() {
-        OwnScreenStart.start(this, Intent(this, CarPlayHostActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT))
+        OwnScreenStart.start(this, CarPlayHostLauncher.intent(this, Intent.FLAG_ACTIVITY_REORDER_TO_FRONT))
     }
     private fun choosePhone() {
         if (Build.VERSION.SDK_INT >= 31 && checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {

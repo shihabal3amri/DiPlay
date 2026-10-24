@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_launcher_support">サードパーティ製ランチャーのサポート</string>
+    <string name="carplay_same_task">CarPlay のピクチャーインピクチャー対応（実験的）</string>
+    <string name="carplay_same_task_hint">サードパーティ製デスクトップ（例：Dudu デスクトップ）は CarPlay をピクチャーインピクチャーカード内に表示しますが、そのカードは DiPlay メインページのタスクのみ表示できます。0.2.12 以降、CarPlay 画面は独立したタスクで動作するため、CarPlay を開くとカードから画面が消えます。この設定を有効にすると、CarPlay 画面はメインページと同じタスクで動作し、カード内に表示され続けます。次回 CarPlay を開いたときに有効になります。</string>
+</resources>

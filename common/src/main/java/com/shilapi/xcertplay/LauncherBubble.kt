@@ -305,14 +305,13 @@ internal object LauncherBubble {
 
     /** CarPlay when a session is up, the settings screen otherwise. */
     private fun openCarPlay(context: Context) {
-        val target = if (CarPlayGlance.snapshot().connected) {
-            CarPlayHostActivity::class.java
+        val intent = if (CarPlayGlance.snapshot().connected) {
+            CarPlayHostLauncher.intent(context, Intent.FLAG_ACTIVITY_NEW_TASK)
         } else {
-            DiPlayActivity::class.java
+            Intent(context, DiPlayActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         }
-        val intent = Intent(context, target).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         runCatching { context.startActivity(intent) }
-            .onSuccess { Log.i(TAG, "bubble opened ${target.simpleName}") }
+            .onSuccess { Log.i(TAG, "bubble opened ${intent.component?.className?.substringAfterLast('.')}") }
             .onFailure { Log.w(TAG, "bubble open failed", it) }
     }
 

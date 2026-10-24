@@ -138,7 +138,7 @@ import kotlin.math.roundToInt
  *
  * Apple devices are discovered by vendor ID; CH341 uses the configured VID/PID below.
  */
-class CarPlayHostActivity : ComponentActivity() {
+open class CarPlayHostActivity : ComponentActivity() {
     private data class SettingsBaseline(
         val safeAreaRects: MutableMap<DisplaySize, SafeAreaRect?>,
         val customIconBytes: ByteArray?,
@@ -829,6 +829,7 @@ class CarPlayHostActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        if (redirectToConfiguredTask()) return
         val bluetoothState = IntentFilter(BluetoothAdapter.ACTION_STATE_CHANGED)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             registerReceiver(bluetoothOnReceiver, bluetoothState, Context.RECEIVER_NOT_EXPORTED)
@@ -894,6 +895,31 @@ class CarPlayHostActivity : ComponentActivity() {
         } else {
             microphonePermission.launch(Manifest.permission.RECORD_AUDIO)
         }
+    }
+
+    /**
+     * Re-routes this screen to the task the "same task" setting asks for when it was started through
+     * the other component (a USB attach, for example, always targets the .carplay activity). The
+     * setting takes effect from the next open; an instance already running in the other task keeps
+     * its task until then.
+     */
+    private fun redirectToConfiguredTask(): Boolean {
+        val sameTask = AirPlayPersistence.loadCarPlaySameTask(this)
+        val launchedAs = intent?.component?.className
+        val wantMainTask = sameTask
+        if (wantMainTask && launchedAs == CarPlayHostActivity::class.java.name) {
+            appendLog("Host: opened in its own task while \"same task\" is on; re-opening in the main task")
+            OwnScreenStart.start(this, CarPlayHostLauncher.intent(this, Intent.FLAG_ACTIVITY_REORDER_TO_FRONT), ::appendLog)
+            finish()
+            return true
+        }
+        if (!wantMainTask && launchedAs == CarPlayHostActivityMainTask::class.java.name) {
+            appendLog("Host: opened in the main task while \"same task\" is off; re-opening in its own task")
+            OwnScreenStart.start(this, CarPlayHostLauncher.intent(this, Intent.FLAG_ACTIVITY_REORDER_TO_FRONT), ::appendLog)
+            finish()
+            return true
+        }
+        return false
     }
 
     private fun loadPersistedSettings() {
@@ -1854,7 +1880,7 @@ class CarPlayHostActivity : ComponentActivity() {
         }
         if (CenterMapOverlay.shown) return
         val shown = CenterMapOverlay.show(applicationContext, MapMirrors.streamAspect, ::onCenterMapSurface) {
-            OwnScreenStart.start(this, Intent(this, CarPlayHostActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK), ::appendLog)
+            OwnScreenStart.start(this, CarPlayHostLauncher.intent(this, Intent.FLAG_ACTIVITY_NEW_TASK), ::appendLog)
         }
         appendLog("Centre map: card ${if (shown) "shown" else "failed"} streamActive=${SCREEN_TYPE_ALT in activeScreenStreamTypes}")
     }
@@ -5552,6 +5578,8 @@ class CarPlayHostActivity : ComponentActivity() {
         val effectiveSize = if (isMultiWindowActive() && !AirPlayPersistence.loadAdaptPipResolution(this) &&
             maximumDetectedWidthPixels >= size.width && maximumDetectedHeightPixels >= size.height &&
             (maximumDetectedWidthPixels > size.width || maximumDetectedHeightPixels > size.height)) {
+            // A split window that has been seen smaller negotiates the largest canvas seen, so
+            // returning to it keeps the session instead of reconnecting.
             DisplaySize(maximumDetectedWidthPixels, maximumDetectedHeightPixels)
         } else {
             size
