@@ -144,7 +144,7 @@
     <string name="carplay_session_ended_reconnecting">CarPlay 会话已结束；正在重新连接</string>
     <string name="carplay_settings">CarPlay 设置</string>
     <string name="carplay_size">CarPlay 尺寸</string>
-    <string name="changes_the_size_of_carplay_icons_and_text_applying_a_size">更改 CarPlay 图标和文字的大小。应用尺寸后会重新连接 CarPlay。</string>
+    <string name="changes_the_size_of_carplay_icons_and_text_applying_a_size">放大 CarPlay 图标和文字可选择“超大”或“最大”，具体布局取决于 iPhone。应用尺寸后会重新连接 CarPlay。</string>
     <string name="channel_0_auto">信道（0 = 自动）</string>
     <string name="channel_is_not_valid_for_the_selected_band">所选频段不支持此信道</string>
     <string name="channel_must_be_0_or_1_196">信道必须为 0 或 1–196</string>
@@ -427,6 +427,8 @@
     <string name="your_phone_your_drive">你的手机，畅享旅程。</string>
     <string name="your_report_was_saved_to_the_selected_location">报告已保存到所选位置。</string>
     <string name="cluster_waiting_for_map">DiPlay · 等待 CarPlay 地图</string>
+    <string name="settings_carplay_size_extra_large">超大</string>
+    <string name="settings_carplay_size_largest">最大</string>
     <string name="option_size_large">大</string>
     <string name="option_size_medium">中</string>
     <string name="option_size_small">小</string>

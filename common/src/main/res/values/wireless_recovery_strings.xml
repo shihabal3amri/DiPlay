@@ -1,0 +1,4 @@
+<resources>
+    <string name="ultra_retries_exhausted">Ultra connection did not complete. Automatic retries stopped. Save a diagnostic report, then retry manually or switch to ordinary CarPlay.</string>
+    <string name="wireless_handoff_timeout">Wireless CarPlay control handoff timed out.</string>
+</resources>

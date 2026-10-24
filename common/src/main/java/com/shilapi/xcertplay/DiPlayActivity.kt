@@ -12,6 +12,7 @@ import android.bluetooth.BluetoothManager
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.content.res.ColorStateList
 import android.content.res.Configuration
@@ -111,6 +112,8 @@ internal enum class SettingsCategory {
 /** A settings card. Every entry needs one category in [SettingsInformationArchitecture]; see AGENTS.md. */
 internal enum class SettingsSection {
     CARPLAY_CONTROLS,
+    BOYUE_L,
+    BOYUE_DIM,
     WHEEL_KEYS,
     CONNECTION_SETUP,
     DIAGNOSTICS,
@@ -149,6 +152,7 @@ internal object SettingsInformationArchitecture {
         SettingsCategory.NAVIGATION to setOf(SettingsSection.LOCATION, SettingsSection.BYD_NAVIGATION),
         SettingsCategory.VEHICLE to setOf(
             SettingsSection.CARPLAY_CONTROLS,
+            SettingsSection.BOYUE_L,
             SettingsSection.WHEEL_KEYS,
             SettingsSection.CAR_BUTTON,
         ),
@@ -156,6 +160,7 @@ internal object SettingsInformationArchitecture {
         SettingsCategory.ADVANCED to setOf(
             SettingsSection.CLUSTER_MAP,
             SettingsSection.LAUNCHER_BUBBLE,
+            SettingsSection.BOYUE_DIM,
             SettingsSection.EXPERIMENTAL_DISPLAY,
             SettingsSection.ADVANCED_MEDIA,
             SettingsSection.NAVIGATION_WHEEL,
@@ -174,6 +179,29 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
     private var appearanceUpdatesResumed = false
     private var appearanceRenderPending = false
     private var appearanceButtonFocusPending = false
+    private var dashboardPreferencesObserved = false
+    private val dashboardSettingsRefresh = Runnable {
+        if (dashboardPreferencesObserved && !isFinishing && !isDestroyed) {
+            markReconnectNeeded()
+            render()
+        }
+    }
+    private val dashboardPreferenceListener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+        if (key == "style") {
+            handler.removeCallbacks(dashboardSettingsRefresh)
+            handler.post(dashboardSettingsRefresh)
+        }
+    }
+    private val dimSettingsRefresh = Runnable {
+        if (dashboardPreferencesObserved && !isFinishing && !isDestroyed && page == "settings") render()
+    }
+    private val dimPreferenceListener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+        if (key == "dim") { handler.removeCallbacks(dimSettingsRefresh); handler.post(dimSettingsRefresh) }
+    }
+    private var dashboardKeyLearningCancel: (() -> Unit)? = null
+    private var dashboardKeyLearningDialog: AlertDialog? = null
+    private var dashboardKeyLearningTimeout: Runnable? = null
+    private var dashboardKeyLearningGeneration = 0L
     private var windowLearning: WindowKeyLearning? = null
     private val windowLearningPresses = WheelKeyPresses()
     private val endWindowLearning = Runnable { cancelKeyLearning() }
@@ -372,6 +400,7 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        BoyueLSettings.migrateDashboardControls(this)
         // Back on the home page finishes this activity while the session runs on, so the icon lands here.
         if (savedInstanceState == null && isLauncherIntent(intent) && CarPlayBackgroundSession.hasSession()) {
             openProjection(); finish(); return
@@ -516,6 +545,8 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
 
     override fun onResume() {
         super.onResume()
+        observeDashboardSettings()
+        NativeDashboardService.refresh(this)
         WheelKeyService.restoreIfNeeded(this)
         applyFullscreenMode()
         // Returning from another activity can bring the head unit's own density back.
@@ -546,6 +577,8 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
         }
     }
     override fun onPause() {
+        cancelDashboardPageKeyLearning()
+        stopObservingDashboardSettings()
         appearanceUpdatesResumed = false
         appearanceObserverRemoval?.invoke()
         appearanceObserverRemoval = null
@@ -557,6 +590,8 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
     }
 
     override fun onDestroy() {
+        cancelDashboardPageKeyLearning()
+        stopObservingDashboardSettings()
         settingsSearchPopup?.dismiss()
         appearanceObserverRemoval?.invoke()
         appearanceObserverRemoval = null
@@ -989,7 +1024,7 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
         if (!compact) right.addView(label(getString(R.string.make_diplay_feel_right_for_your_car), 14, MUTED).apply { gravity = Gravity.CENTER; setPadding(0, dp(10), 0, dp(24)) })
         else right.addView(space(12))
         right.addView(label(getString(R.string.home_public_preview, version()), 12, MUTED).apply { letterSpacing = .08f })
-        availableUpdate?.let { release ->
+        availableUpdate?.takeUnless { UpdateAvailability.promptsDisabled(this) }?.let { release ->
             val message = getString(R.string.update_available_home)
             val tint = { alpha: Int -> (WARNING and 0x00FFFFFF) or (alpha shl 24) }
             val chip = GradientDrawable().apply {
@@ -1710,7 +1745,211 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
         }
     }
 
+    private fun observeDashboardSettings() {
+        if (dashboardPreferencesObserved) return
+        dashboardPreferencesObserved = true
+        getSharedPreferences("native_dashboard", MODE_PRIVATE).registerOnSharedPreferenceChangeListener(dashboardPreferenceListener)
+        getSharedPreferences("boyue_l", MODE_PRIVATE).registerOnSharedPreferenceChangeListener(dimPreferenceListener)
+    }
+    private fun stopObservingDashboardSettings() {
+        if (dashboardPreferencesObserved) {
+            getSharedPreferences("native_dashboard", MODE_PRIVATE).unregisterOnSharedPreferenceChangeListener(dashboardPreferenceListener)
+            getSharedPreferences("boyue_l", MODE_PRIVATE).unregisterOnSharedPreferenceChangeListener(dimPreferenceListener)
+            dashboardPreferencesObserved = false
+        }
+        handler.removeCallbacks(dashboardSettingsRefresh)
+        handler.removeCallbacks(dimSettingsRefresh)
+    }
+    private fun dashboardPageKeyLabel(): String {
+        val key = NativeDashboardSettings.pageKey(this)
+        return getString(R.string.settings_dashboard_page_key) + " · " +
+            if (key == 0) getString(R.string.settings_dashboard_page_unbound)
+            else getString(R.string.settings_dashboard_page_code, key)
+    }
+    private fun chooseDashboardPageKey() {
+        appDialogBuilder().setTitle(getString(R.string.settings_dashboard_page_key))
+            .setItems(arrayOf(getString(R.string.settings_dashboard_page_learn), getString(R.string.settings_dashboard_page_clear))) { _, which ->
+                if (which == 0) startDashboardPageKeyLearning()
+                else {
+                    cancelDashboardPageKeyLearning()
+                    NativeDashboardSettings.setPageKey(this, 0)
+                    GeelyWheelKeys.refresh()
+                    render()
+                }
+            }.setNegativeButton(android.R.string.cancel, null).show()
+    }
+    private fun startDashboardPageKeyLearning() {
+        cancelDashboardPageKeyLearning()
+        cancelKeyLearning()
+        val session = ++dashboardKeyLearningGeneration
+        dashboardKeyLearningDialog = appDialogBuilder().setTitle(getString(R.string.settings_dashboard_page_learn))
+            .setMessage(getString(R.string.settings_dashboard_page_learning))
+            .setNegativeButton(android.R.string.cancel, null).create().apply {
+                setOnDismissListener { if (dashboardKeyLearningGeneration == session) cancelDashboardPageKeyLearning() }
+                show()
+            }
+        try {
+            dashboardKeyLearningCancel = GeelyWheelKeys.learnDashboardPageKey(this) { code ->
+                if (session != dashboardKeyLearningGeneration || isFinishing || isDestroyed) return@learnDashboardPageKey
+                // Replace the prompt without ending the service-owned learning session. Its
+                // candidate is still inert until the driver confirms this exact button.
+                dashboardKeyLearningDialog?.setOnDismissListener(null)
+                dashboardKeyLearningDialog?.dismiss()
+                dashboardKeyLearningDialog = appDialogBuilder().setTitle(getString(R.string.settings_dashboard_page_key))
+                    .setMessage(getString(R.string.settings_dashboard_page_confirm, code))
+                    .setPositiveButton(R.string.save) { _, _ ->
+                        if (session == dashboardKeyLearningGeneration) {
+                            cancelDashboardPageKeyLearning()
+                            NativeDashboardSettings.setPageKey(this, code)
+                            GeelyWheelKeys.refresh()
+                            render()
+                        }
+                    }.setNegativeButton(android.R.string.cancel, null).create().apply {
+                        setOnDismissListener { if (dashboardKeyLearningGeneration == session) cancelDashboardPageKeyLearning() }
+                        show()
+                    }
+            }
+            dashboardKeyLearningTimeout = Runnable {
+                if (session == dashboardKeyLearningGeneration) {
+                    cancelDashboardPageKeyLearning()
+                    toast(getString(R.string.settings_dashboard_page_timeout))
+                }
+            }.also { handler.postDelayed(it, 45_000L) }
+        } catch (_: Exception) {
+            cancelDashboardPageKeyLearning()
+            toast(getString(R.string.settings_dashboard_page_failed))
+        }
+    }
+    private fun cancelDashboardPageKeyLearning() {
+        dashboardKeyLearningGeneration++
+        dashboardKeyLearningTimeout?.let(handler::removeCallbacks)
+        dashboardKeyLearningTimeout = null
+        val cancel = dashboardKeyLearningCancel
+        dashboardKeyLearningCancel = null
+        dashboardKeyLearningDialog?.setOnDismissListener(null)
+        dashboardKeyLearningDialog?.dismiss()
+        dashboardKeyLearningDialog = null
+        cancel?.invoke()
+    }
+    private fun nativeDashboardDiagnosticReport(context: Context): String = listOf(
+        "--- FX11 native dashboard and steering-wheel diagnostics ---",
+        "style=${NativeDashboardSettings.style(context)} page=${NativeDashboardSettings.mode(context)} pageKey=${NativeDashboardSettings.pageKey(context)}",
+        NativeDashboardService.status,
+        NativeDashboardRuntime.status,
+        AsyncDiagnosticLog.diagnostic(),
+        GeelyWheelKeys.diagnosticReport(),
+        BoyueVehicleIntegration.diagnosticReport(),
+    ).flatMap { it.lineSequence().toList() }.mapNotNull(DiagnosticRedactor::redact).joinToString("\n")
+
+    private fun captureNativeDashboardDiagnostics(context: Context): String {
+        if (Looper.myLooper() == Looper.getMainLooper()) return nativeDashboardDiagnosticReport(context)
+        val result = java.util.concurrent.CompletableFuture<String>()
+        handler.post {
+            runCatching { nativeDashboardDiagnosticReport(context) }
+                .onSuccess { result.complete(it) }.onFailure { result.completeExceptionally(it) }
+        }
+        return runCatching { result.get(2, java.util.concurrent.TimeUnit.SECONDS) }
+            .getOrElse { "FX11 dashboard snapshot unavailable: main thread did not respond" }
+    }
+
     private fun allSettingsSections(content: LinearLayout) {
+        filteredSection(content, SettingsSection.BOYUE_L,
+            getString(R.string.settings_boyue_vehicle), R.drawable.ic_dp_car) { card ->
+            choice(card, getString(R.string.settings_boyue_model),
+                listOf(getString(R.string.settings_boyue_default), getString(R.string.settings_boyue_name)),
+                if (BoyueLSettings.selected(this)) 1 else 0, reconnects = false, announcesReconnect = false, adaptiveHeight = true) {
+                if (it == 0 && NativeDashboardSettings.enabled(this)) {
+                    toast(getString(R.string.settings_dashboard_model_close_first))
+                    render() // Keep the selected model while OEM restoration is still required.
+                    return@choice
+                }
+                BoyueLSettings.select(this, it == 1)
+                NativeDashboardService.refresh(this)
+                GeelyWheelKeys.refresh()
+                BoyueDimIntegration.refresh()
+                markReconnectNeeded()
+                render()
+            }
+            card.addView(label(getString(R.string.settings_boyue_model_description), 14, MUTED))
+
+        }
+        if (BoyueLSettings.selected(this)) filteredSection(content, SettingsSection.BOYUE_DIM,
+            getString(R.string.settings_boyue_cluster), R.drawable.ic_dp_dashboard) { card ->
+            choice(card, getString(R.string.settings_dashboard_title), DashboardStyle.entries.map { getString(it.title) },
+                NativeDashboardSettings.style(this).ordinal, reconnects = false, announcesReconnect = false, adaptiveHeight = true) {
+                val selected = DashboardStyle.entries[it]
+                if (selected == DashboardStyle.OFF) {
+                    if (NativeDashboardSettings.style(this) != DashboardStyle.OFF) NativeDashboardService.disable(this)
+                    // Keep showing the saved style until the service confirms OEM restoration.
+                    // The preference observer refreshes this page only after OFF is saved.
+                    render()
+                } else {
+                    NativeDashboardService.selectStyle(this, selected)
+                    markReconnectNeeded()
+                    render()
+                }
+            }
+            card.addView(label(getString(if (NativeDashboardSettings.style(this) == DashboardStyle.OEM_OVERLAY)
+                R.string.settings_dashboard_oem_overlay_description else R.string.settings_dashboard_description), 14, MUTED))
+            if (NativeDashboardSettings.style(this) == DashboardStyle.OEM_OVERLAY) {
+                choice(card, getString(R.string.settings_overlay_path), OemOverlayPath.entries.map { getString(it.title) },
+                    NativeDashboardSettings.overlayPath(this).ordinal, reconnects = false, announcesReconnect = false, adaptiveHeight = true) {
+                    NativeDashboardService.selectOverlayOutput(this, OemOverlayPath.entries[it], NativeDashboardSettings.overlayDisplay(this))
+                }
+                val outputs = listOf(4, 3)
+                choice(card, getString(R.string.settings_overlay_output), outputs.map { getString(R.string.settings_overlay_output_number, it) },
+                    outputs.indexOf(NativeDashboardSettings.overlayDisplay(this)), reconnects = false, announcesReconnect = false, adaptiveHeight = true) {
+                    NativeDashboardService.selectOverlayOutput(this, NativeDashboardSettings.overlayPath(this), outputs[it])
+                }
+                card.addView(label(getString(R.string.settings_overlay_output_hint), 14, MUTED))
+            }
+            if (NativeDashboardSettings.style(this) == DashboardStyle.REPLICA) {
+                choice(card, getString(R.string.settings_dashboard_appearance), DashboardAppearance.entries.map { getString(it.title) },
+                    NativeDashboardSettings.appearance(this).ordinal, reconnects = false, announcesReconnect = false, adaptiveHeight = true) {
+                    NativeDashboardSettings.setAppearance(this, DashboardAppearance.entries[it])
+                }
+                card.addView(label(getString(R.string.settings_dashboard_appearance_hint), 14, MUTED))
+            }
+            val dashboardModes = NativeDashboardSettings.modes(this)
+            choice(card, getString(R.string.settings_dashboard_map_size), DashboardMapSize.entries.map { getString(it.title) },
+                NativeDashboardSettings.mapSize(this).ordinal, reconnects = false, announcesReconnect = false, adaptiveHeight = true) {
+                NativeDashboardSettings.setMapSize(this, DashboardMapSize.entries[it])
+            }
+            card.addView(label(getString(R.string.settings_dashboard_map_size_hint), 14, MUTED))
+            val positions = NativeDashboardMapConfig.horizontalPositions
+            choice(card, getString(R.string.settings_dashboard_map_position), positions.map {
+                overlayOffsetLabel(it, getString(R.string.marker_left), getString(R.string.marker_right), 50)
+            }, positions.indexOf(NativeDashboardSettings.mapHorizontalPosition(this)),
+                reconnects = false, announcesReconnect = false, adaptiveHeight = true) {
+                NativeDashboardSettings.setMapHorizontalPosition(this, positions[it])
+                markReconnectNeeded()
+            }
+            card.addView(label(getString(R.string.settings_dashboard_map_position_hint), 14, MUTED))
+            choice(card, getString(R.string.settings_dashboard_layout), dashboardModes.map { getString(it.titleFor(NativeDashboardSettings.style(this))) },
+                dashboardModes.indexOf(NativeDashboardSettings.mode(this)), reconnects = false, announcesReconnect = false, adaptiveHeight = true) {
+                NativeDashboardSettings.setMode(this, dashboardModes[it])
+            }
+            card.addView(label(getString(R.string.settings_boyue_dashboard_auto_hint), 14, MUTED))
+            card.addView(button(getString(if (NativeDashboardSettings.style(this) == DashboardStyle.OEM_OVERLAY)
+                R.string.settings_dashboard_oem_overlay_toggle else R.string.settings_dashboard_projection_toggle), false) {
+                NativeDashboardService.toggleProjection(this)
+            }.apply { adaptiveHeight = true; isEnabled = NativeDashboardSettings.enabled(this@DiPlayActivity) }, matchButton(0, CONTROL_HEIGHT_DP))
+            card.addView(button(getString(R.string.settings_dashboard_preview), false) {
+                startActivity(Intent(this, NativeDashboardPreviewActivity::class.java))
+            }.apply { adaptiveHeight = true }, matchButton(0, CONTROL_HEIGHT_DP))
+            toggle(card, getString(R.string.settings_boyue_dim), getString(R.string.settings_boyue_dim_description),
+                BoyueLSettings.dim(this)) {
+                BoyueLSettings.setDim(this, it)
+                BoyueDimIntegration.refresh()
+            }
+            card.addView(button(getString(R.string.settings_boyue_artwork), false) {
+                if (Build.VERSION.SDK_INT >= 30 && !android.os.Environment.isExternalStorageManager()) {
+                    runCatching { startActivity(Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION,
+                        Uri.parse("package:$packageName"))) }.onFailure { toast(it.message.orEmpty()) }
+                } else BoyueDimIntegration.refresh()
+            }.apply { adaptiveHeight = true }, matchButton(0, 60))
+
+        }
         filteredSection(content, SettingsSection.CARPLAY_CONTROLS,
             getString(R.string.carplay_controls), R.drawable.ic_dp_controls) { card ->
             val gestureFingers = listOf(0, 2, 3, 4)
@@ -2084,6 +2323,7 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
             card.addView(label(getString(R.string.settings_navigation_attenuation_description), 14, MUTED).apply {
                 setPadding(0, dp(SETTINGS_BLOCK_GAP_DP), 0, 0)
             })
+            microphoneInputControls(card)
             musicBufferChoice(card, wireless = true)
             musicBufferChoice(card, wireless = false)
             toggle(card, getString(R.string.settings_call_speakerphone), getString(R.string.settings_call_speakerphone_description),
@@ -2130,7 +2370,7 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
             }
         }
         // Cluster video does not require a BYD navigation broadcast receiver.
-        filteredSection(content, SettingsSection.CLUSTER_MAP,
+        if (!BoyueLSettings.selected(this)) filteredSection(content, SettingsSection.CLUSTER_MAP,
             getString(R.string.carplay_map_on_instrument_cluster_experimental), R.drawable.ic_dp_dashboard) { card ->
             // DiLink 3 makes its own dashboard display; either DiLink 4 route stops that, so offer them only to
             // turn off, as the setup guide does (#722).
@@ -2467,9 +2707,21 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
         section(content, getString(R.string.about_public_preview_prefix, version())) { card ->
             card.addView(label(getString(R.string.an_independent_carplay_receiver_for_android_head_units_wir), 17, TEXT))
             card.addView(updateRow())
+            toggle(card, getString(R.string.settings_disable_app_update_prompts),
+                getString(R.string.settings_disable_app_update_prompts_description),
+                UpdateAvailability.promptsDisabled(this)) {
+                UpdateAvailability.savePromptsDisabled(this, it)
+                availableUpdate = UpdateAvailability.available(this, version())
+                scheduleBackgroundUpdateChecks()
+                render()
+            }
             toggle(card, getString(R.string.settings_background_update_checks),
                 getString(R.string.settings_background_update_checks_description),
-                UpdateAvailability.backgroundChecksEnabled(this)) { UpdateAvailability.saveBackgroundChecksEnabled(this, it) }
+                UpdateAvailability.backgroundChecksEnabled(this),
+                enabled = !UpdateAvailability.promptsDisabled(this)) {
+                UpdateAvailability.saveBackgroundChecksEnabled(this, it)
+                scheduleBackgroundUpdateChecks()
+            }
         }
         section(content, getString(R.string.backup_title)) { card ->
             card.addView(button(getString(R.string.backup_open), false) { openBackup() }, matchButton(0, 60))
@@ -4117,7 +4369,39 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
 
     /** Steering-wheel keys for the dashboard map zoom and the CarPlay joystick: the switches, the key service and the keys. */
     // One place for the key service setup, above every feature that needs it.
+    private fun boyueWheelSettings(card: LinearLayout) {
+        toggle(card, getString(R.string.settings_boyue_wheel), getString(R.string.settings_boyue_wheel_description),
+            BoyueLSettings.wheel(this)) {
+            BoyueLSettings.setWheel(this, it)
+            GeelyWheelKeys.refresh()
+        }
+        card.addView(label(getString(R.string.settings_boyue_press_hint), 14, MUTED))
+        val actions = listOf(R.string.settings_boyue_none, R.string.settings_boyue_play,
+            R.string.settings_boyue_next, R.string.settings_boyue_previous, R.string.settings_boyue_siri,
+            R.string.settings_boyue_action_dashboard, R.string.settings_boyue_action_page).map(::getString)
+        for (key in BoyueLSettings.editableKeys(this)) {
+            val title = when (key) {
+                NativeDashboardSettings.modeKey(this) -> getString(R.string.settings_boyue_key_mode)
+                Fx11MenuWheelPolicy.MENU_KEY -> getString(R.string.settings_boyue_key_menu)
+                GeelyWheelKeyCodes.KEY_PLAY_PAUSE -> getString(R.string.settings_boyue_key_play)
+                GeelyWheelKeyCodes.KEY_NEXT -> getString(R.string.settings_boyue_key_next)
+                GeelyWheelKeyCodes.KEY_PREVIOUS -> getString(R.string.settings_boyue_key_previous)
+                GeelyWheelKeyCodes.KEY_VOICE_ASSIST -> getString(R.string.settings_boyue_key_voice)
+                else -> getString(R.string.settings_boyue_key_code, key)
+            }
+            for (longPress in listOf(false, true)) {
+                choice(card, getString(if (longPress) R.string.settings_boyue_long_press else R.string.settings_boyue_short_press, title),
+                    actions, BoyueLSettings.action(this, key, longPress).ordinal,
+                    reconnects = false, announcesReconnect = false, adaptiveHeight = true) {
+                    BoyueLSettings.setAction(this, key, BoyueWheelAction.entries[it], longPress)
+                    GeelyWheelKeys.refresh()
+                }
+            }
+        }
+    }
+
     private fun wheelKeysSettings(card: LinearLayout) {
+        if (BoyueLSettings.selected(this)) boyueWheelSettings(card)
         // The joystick and map zoom use BYD's media and custom keys.
         val byd = CarHotspotSetup.isBydHeadUnit(this)
         val zoomAvailable = wheelMapZoomAvailable()
@@ -5474,7 +5758,7 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
         val custom = AirPlayPersistence.loadCustomAirPlayIconFile(this)?.let { BitmapFactory.decodeFile(it.absolutePath) }
         val preview = row().apply { gravity = Gravity.CENTER_VERTICAL }
         preview.addView(ImageView(this).apply {
-            setImageBitmap(custom ?: BitmapFactory.decodeResource(resources, R.raw.ic_car_home))
+            setImageBitmap(custom ?: CarButtonBranding.defaultIcon(resources))
             scaleType = ImageView.ScaleType.CENTER_CROP
             background = rounded(SURFACE, BORDER)
             clipToOutline = true
@@ -5754,9 +6038,11 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
         exportButton?.apply { isEnabled = false; text = getString(R.string.saving_report) }
         val appContext = applicationContext
         val fileName = reportFileName()
+        // Freeze main-thread-owned dashboard state before the report writer reads log files.
+        val nativeDashboardReport = nativeDashboardDiagnosticReport(appContext)
         Thread({
             val result = runCatching {
-                val report = diagnosticReportText(appContext)
+                val report = diagnosticReportText(appContext, nativeDashboardReport)
                 val savedReport = if (uri != null) {
                     DiagnosticExportStore.write(appContext.contentResolver, uri, report)
                     DiagnosticExportStore.SavedReport(uri)
@@ -5798,7 +6084,10 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
     }
 
     /** The text of a diagnostic report. It reads the session logs, so call it off the main thread. */
-    private fun diagnosticReportText(appContext: Context): String = buildString {
+    private fun diagnosticReportText(appContext: Context): String =
+        diagnosticReportText(appContext, captureNativeDashboardDiagnostics(appContext))
+
+    private fun diagnosticReportText(appContext: Context, nativeDashboardReport: String): String = buildString {
         appendLine("DiPlay ${version()} · private beta diagnostic report")
         appendLine("Android ${Build.VERSION.RELEASE} / API ${Build.VERSION.SDK_INT}")
         appendLine("Head unit: ${Build.MANUFACTURER} ${Build.MODEL}")
@@ -5806,7 +6095,7 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
         AirPlayPersistence.loadUsbChargingCurrent(appContext).let {
             appendLine("USB charging offer: ${it.key} (${it.milliAmps} mA)")
         }
-        appendLine("Authentication: local experimental beta identity; no remote fallback")
+        appendLine(DiPlayBootstrap.authenticationDiagnostic(appContext))
         appendLine("CarPlay setup: ${if (setupError == null) "ready" else "authentication unavailable"}")
         appendLine("Saved video preference (may differ from active session): ${if (AirPlayPersistence.loadHevcEnabled(appContext)) "HEVC" else "H.264"}; ${AirPlayPersistence.loadFps(appContext)} fps")
         appendLine("Media-key audio focus: ${if (AirPlayPersistence.loadDisableMediaKeyAudioFocus(appContext)) "disabled" else "enabled"}")
@@ -5816,6 +6105,8 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
         appendLine("Session: ${if (CarPlayBackgroundSession.active) "active" else if (CarPlayBackgroundSession.hasSession()) "connecting" else "stopped"}")
         appendLine(PhoneWakeDiagnostics.report(appContext))
         appendLine("Head-unit board: ${Build.BOARD}; hardware: ${Build.HARDWARE}; build: ${Build.DISPLAY}")
+        appendLine()
+        nativeDashboardReport.lineSequence().forEach { line -> DiagnosticRedactor.redact(line)?.let { appendLine(it) } }
         appendLine()
         appendLine("--- Current cluster display diagnostics (even when disabled) ---")
         appendLine(ClusterMapPresentation.diagnosticReport(appContext))
@@ -6285,10 +6576,45 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
     }
 
     // [announcesReconnect] labels a choice whose [save] reconnects by itself.
+    private fun microphoneInputControls(card: LinearLayout) {
+        val sources = com.shilapi.xcertplay.media.MicrophoneInput.sources
+        val labels = listOf(R.string.settings_mic_auto, R.string.settings_mic_communication,
+            R.string.settings_mic_plain, R.string.settings_mic_recognition, R.string.settings_mic_default,
+            R.string.settings_mic_camcorder, R.string.settings_mic_unprocessed).map { getString(it) }
+        choice(card, getString(R.string.settings_mic_source), labels,
+            sources.indexOf(AirPlayPersistence.loadMicrophoneInputSource(this)), reconnects = false,
+            adaptiveHeight = true) { AirPlayPersistence.saveMicrophoneInputSource(this, sources[it]) }
+        fun deviceLabel(): String {
+            val key = AirPlayPersistence.loadMicrophoneInputDevice(this)
+            if (key.isEmpty()) return getString(R.string.settings_mic_auto)
+            val devices = com.shilapi.xcertplay.media.MicrophoneInput.devices(getSystemService(android.media.AudioManager::class.java))
+            return devices.firstOrNull { com.shilapi.xcertplay.media.MicrophoneInput.key(it) == key }
+                ?.let { "${it.productName} (${it.type})" } ?: getString(R.string.settings_mic_missing)
+        }
+        val title = getString(R.string.settings_mic_device)
+        val row = button("$title · ${deviceLabel()}", false) {}.apply { adaptiveHeight = true }
+        row.setOnClickListener {
+            // Enumerate on each open: a USB input may have appeared since Settings was rendered.
+            val devices = com.shilapi.xcertplay.media.MicrophoneInput.devices(getSystemService(android.media.AudioManager::class.java))
+            val keys = listOf("") + devices.map { com.shilapi.xcertplay.media.MicrophoneInput.key(it) }
+            val names = listOf(getString(R.string.settings_mic_auto)) + devices.map { "${it.productName} (${it.type}, #${it.id})" }
+            var selection = keys.indexOf(AirPlayPersistence.loadMicrophoneInputDevice(this))
+            appDialogBuilder().setTitle(title).setSingleChoiceItems(names.toTypedArray(), selection) { _, index -> selection = index }
+                .setPositiveButton(getString(R.string.save)) { _, _ ->
+                    if (selection >= 0) AirPlayPersistence.saveMicrophoneInputDevice(this, keys[selection])
+                    row.text = "$title · ${deviceLabel()}"
+                }.setNegativeButton(getString(R.string.cancel), null).show()
+        }
+        card.addView(row, matchButton(0, 60))
+        card.addView(label(getString(R.string.settings_mic_description), 14, MUTED).apply {
+            setPadding(0, dp(SETTINGS_BLOCK_GAP_DP), 0, dp(SETTINGS_BLOCK_GAP_DP))
+        })
+    }
+
     private fun choice(parent: LinearLayout, title: String, options: List<String>, current: Int, reconnects: Boolean = true,
-        announcesReconnect: Boolean = reconnects, enabled: Boolean = true, save: (Int) -> Unit) {
+        announcesReconnect: Boolean = reconnects, enabled: Boolean = true, adaptiveHeight: Boolean = false, save: (Int) -> Unit) {
         var selection = current
-        val button = button("$title · ${options[selection]}", false) {}.apply { isEnabled = enabled }
+        val button = button("$title · ${options[selection]}", false) {}.apply { isEnabled = enabled; this.adaptiveHeight = adaptiveHeight }
         button.setOnClickListener {
             var pendingSelection = selection
             appDialogBuilder().setTitle(title)
@@ -6473,6 +6799,7 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
         private val accent: Int,
     ) : Button(context) {
         var action = false
+        var adaptiveHeight = false
         var contentOffsetY = 0f
         var alignVisibleGlyphs = true
         private val glyphBounds = android.graphics.Rect()
@@ -6557,7 +6884,12 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
             val lp = child.layoutParams as? LinearLayout.LayoutParams ?: continue
             when {
                 child is Button -> {
-                    lp.height = dp(CONTROL_HEIGHT_DP); lp.topMargin = 0
+                    lp.height = if (child is SettingButton && child.adaptiveHeight) {
+                        child.minimumHeight = dp(CONTROL_HEIGHT_DP)
+                        child.setPadding(child.paddingLeft, dp(CONTROL_GAP_DP), child.paddingRight, dp(CONTROL_GAP_DP))
+                        ViewGroup.LayoutParams.WRAP_CONTENT
+                    } else dp(CONTROL_HEIGHT_DP)
+                    lp.topMargin = 0
                     lp.bottomMargin = dp(if (isNote(next)) NOTE_ATTACH_GAP_DP else CONTROL_GAP_DP)
                 }
                 // Toggle rows carried their own vertical padding, which doubled the gap after a button.

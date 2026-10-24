@@ -109,11 +109,7 @@ object CarPlayBonjourProtocol {
         require('\r' !in unbracketedHost && '\n' !in unbracketedHost) {
             "host must not contain a line break"
         }
-        val receiverDeviceId = deviceId.replace(":", "")
-        require(receiverDeviceId.isNotEmpty()) { "deviceId must contain a hexadecimal value" }
-        require('\r' !in receiverDeviceId && '\n' !in receiverDeviceId) {
-            "deviceId must not contain a line break"
-        }
+        val receiverDeviceId = macAddressToDecimal(deviceId)
         val hostHeader = if (':' in unbracketedHost) {
             "[$unbracketedHost]:$port"
         } else {
@@ -125,6 +121,15 @@ object CarPlayBonjourProtocol {
             "AirPlay-Receiver-Device-ID: $receiverDeviceId\r\n" +
             "Connection: close\r\n" +
             "\r\n"
+    }
+
+    // xcertplay PR #52: only the control HTTP header uses decimal; Bonjour TXT stays a MAC.
+    private fun macAddressToDecimal(value: String): String {
+        val hexadecimal = value.replace(":", "")
+        require(hexadecimal.length == 12 && hexadecimal.all { it.digitToIntOrNull(16) != null }) {
+            "deviceId must contain exactly 12 hexadecimal digits"
+        }
+        return hexadecimal.toLong(16).toString()
     }
 }
 

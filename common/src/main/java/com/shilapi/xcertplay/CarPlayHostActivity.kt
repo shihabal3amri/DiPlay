@@ -155,6 +155,7 @@ class CarPlayHostActivity : ComponentActivity() {
     private var connectionHelpView: TextView? = null
     private var wifiRecoveryButton: View? = null
     private var reconnectAttempts = 0
+    private var sessionUltraEnabled = false
     private val siriKey = WheelSiriKey()
     private val siriKeyPresses = WheelKeyPresses()
     private val mediaKeyPresses = WheelKeyPresses()
@@ -198,10 +199,12 @@ class CarPlayHostActivity : ComponentActivity() {
             firmwareVersion = "0.1.0",
             hardwareVersion = "1.0",
             carPlayUsbInterfaceNumber = 3,
-            locationInformationEnabled = locationReportingEnabled,
-            vehicleStatusEnabled = com.shilapi.xcertplay.hud.BydOutputSettings.batteryToIphoneActive(this),
+            locationInformationEnabled = locationReportingEnabled || BoyueLSettings.vehicleData(this),
+            gpsLocationEnabled = locationReportingEnabled,
+            vehicleDataEnabled = BoyueLSettings.vehicleData(this),
+            vehicleStatusEnabled = !BoyueLSettings.selected(this) && com.shilapi.xcertplay.hud.BydOutputSettings.batteryToIphoneActive(this),
             chargingConnectors = com.shilapi.xcertplay.hud.BydOutputSettings.chargingConnectors(this),
-            vehicleSpeedEnabled = locationReportingEnabled && com.shilapi.xcertplay.hud.BydOutputSettings.wheelSpeedToIphoneActive(this),
+            vehicleSpeedEnabled = BoyueLSettings.vehicleData(this) || (!BoyueLSettings.selected(this) && locationReportingEnabled && com.shilapi.xcertplay.hud.BydOutputSettings.wheelSpeedToIphoneActive(this)),
         ),
         label = "DiPlay",
         hostName = "diplay-" + DiPlayBootstrap.deviceId(airPlayIdentity).replace(":", "").lowercase(),
@@ -1259,6 +1262,15 @@ class CarPlayHostActivity : ComponentActivity() {
     }
 
     private fun ensureClusterPresentation() {
+        if (NativeDashboardSettings.enabled(this)) {
+            dismissClusterPresentation()
+            NativeDashboardService.refresh(this)
+            return
+        }
+        if (BoyueLSettings.selected(this) && (!isActivityStarted || BoyueLSettings.display(this) == null)) {
+            dismissClusterPresentation()
+            return
+        }
         if (!AirPlayPersistence.loadClusterMapEnabled(this)) {
             clusterLaunchGate.reset()
             dismissClusterPresentation()
@@ -1276,7 +1288,7 @@ class CarPlayHostActivity : ComponentActivity() {
         clusterLaunchGate.reset()
         ClusterActivityOutput.stop(this)
         val theme = effectiveClusterTheme()
-        if (DiLink51ClusterLayout.supported()) {
+        if (!BoyueLSettings.selected(this) && DiLink51ClusterLayout.supported()) {
             ensureDiLink51ClusterPresentation(theme)
             return
         }
@@ -1454,6 +1466,7 @@ class CarPlayHostActivity : ComponentActivity() {
     // finish after the session has already asked for the virtual fallback stream.
     private val clusterDisplayListener = object : android.hardware.display.DisplayManager.DisplayListener {
         override fun onDisplayAdded(displayId: Int) {
+            if (NativeDashboardSettings.enabled(this@CarPlayHostActivity)) return
             if (isDestroyed || !AirPlayPersistence.loadClusterMapEnabled(this@CarPlayHostActivity)) return
             val display = ClusterMapPresentation.findDisplay(this@CarPlayHostActivity, effectiveClusterTheme())
             if (display?.displayId != displayId) return
@@ -1472,6 +1485,28 @@ class CarPlayHostActivity : ComponentActivity() {
         clusterStreamOnDisplay = false
         requestedSmallWindowForStream = null
         if (!AirPlayPersistence.loadClusterMapEnabled(this)) return null
+        if (NativeDashboardSettings.enabled(this)) {
+            // Ordinary CarPlay map stream; the service renders vehicle gauges locally, even offline.
+            val style = NativeDashboardSettings.style(this)
+            val position = NativeDashboardSettings.mapHorizontalPosition(this, style)
+            val config = NativeDashboardMapConfig.config(style, NativeDashboardSettings.mapSize(this), position)
+            MapMirrors.streamAspect = config.widthPixels.toDouble() / config.heightPixels
+            appendLog("Native dashboard map: style=$style stream=${config.widthPixels}x${config.heightPixels} " +
+                "physicalWidth=${config.widthPhysicalMm} focusPercent=$position safeArea=${config.safeArea} " +
+                "drawOutside=${config.safeAreaDrawOutside}; camera placement requested, not confirmed")
+            return config
+        }
+        if (BoyueLSettings.selected(this)) {
+            val display = BoyueLSettings.display(this)
+            if (display == null) {
+                appendLog("Boyue L: Display 4 must be ON, public presentation, 1920x532; cluster stream not requested")
+                return null
+            }
+            clusterStreamOnDisplay = true
+            MapMirrors.streamAspect = 1920.0 / 532
+            appendLog("Boyue L: requesting map stream 111, 1920x532 on Display 4; physical visibility unverified")
+            return BoyueLSettings.streamConfig().let { if (BoyueLSettings.ultra(this)) it.copy(initialUrl = null) else it }
+        }
         if (AdbClusterRouter.enabled(this) && ClusterActivityOutput.hasConfirmedRoute()) {
             adbClusterConfigured = true
             clusterStreamOnDisplay = true
@@ -1747,6 +1782,7 @@ class CarPlayHostActivity : ComponentActivity() {
         closePicturePanel()
         // The controller, USB/iAP2 link, and VPN attachment intentionally outlive the UI.
         isActivityStarted = false
+        if (BoyueLSettings.selected(this)) dismissClusterPresentation()
         logThemeState(ThemeModeDiagnostics.Source.STOP, resources.configuration)
         mainHandler.removeCallbacks(pollConfiguration)
         super.onStop()
@@ -2661,7 +2697,7 @@ class CarPlayHostActivity : ComponentActivity() {
         val battery = if (com.shilapi.xcertplay.hud.BydOutputSettings.batteryToIphoneActive(this)) {
             com.shilapi.xcertplay.hud.BydNavigationOutputs.batteryStatus(applicationContext).snapshot()
         } else null
-        sidePanelBattery?.text = battery?.let { "🔋 ${Math.round(it.batteryPercent)} %  ·  ${it.rangeKm} km" }.orEmpty()
+        sidePanelBattery?.text = battery?.takeIf { it.batteryPercent != null && it.rangeKm != null }?.let { "🔋 ${Math.round(requireNotNull(it.batteryPercent))} %  ·  ${it.rangeKm} km" }.orEmpty()
         val tyres = com.shilapi.xcertplay.hud.BydTyreStatus.latest()
         sidePanelTyres?.visibility = if (tyres == null) View.GONE else View.VISIBLE
         if (tyres != null) sidePanelTyreTexts.forEachIndexed { tyre, text ->
@@ -4925,13 +4961,19 @@ class CarPlayHostActivity : ComponentActivity() {
         appendLog(effectiveSummary)
         val carBluetoothAudio = AirPlayPersistence.loadCarBluetoothAudio(this)
         if (carBluetoothAudio) logCarBluetoothAudio()
+        val clusterDisplay = clusterDisplayConfig()
+        val ultraConfig = BoyueUltraIntegration.config(this, clusterDisplay)
+        sessionUltraEnabled = ultraConfig != null
+        appendLog("connection configuration ultra=$sessionUltraEnabled nativeDashboard=${NativeDashboardSettings.enabled(this)} " +
+            "controlDeviceIdFormat=decimal; ${BoyueUltraIntegration.status}")
         return AirPlayConfig(
             deviceName = "DiPlay",
             deviceId = DiPlayBootstrap.deviceId(airPlayIdentity),
             btMac = DiPlayBluetooth.localAddress(this) ?: DiPlayBootstrap.deviceId(airPlayIdentity),
             sourceVersion = "950.7.1",
             main = declared,
-            cluster = clusterDisplayConfig(),
+            cluster = clusterDisplay,
+            ultra = ultraConfig,
             rightHandDrive = rightHandDrive,
             hevc = sessionHevc,
             microphone = microphoneAvailable,
@@ -4994,7 +5036,7 @@ class CarPlayHostActivity : ComponentActivity() {
 
     private fun defaultAirPlayIconBytes(): ByteArray =
         // Shown in CarPlay's app list as the "back to the car" button.
-        resources.openRawResource(R.raw.ic_car_home).use { it.readBytes() }
+        CarButtonBranding.defaultIconPng(resources)
 
     private fun updateAirPlayIconPreview() {
         val preview = iconPreviewView ?: return
@@ -5006,7 +5048,7 @@ class CarPlayHostActivity : ComponentActivity() {
                 AirPlayPersistence.clearCustomAirPlayIcon(this)
             }
         }
-        val bitmap = customBitmap ?: BitmapFactory.decodeResource(resources, R.raw.placeholder_icon)
+        val bitmap = customBitmap ?: CarButtonBranding.defaultIcon(resources)
         preview.setImageBitmap(bitmap)
         iconStatusView?.text =
             if (customBitmap != null) getString(R.string.custom_1_1_icon) else getString(R.string.default_placeholder_icon)
@@ -5151,17 +5193,14 @@ class CarPlayHostActivity : ComponentActivity() {
                 onScreenStreamStateChanged(controllerGeneration, type, active)
             },
             mediaBufferMillis = AirPlayPersistence.loadMediaBufferMillis(this, wireless = wirelessEnabled),
-            onAudioDiagnostic = { message ->
-                if (message.startsWith("Microphone: ")) {
-                    AsyncDiagnosticLog.append(diagnosticLog, message)
-                } else {
-                    diagnosticLog?.append(formattedLogLine(message, System.currentTimeMillis()))
-                }
-            },
+            // Audio workers must never wait for file I/O or session-log rotation.
+            onAudioDiagnostic = { message -> AsyncDiagnosticLog.append(diagnosticLog, message) },
             onMediaAudioChanged = CarPlayMediaKeys::onMediaAudioChanged,
             callEchoCancellation = AirPlayPersistence.loadCallEchoCancellation(this),
             callVoiceFilter = AirPlayPersistence.loadCallVoiceFilter(this),
             callSpeakerphone = { AirPlayPersistence.loadCallSpeakerphone(this) },
+            microphoneInputSource = { AirPlayPersistence.loadMicrophoneInputSource(this) },
+            microphoneInputDevice = { AirPlayPersistence.loadMicrophoneInputDevice(this) },
             // Only a SurfaceView honours release timestamps; smooth video always selects one.
             videoPacingDelayMillis = if (smoothVideo) smoothVideoDelayMillis(fps) else 0,
             mainVideoFrameRate = fps,
@@ -5194,7 +5233,7 @@ class CarPlayHostActivity : ComponentActivity() {
 
             override fun onSessionActive(session: AirPlaySession) {
                 runOnUiThread {
-                    if (controllerGeneration != restartGeneration) {
+                    if (controllerGeneration != restartGeneration || startupRetryStopped) {
                         return@runOnUiThread
                     }
                     activeAirPlaySession = session
@@ -5206,7 +5245,8 @@ class CarPlayHostActivity : ComponentActivity() {
                     showConnectionHelp(null)
                     callPopupSessionReady = true
                     updateCallPopupGuard()
-                    reconnectAttempts = 0
+                    // An accepted SETUP is not proof of a working Ultra session.
+                    if (!sessionUltraEnabled) reconnectAttempts = 0
                     logThemeState(ThemeModeDiagnostics.Source.SESSION_ACTIVE, resources.configuration)
                     syncAirPlayDarkMode(ThemeModeDiagnostics.Source.SESSION_ACTIVE)
                     applyClusterTurnOverlay()
@@ -5228,6 +5268,7 @@ class CarPlayHostActivity : ComponentActivity() {
                         if (controllerGeneration == restartGeneration && activeAirPlaySession === session &&
                             !shuttingDown.get() && CarPlayBackgroundSession.isOwner(this@CarPlayHostActivity) &&
                             startupRetryBudget.resetIfStable(session, android.os.SystemClock.elapsedRealtime())) {
+                            reconnectAttempts = 0
                             appendLog("wireless startup retry budget reset after stable video session")
                         }
                     }, WirelessStartupPolicy.STABLE_SESSION_MILLIS)
@@ -5243,6 +5284,9 @@ class CarPlayHostActivity : ComponentActivity() {
                         return@runOnUiThread
                     }
                     if (controllerGeneration != restartGeneration || startupRetryStopped) return@runOnUiThread
+                    MapMirrors.setStreamActive(false)
+                    ClusterMusicState.publish(com.shilapi.xcertplay.media.CarPlayNowPlaying(), null)
+                    com.shilapi.xcertplay.hud.GeelyDimNavigation.clear()
                     startupRetryBudget.disconnected()
                     activeAirPlaySession = null
                     clearIphoneCornerMask()
@@ -5264,6 +5308,9 @@ class CarPlayHostActivity : ComponentActivity() {
             override fun onTransportError(message: String) {
                 runOnUiThread {
                     if (controllerGeneration != restartGeneration || startupRetryStopped) return@runOnUiThread
+                    MapMirrors.setStreamActive(false)
+                    ClusterMusicState.publish(com.shilapi.xcertplay.media.CarPlayNowPlaying(), null)
+                    com.shilapi.xcertplay.hud.GeelyDimNavigation.clear()
                     callPopupSessionReady = false
                     updateCallPopupGuard()
                     startupRetryBudget.disconnected()
@@ -5286,6 +5333,11 @@ class CarPlayHostActivity : ComponentActivity() {
                     AsyncDiagnosticLog.append(diagnosticLog, message)
                     return
                 }
+                if (message.startsWith("Ultra ")) {
+                    // Retain negotiation evidence while Settings is open and during teardown.
+                    AsyncDiagnosticLog.append(diagnosticLog, "generation=$controllerGeneration $message")
+                    return
+                }
                 runOnUiThread {
                     if (controllerGeneration != restartGeneration) {
                         return@runOnUiThread
@@ -5305,12 +5357,15 @@ class CarPlayHostActivity : ComponentActivity() {
         controllerGeneration: Int,
     ): (CarPlayStatus) -> Unit = report@{ status ->
         if (controllerGeneration != restartGeneration) return@report
+        if (startupRetryStopped) return@report
         if (status is CarPlayStatus.Failed || status is CarPlayStatus.ControlEnded) {
+            if (sessionUltraEnabled) startupRetryBudget.disconnected()
             callPopupSessionReady = false
             updateCallPopupGuard()
         }
         if (menuOpen) {
             if (status is CarPlayStatus.Failed) failurePendingAfterMenu = status
+            if (sessionUltraEnabled && status is CarPlayStatus.ControlEnded) recoveryPendingAfterMenu = true
             return@report
         }
         updateHotspotStatus(status)
@@ -5331,6 +5386,9 @@ class CarPlayHostActivity : ComponentActivity() {
                     startupFailureGeneration = controllerGeneration
                 }
                 reconnectAfterLoss(description, status.startupFailure, englishDescription)
+            }
+            CarPlayStatus.ControlEnded -> if (sessionUltraEnabled) {
+                reconnectAfterLoss(description, englishReason = englishDescription)
             }
             else -> Unit
         }
@@ -5355,6 +5413,7 @@ class CarPlayHostActivity : ComponentActivity() {
         adbClusterConfigured = AdbClusterRouter.enabled(this) && snapshot.controller.configuredClusterSize() ==
             (DiLink4ClusterDisplay.STREAM_WIDTH to DiLink4ClusterDisplay.STREAM_HEIGHT)
         controller = snapshot.controller
+        sessionUltraEnabled = snapshot.controller.isUltraEnabled()
         updateClusterMapShown()
         sink = snapshot.sink
         sessionDisplay = snapshot.display
@@ -5426,6 +5485,7 @@ class CarPlayHostActivity : ComponentActivity() {
     }
 
     private fun startCarPlay(size: DisplaySize) {
+        if (startupRetryStopped) return
         if (CarPlayBackgroundSession.hasSession() && !CarPlayBackgroundSession.isOwner(this)) return
         if (shuttingDown.get() || menuOpen || handshakeResetInProgress || controller != null) return
         val controllerGeneration = restartGeneration
@@ -5441,8 +5501,11 @@ class CarPlayHostActivity : ComponentActivity() {
             size
         }
         val airPlayConfig = createAirPlayConfig(effectiveSize)
+        val fx11Provider = BoyueVehicleIntegration.create(this)
         val locationProvider: Iap2LocationProvider? =
             when {
+                fx11Provider != null -> VehicleSpeedLocationProvider(
+                    if (config.locationReportingEnabled) AndroidCarPlayLocationProvider(this) else null, fx11Provider)
                 !config.locationReportingEnabled -> null
                 config.identification.vehicleSpeedEnabled -> VehicleSpeedLocationProvider(
                     AndroidCarPlayLocationProvider(this),
@@ -5501,7 +5564,7 @@ class CarPlayHostActivity : ComponentActivity() {
             savePairRecord = { record -> AirPlayPersistence.saveLockdownRecord(this, record) },
             clearPairRecord = { AirPlayPersistence.clearLockdownRecord(this) },
             locationProvider = locationProvider,
-            vehicleStatusProvider = if (com.shilapi.xcertplay.hud.BydOutputSettings.batteryToIphoneActive(this)) {
+            vehicleStatusProvider = fx11Provider ?: if (!BoyueLSettings.selected(this) && com.shilapi.xcertplay.hud.BydOutputSettings.batteryToIphoneActive(this)) {
                 com.shilapi.xcertplay.hud.BydNavigationOutputs.batteryStatus(applicationContext)
             } else {
                 null
@@ -5805,7 +5868,7 @@ class CarPlayHostActivity : ComponentActivity() {
     }
 
     private fun maybeStartCarPlay() {
-        if (shuttingDown.get()) return
+        if (shuttingDown.get() || startupRetryStopped) return
         if (CarPlayBackgroundSession.hasSession() && !CarPlayBackgroundSession.isOwner(this)) {
             if (!adoptBackgroundSession()) mainHandler.postDelayed({ maybeStartCarPlay() }, 500)
             return
@@ -5855,22 +5918,44 @@ class CarPlayHostActivity : ComponentActivity() {
         if (menuOpen) recoveryPendingAfterMenu = true
         if (shuttingDown.get() || menuOpen || handshakeResetInProgress || startupRetryStopped) return
         if (reconnectScheduled) return
-        val startupDelay = if (startupFailure != null && startupFailure.retryable)
-            startupRetryBudget.nextDelayMillis() else null
-        if (startupFailure != null && startupDelay == null) {
+        // Ultra transport/session loss must share the startup budget, including untyped errors.
+        // Keep the established ordinary CarPlay retry behavior unchanged.
+        val boundedRecovery = startupFailure != null || sessionUltraEnabled
+        val maxRetries = if (sessionUltraEnabled) WirelessStartupPolicy.MAX_ULTRA_RETRIES
+            else WirelessStartupPolicy.MAX_STARTUP_RETRIES
+        val startupDelay = if (boundedRecovery && startupFailure?.retryable != false)
+            startupRetryBudget.nextDelayMillis(maxRetries) else null
+        if (boundedRecovery && startupDelay == null) {
             startupRetryStopped = true
             startupRetryButton?.visibility = View.VISIBLE
             if (startupFailure == WirelessStartupFailure.HOTSPOT_CONFIGURATION) {
                 // Its cause is in English, for the report; the help line below says what to check.
                 setConnectionStage("${getString(R.string.hotspot_network_not_ready)}\n" +
                     getString(R.string.wireless_startup_retries_exhausted))
-            } else if (!startupFailure.retryable) {
+            } else if (startupFailure?.retryable == false) {
                 setConnectionStage(reason, englishReason)
+            } else if (sessionUltraEnabled) {
+                setConnectionStage(R.string.ultra_retries_exhausted)
             } else {
                 setConnectionStage("$reason\n${getString(R.string.wireless_startup_retries_exhausted)}",
                     "$englishReason\n${englishResources.getString(R.string.wireless_startup_retries_exhausted)}")
             }
-            appendLog("wireless startup recovery stopped generation=$restartGeneration reason=$startupFailure retries=${startupRetryBudget.retries}")
+            appendLog("wireless startup recovery stopped generation=$restartGeneration ultra=$sessionUltraEnabled " +
+                "reason=$startupFailure retries=${startupRetryBudget.retries} limit=$maxRetries; lastFailure=$englishReason")
+            // Stop a partially open Ultra transport as well; late callbacks cannot schedule again.
+            if (sessionUltraEnabled) {
+                startupRetryBudget.disconnected()
+                activeAirPlaySession = null
+                CarPlayBackgroundSession.active = false
+                callPopupSessionReady = false
+                updateCallPopupGuard()
+                activeScreenStreamTypes.clear()
+                MapMirrors.setStreamActive(false)
+                ClusterActivityOutput.setStreamActive(false)
+                ClusterMusicState.publish(com.shilapi.xcertplay.media.CarPlayNowPlaying(), null)
+                com.shilapi.xcertplay.hud.GeelyDimNavigation.clear()
+                controller?.close()
+            }
             return
         }
         reconnectScheduled = true
@@ -5885,7 +5970,8 @@ class CarPlayHostActivity : ComponentActivity() {
             (RECONNECT_DELAY_MILLIS * (1L shl reconnectAttempts.coerceAtMost(4))).coerceAtMost(30_000L)
         }
         reconnectAttempts += 1
-        appendLog("$reason; retrying in ${delayMillis}ms generation=$generation startupFailure=$startupFailure startupRetries=${startupRetryBudget.retries}")
+        appendLog("$reason; retrying in ${delayMillis}ms generation=$generation ultra=$sessionUltraEnabled " +
+            "startupFailure=$startupFailure startupRetries=${startupRetryBudget.retries} limit=${if (boundedRecovery) maxRetries else "legacy"}")
         mainHandler.postDelayed(
             {
                 reconnectScheduled = false
@@ -5913,6 +5999,7 @@ class CarPlayHostActivity : ComponentActivity() {
         startupRetryButton?.visibility = View.GONE
         appendLog(reason)
         activeScreenStreamTypes.clear()
+        MapMirrors.setStreamActive(false)
         ClusterActivityOutput.setStreamActive(false)
         setConnectionStage(reason)
         Log.i(TAG, "$reason; rebuilding stack at ${size.width}x${size.height}")
@@ -6089,12 +6176,15 @@ class CarPlayHostActivity : ComponentActivity() {
             startupRetryBudget.manualRetry()
             startupRetryStopped = false
         }
-        if (failure?.startupFailure != null && !reconnect) {
+        if ((failure?.startupFailure != null || sessionUltraEnabled && failure != null) && !reconnect) {
+            checkNotNull(failure)
             createStatusReporter(restartGeneration)(failure)
         } else if (failure?.wifiResetRequired == true && (!reconnect || wirelessEnabled)) {
             createStatusReporter(restartGeneration)(failure)
         } else if (handshakeResetInProgress) {
             startAfterHandshakeReset = true
+        } else if (sessionUltraEnabled && recoveryPending && !reconnect) {
+            reconnectAfterLoss("Connection lost while settings were open")
         } else if ((reconnect || recoveryPending) && controller != null) {
             restartCarPlay(if (reconnect) "Settings saved; reconnecting" else "Connection lost while settings were open; reconnecting")
         } else {
@@ -6291,7 +6381,7 @@ class CarPlayHostActivity : ComponentActivity() {
         sink?.setSurface(SCREEN_TYPE_MAIN, surface)
         if (AirPlayPersistence.loadClusterMapEnabled(this)) {
             clusterSurface?.let { sink?.setSurface(SCREEN_TYPE_ALT, it) }
-        } else {
+        } else if (!BoyueLSettings.selected(this)) {
             sink?.setSurface(SCREEN_TYPE_ALT, surface)
         }
     }
@@ -6623,6 +6713,7 @@ class CarPlayHostActivity : ComponentActivity() {
         is CarPlayStatus.Failed -> when (startupFailure) {
             WirelessStartupFailure.HOTSPOT_NOT_READY -> res.getString(R.string.hotspot_network_not_ready)
             WirelessStartupFailure.FIRST_TCP_TIMEOUT -> res.getString(R.string.first_tcp_timeout)
+            WirelessStartupFailure.HANDOFF_TIMEOUT -> res.getString(R.string.wireless_handoff_timeout)
             else -> res.getString(R.string.status_failed, message)
         }
     }

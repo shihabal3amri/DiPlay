@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_mic_source">Источник микрофона</string>
+    <string name="settings_mic_device">Устройство ввода микрофона</string>
+    <string name="settings_mic_auto">Автоматически</string>
+    <string name="settings_mic_communication">7 · Голосовая связь</string>
+    <string name="settings_mic_plain">1 · Микрофон</string>
+    <string name="settings_mic_recognition">6 · Распознавание речи</string>
+    <string name="settings_mic_default">0 · Системный</string>
+    <string name="settings_mic_camcorder">5 · Видеокамера</string>
+    <string name="settings_mic_unprocessed">9 · Без обработки</string>
+    <string name="settings_mic_missing">Выбранное устройство отключено</string>
+    <string name="settings_mic_description">Для звонков и Siri. Применяется со следующего звонка или сеанса Siri, не прерывая текущий звук. Номера входов отличаются от каналов воспроизведения. Если вас не слышат, попробуйте 7, затем 1 или 6. Неподдерживаемый источник или отключённое устройство не заменяются автоматически. Выберите «Автоматически», чтобы восстановить автоматическую маршрутизацию.</string>
+</resources>

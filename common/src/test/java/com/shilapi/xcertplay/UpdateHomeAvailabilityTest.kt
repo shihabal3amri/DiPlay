@@ -7,8 +7,10 @@ import android.widget.TextView
 import com.shilapi.xcertplay.host.R
 import com.shilapi.xcertplay.update.UpdateAvailability
 import com.shilapi.xcertplay.update.UpdateRelease
+import org.junit.Before
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -22,6 +24,8 @@ import org.robolectric.util.ReflectionHelpers
 @Config(sdk = [29], qualifiers = "en-w900dp-h600dp-land")
 class UpdateHomeAvailabilityTest {
     private val application: Application = RuntimeEnvironment.getApplication()
+
+    @Before fun enablePromptsForExistingFlows() = UpdateAvailability.savePromptsDisabled(application, false)
 
     @After fun clear() = UpdateAvailability.clearAllForTest(application)
 
@@ -59,6 +63,31 @@ class UpdateHomeAvailabilityTest {
         assertTrue(update.minHeight >= (48 * activity.resources.displayMetrics.density).toInt())
         assertTrue(update.isClickable)
         controller.pause().stop().destroy()
+    }
+
+    @Test fun disablingPromptsHidesAnAlreadyLoadedBannerAndKeepsManualCheck() {
+        UpdateAvailability.save(application, release())
+        val controller = Robolectric.buildActivity(DiPlayActivity::class.java).setup()
+        val activity = controller.get()
+        try {
+            ReflectionHelpers.setField(activity, "page", "settings")
+            ReflectionHelpers.callInstanceMethod<Unit>(activity, "openSettingsCategory",
+                ReflectionHelpers.ClassParameter.from(SettingsCategory::class.java, SettingsCategory.ABOUT))
+            val disable = descendants(activity.window.decorView).filterIsInstance<android.widget.Switch>().single {
+                it.contentDescription == activity.getString(R.string.settings_disable_app_update_prompts)
+            }
+            disable.performClick()
+            assertTrue(UpdateAvailability.promptsDisabled(application))
+            assertFalse(UpdateAvailability.backgroundChecksEnabled(application))
+            assertTrue(descendants(activity.window.decorView).filterIsInstance<TextView>().any {
+                it.text == activity.getString(R.string.update_check)
+            })
+            ReflectionHelpers.setField(activity, "page", "home")
+            ReflectionHelpers.callInstanceMethod<Unit>(activity, "render")
+            assertFalse(descendants(activity.window.decorView).filterIsInstance<TextView>().any {
+                it.text == activity.getString(R.string.update_available_home)
+            })
+        } finally { controller.pause().stop().destroy() }
     }
 
     private fun release() = UpdateRelease(

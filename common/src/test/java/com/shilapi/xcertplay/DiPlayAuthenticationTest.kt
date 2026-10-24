@@ -62,6 +62,22 @@ class DiPlayAuthenticationTest {
         assertThrows(Exception::class.java) { DiPlayBootstrap.ensure(context, MfiTarget.LOCAL) }
     }
 
+    @Test fun diagnosticDistinguishesSelectedBackendAndMissingAssetsWithoutExportingContents() {
+        directory.mkdirs()
+        File(directory, "identity.pk8").writeText("synthetic-private-content-must-not-be-exported")
+        AirPlayPersistence.saveMfiTarget(context, MfiTarget.USB_CH341)
+        val usb = DiPlayBootstrap.authenticationDiagnostic(context)
+        assertTrue(usb.contains("Authentication target: USB_CH341"))
+        assertTrue(usb.contains("bundled=unavailable installed=true"))
+        assertFalse(usb.contains("synthetic-private-content"))
+        AirPlayPersistence.saveMfiTarget(context, MfiTarget.LOCAL)
+        assertThrows(Exception::class.java) { DiPlayBootstrap.ensure(context, MfiTarget.LOCAL) }
+        val failed = DiPlayBootstrap.authenticationDiagnostic(context)
+        assertTrue(failed.contains("Authentication target: LOCAL"))
+        assertTrue(failed.contains("Authentication bootstrap: failed:"))
+        assertEquals("synthetic-private-content-must-not-be-exported", File(directory, "identity.pk8").readText())
+    }
+
     @Test fun usbControllerWaitsForHardwareWithoutLocalAssets() {
         val statuses = startAuthentication(MfiTarget.USB_CH341)
         assertTrue(statuses.contains(CarPlayStatus.WaitingForMfi))

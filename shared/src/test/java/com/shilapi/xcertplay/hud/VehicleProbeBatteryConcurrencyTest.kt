@@ -126,7 +126,7 @@ class VehicleProbeBatteryConcurrencyTest {
     private fun reading(percent: Double) = BydBatteryReading(percent, 150, 20.0, false)
 
     private fun assertBattery(percent: Double) =
-        assertEquals(percent, BydBatteryStatus.snapshot()!!.batteryPercent, 0.0)
+        assertEquals(percent, BydBatteryStatus.snapshot()!!.batteryPercent!!, 0.0)
 
     private fun capabilities(percent: Double) = BydVehicleCapabilities(
         fields = BydVehicleField.entries.associateWith { field ->

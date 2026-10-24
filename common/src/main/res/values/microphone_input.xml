@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_mic_source">Microphone input source</string>
+    <string name="settings_mic_device">Microphone input device</string>
+    <string name="settings_mic_auto">Automatic</string>
+    <string name="settings_mic_communication">7 · Voice communication</string>
+    <string name="settings_mic_plain">1 · Microphone</string>
+    <string name="settings_mic_recognition">6 · Voice recognition</string>
+    <string name="settings_mic_default">0 · System default</string>
+    <string name="settings_mic_camcorder">5 · Camcorder</string>
+    <string name="settings_mic_unprocessed">9 · Unprocessed</string>
+    <string name="settings_mic_missing">Selected device disconnected</string>
+    <string name="settings_mic_description">For calls and Siri. Applies at the next call or Siri session; current audio is not interrupted. Input source numbers differ from playback channels. If others cannot hear you, try 7, then 1 or 6. Unsupported sources or disconnected devices do not silently fall back; choose Automatic to restore automatic routing.</string>
+</resources>

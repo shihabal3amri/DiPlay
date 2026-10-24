@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_dashboard_oem_overlay">تراكب على العدادات الأصلية (تجريبي)</string>
+    <string name="settings_dashboard_oem_overlay_description">يحتفظ بوضع المصنع ويضيف نافذة مركزية صغيرة لخريطة CarPlay والإرشادات والموسيقى. اختر هذا النمط ثم افتحه بالزر أدناه أو MODE. أعد توصيل CarPlay بعد تغيير النمط. يلزم اختبار التعايش على السيارة.</string>
+    <string name="settings_dashboard_oem_overlay_hint">يشغّل MODE التراكب أو يغلقه. يبدّل وضع MENU بين جميع المعلومات والملاحة والموسيقى. تبقى المناطق دون بيانات شفافة. تتم استعادة العرض الأصلي عند الخروج.</string>
+    <string name="settings_dashboard_oem_overlay_toggle">تشغيل أو إغلاق تراكب العدادات</string>
+    <string name="dashboard_oem_overlay_active">فُتحت النافذة المركزية؛ تحقّق من بقاء العدادات الأصلية</string>
+    <string name="settings_overlay_path">طريقة التراكب (تجريبي)</string>
+    <string name="settings_overlay_path_factory">الاحتفاظ بوضع المصنع</string>
+    <string name="settings_overlay_path_dim">اختبار توافق DIM</string>
+    <string name="settings_overlay_output">شاشة التراكب (تجريبي)</string>
+    <string name="settings_overlay_output_number">الشاشة %1$d</string>
+    <string name="settings_overlay_output_hint">ابدأ بوضع المصنع. إذا لم يظهر محتوى في الوسط، جرّب الشاشة الأخرى. يؤدي تغيير الطريقة أو الشاشة إلى استعادة وضع المصنع وإغلاق النافذة؛ اضغط MODE لفتحها مجددًا. قد يخفي وضع DIM العدادات الأصلية؛ اضغط MODE مجددًا لاستعادتها. يجب أن تكون الشاشة المتاحة للعدادات بدقة 1920×532.</string>
+</resources>

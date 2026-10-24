@@ -70,6 +70,7 @@ data class AirPlayConfig(
     val sourceVersion: String,
     val main: AirPlayDisplayConfig,
     val cluster: AirPlayDisplayConfig? = null,
+    val ultra: AirPlayUltraConfig? = null,
     val rightHandDrive: Boolean = false,
     val port: Int = 7000,
     val entertainmentSampleRate: Int = 48000,

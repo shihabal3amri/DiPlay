@@ -315,7 +315,9 @@ object Iap2ControlMessages {
     fun locationInformation(nmeaSentence: String): Iap2Frame {
         require(nmeaSentence.isNotEmpty()) { "NMEA sentence must not be empty" }
         return Iap2Messages.build(Iap2Endpoints.LOCATION_INFORMATION) {
-            string(0, nmeaSentence)
+            nmeaSentence.split("\r\n").filter { it.isNotEmpty() }.forEach {
+                string(0, it + if ("\r\n" in nmeaSentence) "\r\n" else "")
+            }
         }
     }
 }

@@ -145,7 +145,7 @@
     <string name="carplay_session_ended_reconnecting">انتهت جلسة CarPlay؛ إعادة الاتصال</string>
     <string name="carplay_settings">إعدادات CarPlay</string>
     <string name="carplay_size">حجم CarPlay</string>
-    <string name="changes_the_size_of_carplay_icons_and_text_applying_a_size">يغيّر حجم أيقونات CarPlay والنص. يعيد تطبيق الحجم اتصال CarPlay.</string>
+    <string name="changes_the_size_of_carplay_icons_and_text_applying_a_size">اختر «كبير جدًا» أو «الأكبر» لتكبير أيقونات CarPlay والنص. يعتمد التخطيط على iPhone. يؤدي تطبيق الحجم إلى إعادة الاتصال بـ CarPlay.</string>
     <string name="channel_0_auto">القناة (0 = تلقائي)</string>
     <string name="channel_is_not_valid_for_the_selected_band">القناة غير صالحة للنطاق المحدد</string>
     <string name="channel_must_be_0_or_1_196">يجب أن تكون القناة 0 أو من 1 إلى 196</string>
@@ -413,6 +413,8 @@
     <string name="your_phone_your_drive">هاتفك. رحلتك.</string>
     <string name="your_report_was_saved_to_the_selected_location">تم حفظ تقريرك في الموقع المحدد.</string>
     <string name="cluster_waiting_for_map">DiPlay · بانتظار خريطة CarPlay</string>
+    <string name="settings_carplay_size_extra_large">كبير جدًا</string>
+    <string name="settings_carplay_size_largest">الأكبر</string>
     <string name="option_size_large">كبير</string>
     <string name="option_size_medium">متوسط</string>
     <string name="option_size_small">صغير</string>

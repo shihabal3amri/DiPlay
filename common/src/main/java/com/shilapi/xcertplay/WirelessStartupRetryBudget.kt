@@ -8,8 +8,8 @@ internal class WirelessStartupRetryBudget {
     private var frameSession: Any? = null
     private var firstFrameMillis = 0L
 
-    fun nextDelayMillis(): Long? {
-        if (retries >= WirelessStartupPolicy.MAX_STARTUP_RETRIES) return null
+    fun nextDelayMillis(maxRetries: Int = WirelessStartupPolicy.MAX_STARTUP_RETRIES): Long? {
+        if (retries >= maxRetries) return null
         return (2_000L * (1L shl retries++)).coerceAtMost(30_000L)
     }
 

@@ -75,10 +75,15 @@ internal object BackgroundUpdateScheduler {
     private const val OPEN_WORK = "diplay-open-update-check"
 
     fun schedule(context: Context) {
+        val manager = WorkManager.getInstance(context.applicationContext)
+        if (!UpdateAvailability.backgroundChecksEnabled(context)) {
+            manager.cancelUniqueWork(PERIODIC_WORK)
+            manager.cancelUniqueWork(OPEN_WORK)
+            return
+        }
         val constraints = Constraints.Builder()
             .setRequiredNetworkType(NetworkType.CONNECTED)
             .build()
-        val manager = WorkManager.getInstance(context.applicationContext)
         val periodic = PeriodicWorkRequestBuilder<BackgroundUpdateWorker>(24, TimeUnit.HOURS, 6, TimeUnit.HOURS)
             .setConstraints(constraints)
             .setInitialDelay(10, TimeUnit.MINUTES)

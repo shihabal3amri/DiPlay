@@ -80,6 +80,7 @@ internal object CarPlayMediaKeys {
         appContext = context.applicationContext
         controller = next
         GeelyWheelKeys.start(context)
+        BoyueDimIntegration.attach(context)
         com.shilapi.xcertplay.media.AmbientMusicController.claimPlaybackOwner(next)
         next.playbackListener = { playing ->
             com.shilapi.xcertplay.media.AmbientMusicController.phonePlaybackChanged(next, playing)
@@ -102,6 +103,7 @@ internal object CarPlayMediaKeys {
         expected.artworkListener = null
         controller = null
         GeelyWheelKeys.stop()
+        BoyueDimIntegration.detach()
         releaseLocked()
     }
 
@@ -128,6 +130,10 @@ internal object CarPlayMediaKeys {
                 val update = expected.nowPlayingSnapshot()
                 val previousArtwork = artwork
                 if (albumTrackChanged(nowPlaying, update)) {
+                    Log.i(TAG, "album identity changed reference=${nowPlaying.artworkTransferId}->${update.artworkTransferId} " +
+                        "sourceChanged=${nowPlaying.sourceApp != update.sourceApp} artistChanged=${nowPlaying.artist != update.artist} " +
+                        "albumChanged=${nowPlaying.album != update.album} duration=${nowPlaying.durationMillis}->${update.durationMillis} " +
+                        "titleChanged=${nowPlaying.title != update.title} position=${nowPlaying.elapsedMillis}->${update.elapsedMillis}")
                     val previousId = nowPlaying.artworkTransferId
                     if (previousId != null) {
                         ambientColorCache.remove(previousId)
@@ -139,12 +145,17 @@ internal object CarPlayMediaKeys {
                     }
                     com.shilapi.xcertplay.media.AmbientMusicController.albumColorChanged(expected,
                         update.artworkTransferId?.let { ambientColorCache[it] })
-                    artwork = nextArtwork(update.artworkTransferId, artworkCache, artwork)
+                    artwork = nextArtwork(update.artworkTransferId, artworkCache, null)
+                } else if (artwork != null && (nowPlaying.artist != update.artist ||
+                        nowPlaying.album != update.album || nowPlaying.durationMillis != update.durationMillis)) {
+                    Log.i(TAG, "album retained for late metadata reference=${update.artworkTransferId} " +
+                        "valid=${artwork?.isRecycled == false}")
                 }
                 if (nowPlaying.elapsedMillis != update.elapsedMillis) elapsedUpdatedAt = SystemClock.elapsedRealtime()
                 val metadataChanged = metadataChanged(nowPlaying, update) || artwork !== previousArtwork
                 nowPlaying = update
-                if (metadataChanged) ClusterMusicState.publish(update, update.artworkTransferId?.let { artworkCache[it] })
+                ClusterMusicState.publish(update, artwork)
+                BoyueDimIntegration.playback(update)
                 updateInitialAlbumRecovery(expected)
                 // The iPhone repeats NowPlayingUpdate about twice a second for the position alone.
                 // Republishing the metadata each time sent a copy of the artwork through system_server
@@ -159,14 +170,23 @@ internal object CarPlayMediaKeys {
     @Synchronized
     private fun onArtworkChanged(expected: CarPlayController, id: Int, bytes: ByteArray) {
         if (controller !== expected) return
+        Log.i(TAG, "album received reference=$id bytes=${bytes.size} currentReference=${nowPlaying.artworkTransferId}")
         artworkOwner?.let { artworkQueue.submit(it, id, bytes) }
     }
 
     @Synchronized
     private fun onArtworkDecoded(expected: Any, id: Int, result: AmbientArtwork?) {
         val decoded = result?.bitmap
+        Log.i(TAG, "album decoded reference=$id success=${decoded != null} ownerCurrent=${artworkOwner === expected} " +
+            "currentReference=${nowPlaying.artworkTransferId}")
         if (artworkOwner !== expected) {
             decoded?.recycle()
+            return
+        }
+        // A corrupt duplicate is not an explicit request to remove an already decoded image.
+        // Real track changes evict this cache entry before this callback can reuse it.
+        if (decoded == null && artworkCache[id]?.isRecycled == false) {
+            Log.i(TAG, "album duplicate decode failed; retaining reference=$id")
             return
         }
         artworkCache.remove(id)

@@ -16,5 +16,7 @@ internal object AsyncDiagnosticLog {
         runCatching { writer.enqueue(Entry(target, "$timestamp  $safe")) }
     }
 
+    fun diagnostic() = "Async diagnostics: pending=${writer.pendingCount} dropped=${writer.droppedCount}"
+
     internal fun awaitIdle(timeoutMillis: Long): Boolean = writer.awaitIdle(timeoutMillis)
 }

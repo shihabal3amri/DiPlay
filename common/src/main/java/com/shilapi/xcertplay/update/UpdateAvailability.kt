@@ -11,6 +11,7 @@ internal object UpdateAvailability {
     private const val CHECKSUMS_URL = "checksums_url"
     private const val LAST_ATTEMPT_MILLIS = "last_attempt_millis"
     private const val BACKGROUND_CHECKS = "background_checks"
+    private const val DISABLE_PROMPTS = "disable_update_prompts"
     private const val LAST_RESULT = "last_result"
     private const val LAST_RESULT_MILLIS = "last_result_millis"
     private const val LAST_INSTALL = "last_install"
@@ -21,14 +22,23 @@ internal object UpdateAvailability {
     private fun preferences(context: Context) =
         context.getSharedPreferences(PREFERENCES, Context.MODE_PRIVATE)
 
+    // This customized build opts out of upstream update prompts until the driver enables them.
+    fun promptsDisabled(context: Context): Boolean = preferences(context).getBoolean(DISABLE_PROMPTS, true)
+
+    fun savePromptsDisabled(context: Context, disabled: Boolean) {
+        preferences(context).edit().putBoolean(DISABLE_PROMPTS, disabled).apply()
+        if (disabled) clear(context)
+    }
+
     fun backgroundChecksEnabled(context: Context): Boolean =
-        preferences(context).getBoolean(BACKGROUND_CHECKS, true)
+        !promptsDisabled(context) && preferences(context).getBoolean(BACKGROUND_CHECKS, true)
 
     fun saveBackgroundChecksEnabled(context: Context, enabled: Boolean) {
         preferences(context).edit().putBoolean(BACKGROUND_CHECKS, enabled).apply()
     }
 
     fun available(context: Context, installedVersion: String): UpdateRelease? {
+        if (promptsDisabled(context)) return null
         val values = preferences(context)
         val release = UpdateRelease(
             tagName = values.getString(TAG, null) ?: return null,
@@ -42,6 +52,8 @@ internal object UpdateAvailability {
     }
 
     fun save(context: Context, release: UpdateRelease) {
+        // A network request started before opt-out must not restore an update banner.
+        if (promptsDisabled(context)) return
         preferences(context).edit()
             .putString(TAG, release.tagName)
             .putString(APK_NAME, release.apkName)
@@ -60,6 +72,7 @@ internal object UpdateAvailability {
     }
 
     fun shouldCheck(context: Context, nowMillis: Long): Boolean {
+        if (!backgroundChecksEnabled(context)) return false
         val lastAttempt = preferences(context).getLong(LAST_ATTEMPT_MILLIS, 0L)
         return lastAttempt <= 0L || nowMillis < lastAttempt || nowMillis - lastAttempt >= CHECK_INTERVAL_MILLIS
     }

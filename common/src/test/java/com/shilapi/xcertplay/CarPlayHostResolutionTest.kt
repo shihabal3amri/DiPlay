@@ -5,6 +5,7 @@ import android.media.MediaFormat
 import android.os.Handler
 import com.shilapi.xcertplay.airplay.AirPlayConfig
 import com.shilapi.xcertplay.airplay.AirPlayIdentity
+import com.shilapi.xcertplay.airplay.CarPlaySize
 import org.junit.After
 import org.junit.Assert.*
 import org.junit.Before
@@ -56,6 +57,27 @@ class CarPlayHostResolutionTest {
         assertEquals(native.widthPhysicalMm, display.widthPhysicalMm)
         assertEquals(native.heightPhysicalMm, display.heightPhysicalMm)
         assertEquals(160, AirPlayPersistence.loadDisplayScalePercent(activity))
+    }
+
+    @Test fun largerIconPresetsReachThePhoneWithoutChangingTheVideoCanvas() {
+        decoder(maxWidth = 3840, maxHeight = 2160)
+        val load = activity.javaClass.getDeclaredMethod("loadPersistedSettings").apply { isAccessible = true }
+        AirPlayPersistence.saveWidthPhysicalMm(activity, 300)
+        load.invoke(activity)
+        val original = config(160)
+        for (preset in listOf(CarPlaySize.EXTRA_LARGE, CarPlaySize.LARGEST)) {
+            AirPlayPersistence.saveWidthPhysicalMm(activity, preset.widthMillimeters)
+            load.invoke(activity)
+            val enlarged = config(160)
+            assertEquals(preset.widthMillimeters, enlarged.main.widthPhysicalMm)
+            assertEquals(Math.round(preset.widthMillimeters * 990.0 / 1920).toInt(), enlarged.main.heightPhysicalMm)
+            assertEquals(original.main, enlarged.main.copy(
+                widthPhysicalMm = original.main.widthPhysicalMm,
+                heightPhysicalMm = original.main.heightPhysicalMm,
+            ))
+            assertEquals(original.cluster, enlarged.cluster)
+            assertEquals(160, AirPlayPersistence.loadDisplayScalePercent(activity))
+        }
     }
 
     @Test fun decoderFrameRateAlsoGatesTheEnlargedStream() {

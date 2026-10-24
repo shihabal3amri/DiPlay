@@ -13,6 +13,19 @@ class WirelessStartupRetryBudgetTest {
         assertEquals(2_000L, budget.nextDelayMillis())
     }
 
+    @Test fun ultraLimitIsThreeAndManualRetryRestoresIt() {
+        val budget = WirelessStartupRetryBudget()
+        assertEquals(listOf(2_000L, 4_000L, 8_000L), List(3) { budget.nextDelayMillis(3) })
+        assertNull(budget.nextDelayMillis(3))
+        val session = Any()
+        budget.firstFrame(session, 1_000)
+        budget.disconnected()
+        assertFalse(budget.resetIfStable(session, 70_000))
+        assertNull(budget.nextDelayMillis(3))
+        budget.manualRetry()
+        assertEquals(2_000L, budget.nextDelayMillis(3))
+    }
+
     @Test fun onlyContinuousVideoSessionResetsBudget() {
         val budget = WirelessStartupRetryBudget()
         budget.nextDelayMillis()

@@ -1,0 +1,4 @@
+<resources>
+    <string name="ultra_retries_exhausted">لم يكتمل اتصال Ultra. توقفت المحاولات التلقائية. احفظ تقرير التشخيص، ثم أعد المحاولة يدوياً أو انتقل إلى CarPlay العادي.</string>
+    <string name="wireless_handoff_timeout">انتهت مهلة نقل قناة التحكم في CarPlay اللاسلكي.</string>
+</resources>

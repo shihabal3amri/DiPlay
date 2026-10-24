@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_dashboard_oem_overlay">Superposición en cuadro original (experimental)</string>
+    <string name="settings_dashboard_oem_overlay_description">Mantiene el modo original y añade una ventana central con mapa, indicaciones y música de CarPlay. Selecciona este estilo y ábrelo con el botón inferior o MODE. Vuelve a conectar CarPlay después de cambiar de estilo. La coexistencia requiere una prueba en el vehículo.</string>
+    <string name="settings_dashboard_oem_overlay_hint">MODE activa o cierra la superposición. MENU permite cambiar entre todo, navegación y música. Sin datos, el área queda transparente. Al salir se restaura el cuadro original.</string>
+    <string name="settings_dashboard_oem_overlay_toggle">Activar o cerrar la superposición</string>
+    <string name="dashboard_oem_overlay_active">Ventana central abierta; comprueba los indicadores originales</string>
+    <string name="settings_overlay_path">Modo de superposición (experimental)</string>
+    <string name="settings_overlay_path_factory">Mantener modo de fábrica</string>
+    <string name="settings_overlay_path_dim">Prueba de compatibilidad DIM</string>
+    <string name="settings_overlay_output">Pantalla de superposición (experimental)</string>
+    <string name="settings_overlay_output_number">Pantalla %1$d</string>
+    <string name="settings_overlay_output_hint">Empieza manteniendo el modo de fábrica. Si no aparece contenido central, prueba la otra pantalla. Al cambiar el modo o la pantalla se restaura el cuadro original y se cierra la ventana; pulsa MODE para abrirla de nuevo. El modo DIM puede ocultar los indicadores originales: pulsa MODE otra vez para restaurarlos. La salida debe ser una pantalla de instrumentos disponible de 1920×532.</string>
+</resources>

@@ -21,6 +21,7 @@ internal object ConnectionFailureGuidance {
             WirelessStartupFailure.HOTSPOT_NOT_READY,
             WirelessStartupFailure.HOTSPOT_CONFIGURATION -> return network(mode)
             WirelessStartupFailure.FIRST_TCP_TIMEOUT -> return iphoneWifi(mode)
+            WirelessStartupFailure.HANDOFF_TIMEOUT -> return R.string.connection_help_general
             null -> Unit
         }
 

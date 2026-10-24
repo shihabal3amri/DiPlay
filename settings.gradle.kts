@@ -24,6 +24,7 @@ dependencyResolutionManagement {
 
 rootProject.name = "xcertplay"
 include(":common")
+include(":fx11-platform-stubs")
 include(":mobile")
 include(":automotive")
 include(":shared")

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_mic_source">Fuente de entrada del micrófono</string>
+    <string name="settings_mic_device">Dispositivo de entrada del micrófono</string>
+    <string name="settings_mic_auto">Automático</string>
+    <string name="settings_mic_communication">7 · Comunicación de voz</string>
+    <string name="settings_mic_plain">1 · Micrófono</string>
+    <string name="settings_mic_recognition">6 · Reconocimiento de voz</string>
+    <string name="settings_mic_default">0 · Predeterminado del sistema</string>
+    <string name="settings_mic_camcorder">5 · Videocámara</string>
+    <string name="settings_mic_unprocessed">9 · Sin procesar</string>
+    <string name="settings_mic_missing">Dispositivo seleccionado desconectado</string>
+    <string name="settings_mic_description">Para llamadas y Siri. Se aplica en la próxima llamada o sesión de Siri sin interrumpir el audio actual. Los números de entrada difieren de los canales de reproducción. Si no te oyen, prueba 7, luego 1 o 6. No se sustituyen fuentes incompatibles ni dispositivos desconectados. Selecciona Automático para restaurar la ruta automática.</string>
+</resources>

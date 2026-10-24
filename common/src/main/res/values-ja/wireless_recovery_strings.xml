@@ -1,0 +1,4 @@
+<resources>
+    <string name="ultra_retries_exhausted">Ultra の接続が完了せず、自動再試行を停止しました。診断レポートを保存し、手動で再試行するか通常の CarPlay に切り替えてください。</string>
+    <string name="wireless_handoff_timeout">ワイヤレス CarPlay の制御チャンネルの切り替えがタイムアウトしました。</string>
+</resources>

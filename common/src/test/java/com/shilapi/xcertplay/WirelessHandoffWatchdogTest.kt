@@ -212,6 +212,72 @@ class WirelessHandoffWatchdogTest {
         verify(bootstrap, never()).close()
     }
 
+    @Test fun ultraGetsOneGracePeriodWithoutClaimingSuccessOrDroppingBluetooth() {
+        enableUltra()
+        timeout()
+        timeout()
+        assertTrue(statuses.isEmpty())
+        assertEquals(0, hotspotCloses)
+        verify(bootstrap, never()).close()
+        assertFalse(flag("wirelessActiveReported").get())
+        assertEquals(1, diagnostics.count { it.contains("handoff=grace-keep-bootstrap") })
+        assertTrue(diagnostics.any { it.contains("ultra=true") && it.contains("deadlineMs=120000") })
+        shadowOf(Looper.getMainLooper()).idleFor(java.time.Duration.ofMillis(74_999))
+        assertTrue(statuses.isEmpty())
+        shadowOf(Looper.getMainLooper()).idleFor(java.time.Duration.ofMillis(1))
+        for (thread in Thread.getAllStackTraces().keys.filter { it.name == "diplay-ultra-handoff-deadline" }) {
+            thread.join(2_000)
+            assertFalse(thread.isAlive)
+        }
+        shadowOf(Looper.getMainLooper()).idle()
+        assertEquals(com.shilapi.xcertplay.network.WirelessStartupFailure.HANDOFF_TIMEOUT,
+            (statuses.single() as CarPlayStatus.Failed).startupFailure)
+        assertEquals(1, hotspotCloses)
+        verify(bootstrap, times(1)).close()
+    }
+
+    @Test fun ultraVideoDuringGracePreservesTheWorkingSessionAtDeadline() {
+        enableUltra()
+        timeout()
+        proofCall("rendered", 0, session)
+        finalTimeout()
+        assertEquals(listOf(CarPlayStatus.WirelessActiveFallback), statuses)
+        verify(bootstrap, never()).close()
+        assertEquals(0, hotspotCloses)
+    }
+
+    @Test fun ultraTunnelDuringGraceCompletesAndInvalidatesTheDeadline() {
+        enableUltra()
+        timeout()
+        tunnelReady(0)
+        awaitHandoff()
+        finalTimeout()
+        assertEquals(listOf(CarPlayStatus.WirelessActive), statuses)
+        verify(bootstrap, times(1)).close()
+        assertEquals(0, hotspotCloses)
+    }
+
+    @Test fun ultraDeadlineFromOldGenerationCannotTearDownReplacement() {
+        enableUltra()
+        timeout()
+        ReflectionHelpers.getField<AtomicInteger>(controller, "wirelessGeneration").set(1)
+        finalTimeout()
+        assertTrue(statuses.isEmpty())
+        assertEquals(0, hotspotCloses)
+        verify(bootstrap, never()).close()
+    }
+
+    private fun enableUltra() {
+        val config = ReflectionHelpers.getField<AirPlayConfig>(controller, "airPlayConfig")
+        ReflectionHelpers.setField(controller, "airPlayConfig", config.copy(ultra = AirPlayUltraConfig(AirPlayDisplayConfig(1920, 532))))
+    }
+
+    private fun finalTimeout() {
+        controller.javaClass.getDeclaredMethod("finishWirelessHandoffTimeout", Int::class.javaPrimitiveType, Boolean::class.javaPrimitiveType)
+            .apply { isAccessible = true }.invoke(controller, 0, false)
+        shadowOf(Looper.getMainLooper()).idle()
+    }
+
     private fun timeout() {
         controller.javaClass.getDeclaredMethod("handleWirelessHandoffTimeout", Int::class.javaPrimitiveType)
             .apply { isAccessible = true }.invoke(controller, 0)

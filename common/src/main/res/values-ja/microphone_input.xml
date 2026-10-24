@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_mic_source">マイク入力ソース</string>
+    <string name="settings_mic_device">マイク入力デバイス</string>
+    <string name="settings_mic_auto">自動</string>
+    <string name="settings_mic_communication">7 · 通話処理</string>
+    <string name="settings_mic_plain">1 · マイク</string>
+    <string name="settings_mic_recognition">6 · 音声認識</string>
+    <string name="settings_mic_default">0 · システム既定</string>
+    <string name="settings_mic_camcorder">5 · ビデオ録音</string>
+    <string name="settings_mic_unprocessed">9 · 未処理</string>
+    <string name="settings_mic_missing">選択したデバイスが未接続</string>
+    <string name="settings_mic_description">通話と Siri に使用します。次の通話または Siri から適用され、現在の音声は中断しません。入力番号は再生チャンネルとは異なります。相手に声が届かない場合は 7、1、6 の順にお試しください。非対応のソースや未接続のデバイスは自動で切り替わりません。「自動」で元に戻せます。</string>
+</resources>

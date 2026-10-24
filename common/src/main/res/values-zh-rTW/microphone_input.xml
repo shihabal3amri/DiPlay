@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_mic_source">語音輸入通道（麥克風）</string>
+    <string name="settings_mic_device">麥克風輸入裝置</string>
+    <string name="settings_mic_auto">自動</string>
+    <string name="settings_mic_communication">7 · 通話處理</string>
+    <string name="settings_mic_plain">1 · 一般麥克風</string>
+    <string name="settings_mic_recognition">6 · 語音辨識</string>
+    <string name="settings_mic_default">0 · 系統預設</string>
+    <string name="settings_mic_camcorder">5 · 攝影錄音</string>
+    <string name="settings_mic_unprocessed">9 · 未經處理</string>
+    <string name="settings_mic_missing">所選裝置已中斷</string>
+    <string name="settings_mic_description">用於通話和 Siri，下次通話或 Siri 工作階段生效，不中斷目前聲音。輸入通道編號與音樂、導航輸出不同。對方聽不到時可依序嘗試 7、1、6。不支援的來源或已中斷的裝置不會自動替換；選擇「自動」可恢復自動路由。</string>
+</resources>

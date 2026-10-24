@@ -71,7 +71,7 @@ class CarPlayBonjourTest {
             "GET /ctrl-int/1/connect HTTP/1.1\r\n" +
                 "Host: [fe80::1]:7000\r\n" +
                 "User-Agent: AirPlay/366.0\r\n" +
-                "AirPlay-Receiver-Device-ID: 020000000002\r\n" +
+                "AirPlay-Receiver-Device-ID: 2199023255554\r\n" +
                 "Connection: close\r\n" +
                 "\r\n",
             CarPlayBonjourProtocol.connectProbeRequest(
@@ -81,5 +81,23 @@ class CarPlayBonjourTest {
                 deviceId = "02:00:00:00:00:02",
             ),
         )
+    }
+
+    @Test fun controlHeaderConvertsHexIncludingUnsigned48BitMaximum() {
+        for ((input, expected) in listOf("de:ad:be:ef:ca:fe" to "244837814094590",
+            "DEADBEEFCAFE" to "244837814094590", "ff:ff:ff:ff:ff:ff" to "281474976710655",
+            "00:00:00:00:00:00" to "0")) {
+            val request = CarPlayBonjourProtocol.connectProbeRequest("192.0.2.1", 7000, "366.0", input)
+            assertEquals(expected, request.lineSequence().single { it.startsWith("AirPlay-Receiver-Device-ID: ") }
+                .substringAfter(": "))
+        }
+    }
+
+    @Test fun malformedDeviceIdCannotProduceAControlRequest() {
+        for (id in listOf("", "123", "0123456789abc", "GG:00:00:00:00:00", "020000000002\r\nInjected: 1")) {
+            org.junit.Assert.assertThrows(IllegalArgumentException::class.java) {
+                CarPlayBonjourProtocol.connectProbeRequest("192.0.2.1", 7000, "366.0", id)
+            }
+        }
     }
 }

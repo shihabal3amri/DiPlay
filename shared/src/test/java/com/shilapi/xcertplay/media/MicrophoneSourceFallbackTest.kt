@@ -119,6 +119,49 @@ class MicrophoneSourceFallbackTest {
         assertTrue(ShadowAudioEffect.getAudioEffects().isEmpty())
     }
 
+    @Test fun explicitSourceAppliesToCallsAndSiriAndChangesOnlyAtNextStream() {
+        sink.close()
+        var chosen = MediaRecorder.AudioSource.MIC
+        sink = AndroidMediaSink(context = context, onAudioDiagnostic = diagnostics::add,
+            microphoneInputSource = { chosen })
+        val call = AudioStreamId(101, "telephony")
+        sink.onMicrophoneStarted(call, config("telephony"))
+        assertTrue(captureStarted.await(5, TimeUnit.SECONDS))
+        val first = RecorderBuilder.built.last()
+        assertEquals(MediaRecorder.AudioSource.MIC, first.audioSource)
+        chosen = MediaRecorder.AudioSource.VOICE_RECOGNITION
+        sink.onMicrophoneStarted(call, config("telephony"))
+        assertEquals(1, RecorderBuilder.built.size)
+        assertEquals(AudioRecord.RECORDSTATE_RECORDING, first.recordingState)
+        sink.onMicrophoneStopped(call)
+        assertEquals(AudioManager.MODE_RINGTONE, context.getSystemService(AudioManager::class.java).mode)
+        sink.onMicrophoneStarted(id, config("speechrecognition"))
+        assertEquals(chosen, RecorderBuilder.built.last().audioSource)
+        assertTrue(diagnostics.any { it.contains("start type=telephony source=MIC") })
+    }
+
+    @Test fun explicitUnsupportedSourceDoesNotSilentlyFallback() {
+        sink.close()
+        sink = AndroidMediaSink(context = context, onAudioDiagnostic = diagnostics::add,
+            microphoneInputSource = { MediaRecorder.AudioSource.VOICE_RECOGNITION })
+        RecorderBuilder.rejectSources = setOf(MediaRecorder.AudioSource.VOICE_RECOGNITION)
+        sink.onMicrophoneStarted(id, config("speechrecognition"))
+        assertEquals(listOf(MediaRecorder.AudioSource.VOICE_RECOGNITION), RecorderBuilder.attempts)
+        assertTrue(diagnostics.any { it.contains("stage=RECORDER_CREATION") })
+        assertNull(captured.get())
+    }
+
+    @Test fun disconnectedSelectedInputReleasesRecorderAndRestoresCallMode() {
+        sink.close()
+        sink = AndroidMediaSink(context = context, onAudioDiagnostic = diagnostics::add,
+            microphoneInputDevice = { "nonexistent-device" })
+        sink.onMicrophoneStarted(AudioStreamId(101, "telephony"), config("telephony"))
+        assertEquals(AudioRecord.STATE_UNINITIALIZED, RecorderBuilder.built.single().state)
+        assertEquals(AudioManager.MODE_RINGTONE, context.getSystemService(AudioManager::class.java).mode)
+        assertTrue(diagnostics.any { it.contains("stage=INPUT_ROUTING") })
+        assertNull(captured.get())
+    }
+
     private fun config(type: String) = MicrophoneConfig(audioType = type, sampleRate = 16_000,
         channels = 1, payloadType = 100, frameMillis = 20, host = InetAddress.getLoopbackAddress(),
         port = 9, key = ByteArray(32))

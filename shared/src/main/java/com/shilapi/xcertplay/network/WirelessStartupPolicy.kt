@@ -8,11 +8,13 @@ object WirelessStartupPolicy {
     const val STABLE_SAMPLES = 3
     const val FIRST_TCP_MILLIS = 30_000L
     const val MAX_STARTUP_RETRIES = 5
+    const val MAX_ULTRA_RETRIES = 3
+    const val ULTRA_HANDOFF_MILLIS = 120_000L
     const val STABLE_SESSION_MILLIS = 60_000L
 }
 
 enum class WirelessStartupFailure {
-    HOTSPOT_NOT_READY, FIRST_TCP_TIMEOUT, HOTSPOT_CONFIGURATION,
+    HOTSPOT_NOT_READY, FIRST_TCP_TIMEOUT, HOTSPOT_CONFIGURATION, HANDOFF_TIMEOUT,
 
     /** The head unit's Android Bluetooth accepts connections that reach no phone. */
     BLUETOOTH_UNUSABLE;

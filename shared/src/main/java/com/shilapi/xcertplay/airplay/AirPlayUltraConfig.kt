@@ -1,0 +1,187 @@
+package com.shilapi.xcertplay.airplay
+
+import com.shilapi.xcertplay.airplay.rcs.caf.CafPluginRegistration
+import com.shilapi.xcertplay.airplay.rcs.caf.CafPluginRegistry
+
+/**
+ * One `vehicleStateProtocolInfo.pluginConfigs` entry.
+ *
+ * The firmware-confirmed envelope is a dictionary with an NSNumber [pluginId]. Additional fields
+ * are OEM/protocol-specific and are preserved without interpretation. The optional
+ * `pluginConfig` dictionary form discussed by the firmware reference remains representable via
+ * [fields].
+ */
+data class AirPlayVehicleStateProtocolPlugin(
+    val pluginId: Long,
+    val fields: Map<String, Any?> = emptyMap(),
+) {
+    init {
+        if (pluginId < 0) {
+            throw AirPlayConfigurationException(
+                "vehicleStateProtocolInfo.pluginConfigs[].pluginID must be non-negative",
+            )
+        }
+        val suppliedPluginId = fields["pluginID"]
+        if (suppliedPluginId != null && toPluginId(suppliedPluginId) != pluginId) {
+            throw AirPlayConfigurationException(
+                "vehicleStateProtocolInfo.pluginConfigs[].pluginID must match the typed plugin ID",
+            )
+        }
+    }
+
+    fun toWireMap(): Map<String, Any?> = linkedMapOf<String, Any?>("pluginID" to pluginId).apply {
+        fields.forEach { (key, value) ->
+            if (key != "pluginID") put(key, value)
+        }
+    }
+
+    companion object {
+        fun of(
+            pluginId: Long,
+            vararg fields: Pair<String, Any?>,
+        ): AirPlayVehicleStateProtocolPlugin = AirPlayVehicleStateProtocolPlugin(
+            pluginId = pluginId,
+            fields = linkedMapOf(*fields),
+        )
+
+        fun fromWireMap(values: Map<String, Any?>): AirPlayVehicleStateProtocolPlugin {
+            val pluginId = values["pluginID"]
+                ?: throw AirPlayConfigurationException(
+                    "vehicleStateProtocolInfo.pluginConfigs[].pluginID is required",
+                )
+            return AirPlayVehicleStateProtocolPlugin(
+                pluginId = toPluginId(pluginId),
+                fields = LinkedHashMap(values),
+            )
+        }
+
+        private fun toPluginId(value: Any): Long = when (value) {
+            is Byte -> value.toLong()
+            is Short -> value.toLong()
+            is Int -> value.toLong()
+            is Long -> value
+            else -> throw AirPlayConfigurationException(
+                "vehicleStateProtocolInfo.pluginConfigs[].pluginID must be an integer",
+            )
+        }
+    }
+}
+
+/**
+ * Vehicle-state plugin metadata advertised in `/info`.
+ *
+ * The outer schema is firmware-confirmed:
+ * - [pluginConfigs] is encoded as an NSArray on the AirPlay wire.
+ * - [pluginMapping] is encoded as an NSDictionary on the AirPlay wire.
+ *
+ * CarKit requires every `pluginConfigs` element to be an NSDictionary containing an NSNumber
+ * `pluginID`. CarAccessoryFramework reads `pluginMapping` as plugin-name -> NSNumber pluginID.
+ * Other element and mapping fields remain OEM/protocol-specific and are preserved verbatim.
+ */
+data class AirPlayVehicleStateProtocolInfo(
+    val protocolVersion: String = "1.0",
+    val pluginConfigs: List<AirPlayVehicleStateProtocolPlugin>,
+    val pluginMapping: Map<String, Long> = emptyMap(),
+) {
+    companion object {
+        /**
+         * Builds the `/info` sidecar from explicitly supplied CAF registrations.
+         *
+         * A registration supplies the plugin ID and may supply additional wire fields through
+         * `CafPluginRegistration.pluginConfig`. No OEM values are synthesized. When no registration
+         * is supplied this returns null and the feature stays disabled.
+         */
+        fun from(
+            registrations: Collection<CafPluginRegistration>,
+            pluginMapping: Map<String, Long> = emptyMap(),
+        ): AirPlayVehicleStateProtocolInfo? {
+            if (registrations.isEmpty()) return null
+            val pluginConfigs = registrations.map { registration ->
+                AirPlayVehicleStateProtocolPlugin.fromWireMap(
+                    registration.wirePluginConfig(),
+                )
+            }
+            val effectiveMapping = LinkedHashMap(pluginMapping)
+            registrations.forEach { registration ->
+                val name = registration.pluginName?.trim().orEmpty()
+                if (name.isEmpty()) return@forEach
+                val existing = effectiveMapping[name]
+                if (existing != null && existing != registration.pluginId) {
+                    throw AirPlayConfigurationException(
+                        "vehicleStateProtocolInfo.pluginMapping '$name' maps to multiple plugin IDs",
+                    )
+                }
+                effectiveMapping[name] = registration.pluginId
+            }
+            return AirPlayVehicleStateProtocolInfo(
+                pluginConfigs = pluginConfigs,
+                pluginMapping = effectiveMapping,
+            )
+        }
+
+        fun fromPluginConfigs(
+            pluginConfigs: Collection<Map<String, Any?>>,
+            pluginMapping: Map<String, Long> = emptyMap(),
+        ): AirPlayVehicleStateProtocolInfo? {
+            if (pluginConfigs.isEmpty()) return null
+            return AirPlayVehicleStateProtocolInfo(
+                pluginConfigs = pluginConfigs.map(
+                    AirPlayVehicleStateProtocolPlugin::fromWireMap,
+                ),
+                pluginMapping = LinkedHashMap(pluginMapping),
+            )
+        }
+
+        fun fromRegistry(
+            registry: CafPluginRegistry,
+            pluginMapping: Map<String, Long> = emptyMap(),
+        ): AirPlayVehicleStateProtocolInfo? = from(
+            registrations = registry.allRegistrations(),
+            pluginMapping = pluginMapping,
+        )
+    }
+}
+
+/**
+ * `uiSyncInfo` is required when `uiSync` is enabled, but the firmware only checks that the
+ * top-level key exists and is an NSDictionary. No child key is read by AirPlaySender. Extra fields
+ * are retained for forward compatibility and OEM extensions.
+ */
+data class AirPlayUiSyncInfo(
+    val values: Map<String, Any?> = emptyMap(),
+) {
+    fun toWireMap(): Map<String, Any?> = LinkedHashMap(values)
+
+    companion object {
+        fun empty(): AirPlayUiSyncInfo = AirPlayUiSyncInfo()
+
+        fun fromWireMap(values: Map<String, Any?>): AirPlayUiSyncInfo =
+            AirPlayUiSyncInfo(LinkedHashMap(values))
+    }
+}
+
+/**
+ * CarPlay Ultra capabilities for one handshake.
+ *
+ * A null [AirPlayConfig.ultra] disables every Ultra feature. Sidecars whose wire schema is not yet
+ * implemented have no default value: unless [readyFeatures] explicitly declares the implementation
+ * ready and the corresponding info is present, the feature stays out of `enabledFeatures`.
+ *
+ * [readyFeatures] is deliberately an enum set rather than a set of wire strings. A sidecar-backed
+ * feature listed there but missing its info is rejected while building the local response.
+ *
+ * [runtime] is the shared handler registry for RCS-backed features. A sidecar and a `readyFeatures`
+ * entry are insufficient when the corresponding RCS client type cannot be dispatched.
+ */
+data class AirPlayUltraConfig(
+    val cluster: AirPlayDisplayConfig,
+    val vehicleStateProtocolInfo: AirPlayVehicleStateProtocolInfo? = null,
+    val uiSyncInfo: AirPlayUiSyncInfo? = null,
+    val fileTransferInfo: Map<String, Any?>? = null,
+    val logTransferInfo: Map<String, Any?>? = null,
+    val mainBufferedInfo: Map<String, Any?>? = null,
+    val videoPlaybackInfo: Map<String, Any?>? = null,
+    val sessionManagementInfo: Map<String, Any?>? = null,
+    val readyFeatures: Set<AirPlayFeature> = emptySet(),
+    val runtime: AirPlayUltraRuntime? = null,
+)

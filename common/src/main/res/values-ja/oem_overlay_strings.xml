@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_dashboard_oem_overlay">純正メーターへの重ね表示（実験的機能）</string>
+    <string name="settings_dashboard_oem_overlay_description">純正表示モードを維持し、中央の小さなウィンドウに CarPlay の地図、案内、音楽を表示します。選択後、下の切り替えボタンまたは MODE で開きます。スタイル変更後は CarPlay を再接続してください。純正メーターとの共存には実車確認が必要です。</string>
+    <string name="settings_dashboard_oem_overlay_hint">MODE で表示を切り替えます。MENU のページ切り替えでは全情報 → ナビ → 音楽の順です。データがない領域は透明になります。終了時は純正表示を復元します。</string>
+    <string name="settings_dashboard_oem_overlay_toggle">純正メーターへの重ね表示を切り替え</string>
+    <string name="dashboard_oem_overlay_active">中央ウィンドウを開きました。実際の純正メーターを確認してください</string>
+    <string name="settings_overlay_path">重ね合わせ方式（実験的機能）</string>
+    <string name="settings_overlay_path_factory">純正モードを維持</string>
+    <string name="settings_overlay_path_dim">DIM 互換性テスト</string>
+    <string name="settings_overlay_output">重ね合わせ出力画面（実験的機能）</string>
+    <string name="settings_overlay_output_number">画面 %1$d</string>
+    <string name="settings_overlay_output_hint">まず「純正モードを維持」を使用してください。中央に表示されない場合は別の出力を試してください。方式や出力の変更時は純正モードに戻してウィンドウを閉じます。MODE で再度開いてください。DIM モードでは純正メーターが隠れる可能性があります。MODE を再度押すと復帰します。出力には使用可能な 1920×532 のメーター画面が必要です。</string>
+</resources>

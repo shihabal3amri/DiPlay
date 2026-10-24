@@ -31,7 +31,7 @@ class Iap2LocationReporterTest {
         val link = link()
 
         assertTrue(link.handle(start) { sent += it })
-        assertEquals(setOf(0, 1, 2, 4, 0x8001), provider.requested)
+        assertEquals(setOf(1, 2), provider.requested)
         assertTrue(provider.started)
         nowMillis += 1_000
         link.tick { sent += it }

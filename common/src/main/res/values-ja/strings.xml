@@ -149,7 +149,7 @@
     <string name="carplay_session_ended_reconnecting">CarPlay接続が終了しました。再接続しています</string>
     <string name="carplay_settings">CarPlay設定</string>
     <string name="carplay_size">CarPlayの表示サイズ</string>
-    <string name="changes_the_size_of_carplay_icons_and_text_applying_a_size">CarPlayのアイコンと文字の大きさを変更します。適用するとCarPlayを再接続します。</string>
+    <string name="changes_the_size_of_carplay_icons_and_text_applying_a_size">CarPlayのアイコンと文字をさらに大きくするには「特大」か「最大」を選びます。レイアウトはiPhoneによって異なります。適用するとCarPlayを再接続します。</string>
     <string name="channel_0_auto">チャンネル（0＝自動）</string>
     <string name="channel_is_not_valid_for_the_selected_band">選択した周波数帯では使えないチャンネルです</string>
     <string name="channel_must_be_0_or_1_196">チャンネルは0または1～196にしてください</string>
@@ -465,6 +465,8 @@
     <string name="your_phone_your_drive">いつものiPhoneを、車でも。</string>
     <string name="your_report_was_saved_to_the_selected_location">選択した場所にレポートを保存しました</string>
     <string name="cluster_waiting_for_map">DiPlay · CarPlayの地図を待っています</string>
+    <string name="settings_carplay_size_extra_large">特大</string>
+    <string name="settings_carplay_size_largest">最大</string>
     <string name="option_size_large">大</string>
     <string name="option_size_medium">中</string>
     <string name="option_size_small">小</string>

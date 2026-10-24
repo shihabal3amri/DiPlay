@@ -48,6 +48,16 @@ class CarPlayConnectionDiagnosticLogTest {
         assertEquals(2, activity.javaClass.getDeclaredField("restartGeneration").apply { isAccessible = true }.get(activity))
     }
 
+    @Test fun ultraNegotiationSurvivesSettingsAndOldControllerWithoutRawPayloads() {
+        activity.javaClass.getDeclaredField("menuOpen").apply { isAccessible = true }.set(activity, true)
+        listener.onDebugLog("Ultra channel client=CarPlayProtocolData event=caf-ready bindings=0 negotiationOnly=true")
+        listener.onDebugLog("Ultra channel payload=secret-data")
+        assertTrue(AsyncDiagnosticLog.awaitIdle(2_000))
+        assertTrue(log.contains("generation=1 Ultra channel"))
+        assertTrue(log.contains("negotiationOnly=true"))
+        assertFalse(log.contains("secret-data"))
+    }
+
     @Test fun theDiagnosticPrefixDoesNotBypassCredentialRedaction() {
         listener.onDebugLog("${CarPlayController.CONNECTION_DIAGNOSTIC_PREFIX} attempt=1 token=private-token")
         assertTrue(AsyncDiagnosticLog.awaitIdle(2_000))

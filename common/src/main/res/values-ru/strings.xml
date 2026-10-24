@@ -145,7 +145,7 @@
     <string name="carplay_session_ended_reconnecting">Сеанс CarPlay завершён; переподключение</string>
     <string name="carplay_settings">Настройки CarPlay</string>
     <string name="carplay_size">Размер CarPlay</string>
-    <string name="changes_the_size_of_carplay_icons_and_text_applying_a_size">Изменяет размер значков и текста CarPlay. Применение размера переподключает CarPlay.</string>
+    <string name="changes_the_size_of_carplay_icons_and_text_applying_a_size">Выберите «Очень большой» или «Максимальный», чтобы увеличить значки и текст CarPlay. Компоновка зависит от iPhone. Применение размера переподключает CarPlay.</string>
     <string name="channel_0_auto">Канал (0 = авто)</string>
     <string name="channel_is_not_valid_for_the_selected_band">Канал недействителен для выбранного диапазона</string>
     <string name="channel_must_be_0_or_1_196">Канал должен быть 0 или от 1 до 196</string>
@@ -413,6 +413,8 @@
     <string name="your_phone_your_drive">ВАШ ТЕЛЕФОН. ВАША ПОЕЗДКА.</string>
     <string name="your_report_was_saved_to_the_selected_location">Отчёт сохранён в выбранном месте.</string>
     <string name="cluster_waiting_for_map">DiPlay · ожидание карты CarPlay</string>
+    <string name="settings_carplay_size_extra_large">Очень большой</string>
+    <string name="settings_carplay_size_largest">Максимальный</string>
     <string name="option_size_large">Большой</string>
     <string name="option_size_medium">Средний</string>
     <string name="option_size_small">Маленький</string>

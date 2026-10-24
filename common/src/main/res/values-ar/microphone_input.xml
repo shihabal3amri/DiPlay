@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_mic_source">مصدر إدخال الميكروفون</string>
+    <string name="settings_mic_device">جهاز إدخال الميكروفون</string>
+    <string name="settings_mic_auto">تلقائي</string>
+    <string name="settings_mic_communication">7 · اتصال صوتي</string>
+    <string name="settings_mic_plain">1 · ميكروفون</string>
+    <string name="settings_mic_recognition">6 · التعرف على الصوت</string>
+    <string name="settings_mic_default">0 · افتراضي النظام</string>
+    <string name="settings_mic_camcorder">5 · تسجيل الكاميرا</string>
+    <string name="settings_mic_unprocessed">9 · دون معالجة</string>
+    <string name="settings_mic_missing">الجهاز المحدد غير متصل</string>
+    <string name="settings_mic_description">للمكالمات وSiri. يُطبّق عند المكالمة أو جلسة Siri التالية دون قطع الصوت الحالي. أرقام الإدخال تختلف عن قنوات التشغيل. إذا لم يسمعك الآخرون، جرّب 7 ثم 1 أو 6. لا يتم استبدال المصدر غير المدعوم أو الجهاز المفصول تلقائياً. اختر تلقائي لاستعادة التوجيه التلقائي.</string>
+</resources>

@@ -1,12 +1,12 @@
-# DiPlay
+# DiPlay for FX11
 
 [English](README.md) · [简体中文](README.zh-CN.md) · [繁體中文](README.zh-TW.md)
 
-为兼容的比亚迪安卓车机提供有线及无线 CarPlay，采用 DiAuto 风格界面。
+**本项目专为 FX11 车机（吉利博越 L）使用。** 基于 DiPlay 适配 FX11 车况数据、自定义仪表及有线／无线 CarPlay。
 
-> 这些项目专注于比亚迪汽车。它们可能在其他品牌上运行，但其他品牌不在支持范围内，也没有增加支持或修复其品牌特定兼容性问题的计划。
+> **适用范围：** 本分支仅针对 FX11 车机。下方保留的上游 DiPlay 说明与链接属于原版项目，不代表本分支支持比亚迪或其他车机。
 
-[下载与中文网站](https://shihabal3amri.github.io/DiPlay/zh-Hans/) · [0.2.20 版本](https://github.com/shihabal3amri/DiPlay/releases/tag/v0.2.20) · [完整说明](README.md) · [报告问题](https://github.com/shihabal3amri/DiPlay/issues/new/choose)
+上游链接：[下载与中文网站](https://shihabal3amri.github.io/DiPlay/zh-Hans/) · [0.2.20 版本](https://github.com/shihabal3amri/DiPlay/releases/tag/v0.2.20) · [完整说明](README.md) · [报告问题](https://github.com/shihabal3amri/DiPlay/issues/new/choose)
 
 ## 0.2.20 — 公开预览版
 

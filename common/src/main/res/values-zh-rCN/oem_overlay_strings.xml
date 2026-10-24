@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_dashboard_oem_overlay">原厂仪表叠加（实验性）</string>
+    <string name="settings_dashboard_oem_overlay_description">保留原厂显示模式，仅在中央小窗口显示 CarPlay 地图、导航文字和音乐。选择后点击下方开关或按 MODE 开启。更换样式后需重新连接 CarPlay。原厂圆盘与中央内容能否共存，仍需实车验证。</string>
+    <string name="settings_dashboard_oem_overlay_hint">MODE 开启或关闭叠加。MENU 翻页模式下可切换全部信息 → 导航 → 音乐；无数据区域保持透明。关闭或切换显示模式时，先恢复原厂仪表。</string>
+    <string name="settings_dashboard_oem_overlay_toggle">开启／关闭原厂仪表叠加</string>
+    <string name="dashboard_oem_overlay_active">中央窗口已开启，请确认实体仪表的原厂圆盘是否保留</string>
+    <string name="settings_overlay_path">叠加显示方式（实验性）</string>
+    <string name="settings_overlay_path_factory">保留原厂模式</string>
+    <string name="settings_overlay_path_dim">DIM 叠加兼容测试</string>
+    <string name="settings_overlay_output">叠加输出屏幕（实验性）</string>
+    <string name="settings_overlay_output_number">屏幕 %1$d</string>
+    <string name="settings_overlay_output_hint">先使用“保留原厂模式”。中间没有内容时可换另一块输出屏幕。更换方式或屏幕后会先恢复原厂并关闭叠加，请再次按 MODE 开启。DIM 兼容模式可能隐藏原厂圆盘，可再按 MODE 恢复。所选输出必须是当前可用的 1920×532 仪表屏。</string>
+</resources>

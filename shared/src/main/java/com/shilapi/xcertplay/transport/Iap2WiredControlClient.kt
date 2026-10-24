@@ -38,7 +38,7 @@ class Iap2WiredControlClient(
         }
 
         val deadlineNanos = Iap2ControlDeadline(timeoutMillis)
-        val identified = identification.withVehicleStatusFrom(vehicleStatusProvider)
+        val identified = identification.withVehicleStatusFrom(vehicleStatusProvider).withLocationFrom(locationProvider)
         if (identified.vehicleStatusEnabled != identification.vehicleStatusEnabled) {
             onProgress("iap2 no battery reading: not declaring an electric vehicle")
         }
@@ -58,8 +58,13 @@ class Iap2WiredControlClient(
         var forwardedFrames = 0
         val rxLog = Iap2RxLog()
         var carPlayStartSessions = 0
-        val location = Iap2LocationReporter(locationProvider, onProgress)
-        val vehicleStatus = Iap2VehicleStatusReporter(vehicleStatusProvider, onProgress)
+        val location = Iap2LocationReporter(locationProvider, onProgress, advertised = buildSet {
+            if (identified.locationInformationEnabled) {
+                if (identified.gpsLocationEnabled) { add(1); add(2) }
+                if (identified.vehicleSpeedEnabled) add(4)
+            }
+        })
+        val vehicleStatus = Iap2VehicleStatusReporter(vehicleStatusProvider, onProgress, identified.vehicleStatusCapabilities)
         try {
             while (true) {
                 val remaining = remainingMillis(deadlineNanos)
@@ -118,6 +123,7 @@ class Iap2WiredControlClient(
                 }
             }
         } finally {
+            vehicleStatus.stop()
             locationProvider?.stop()
         }
     }

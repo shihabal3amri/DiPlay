@@ -382,7 +382,7 @@ class BydVehicleDataSettingsTest {
         // Read the provider without starting its real ADB polling executor.
         val provider = Class.forName("com.shilapi.xcertplay.hud.BydBatteryStatus")
             .getField("INSTANCE").get(null) as VehicleStatusProvider
-        return requireNotNull(provider.snapshot()).batteryPercent
+        return requireNotNull(requireNotNull(provider.snapshot()).batteryPercent)
     }
 
     @Test fun aPassingValidationKeepsTheOfferToReplaceSavedData() {

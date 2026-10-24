@@ -81,6 +81,16 @@ object AirPlayInfoPlist {
             val legacy = features(config)
             info["videoPlaybackInfo"] = VideoInCar.info(legacy, VideoInCar.allowed)
         }
+        if (config.ultra != null) {
+            AirPlayFeatureNegotiation.capabilities(config, true).supportedFeatureSet
+                .filter { it.requiresInfoResponseSidecar }
+                .forEach { feature ->
+                    // Keep DiPlay's existing audio/video sidecars; add only the Ultra channels.
+                    if (feature == AirPlayFeature.UI_SYNC || feature == AirPlayFeature.VEHICLE_STATE_PROTOCOL) {
+                        info[requireNotNull(feature.infoResponseKey)] = AirPlayFeatureNegotiation.resolveInfoSidecar(config, feature)
+                    }
+                }
+        }
         return info
     }
 

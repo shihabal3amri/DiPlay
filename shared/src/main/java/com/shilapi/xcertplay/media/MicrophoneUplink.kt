@@ -43,6 +43,8 @@ internal class MicrophoneUplink(
         )
     },
     private val noAudioRestartMillis: Long = NO_AUDIO_RESTART_MILLIS,
+    private val inputSource: Int = MicrophoneInput.AUTO,
+    private val configureInput: (AudioRecord) -> Unit = {},
 ) : Closeable {
     private val running = AtomicBoolean(false)
     private val stats = MicrophoneCaptureStats(config, report = { message ->
@@ -76,7 +78,7 @@ internal class MicrophoneUplink(
             return false
         }
 
-        val source = when {
+        val automaticSource = when {
             config.audioType == "telephony" -> telephonyMicrophoneSource(
                 speakerphoneCall = speakerphoneCall,
                 carPhoneState = PhoneAudioRoute.carPlayCallsUseCarAudio(),
@@ -92,6 +94,9 @@ internal class MicrophoneUplink(
                 }
             else -> MediaRecorder.AudioSource.MIC
         }
+        val source = MicrophoneInput.resolve(inputSource, automaticSource)
+        stats.useSource(source)
+        runCatching { onDiagnostic("Microphone: input requestedSource=${MicrophoneInput.name(inputSource)} resolvedSource=${MicrophoneInput.name(source)}") }
         val nextEncoder = if (config.codec == AudioCodecKind.OPUS) {
             opusEncoderFactory(config.bitrate ?: 48_000)
         } else {
@@ -112,13 +117,23 @@ internal class MicrophoneUplink(
         val bufferSize = maxOf(minBuffer * 2, config.frameBytes * 4)
         // Some head units throw on VOICE_RECOGNITION at build(); VOICE_COMMUNICATION works there.
         val nextRecorder = createRecorder(source, channelMask, bufferSize)
-            ?: if (source == MediaRecorder.AudioSource.VOICE_RECOGNITION) {
+            ?: if (MicrophoneInput.sanitize(inputSource) == MicrophoneInput.AUTO && source == MediaRecorder.AudioSource.VOICE_RECOGNITION) {
                 stats.useVoiceCommunicationSource()
                 createRecorder(MediaRecorder.AudioSource.VOICE_COMMUNICATION, channelMask, bufferSize)
             } else {
                 null
             }
         if (nextRecorder == null) {
+            nextEncoder?.close()
+            running.set(false)
+            return false
+        }
+
+        try {
+            configureInput(nextRecorder)
+        } catch (error: Exception) {
+            stats.failure(MicrophoneFailureStage.INPUT_ROUTING, error)
+            nextRecorder.release()
             nextEncoder?.close()
             running.set(false)
             return false
@@ -151,6 +166,9 @@ internal class MicrophoneUplink(
             }
             nextRecorder.startRecording()
             stats.started(routeType(nextRecorder))
+            runCatching { onDiagnostic("Microphone: input actualSource=${MicrophoneInput.name(nextRecorder.audioSource)} " +
+                "preferredDeviceType=${nextRecorder.preferredDevice?.type ?: "auto"} " +
+                "routedDeviceType=${routeType(nextRecorder) ?: "unknown"}") }
             thread = Thread({ capture(nextRecorder, nextSocket) }, "carplay-mic").apply {
                 isDaemon = true
                 start()

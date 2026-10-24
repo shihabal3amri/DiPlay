@@ -691,6 +691,7 @@ class AdaptiveSettingsUiTest {
     }
 
     @Test fun settingsLiveWhereDriversLookForThem() {
+        BoyueLSettings.select(context, true)
         val screen = openSettings()
         fun visibleIn(category: Int): List<CharSequence> {
             descendants(screen.window.decorView).first { candidate ->
@@ -723,6 +724,16 @@ class AdaptiveSettingsUiTest {
         assertTrue(text(R.string.car_button_in_carplay) in vehicle)
         assertTrue(text(R.string.wheel_siri_key) in vehicle)
         assertTrue(text(R.string.settings_wheel_keys) in vehicle)
+        val shortMode = screen.getString(R.string.settings_boyue_short_press, text(R.string.settings_boyue_key_mode))
+        val longMode = screen.getString(R.string.settings_boyue_long_press, text(R.string.settings_boyue_key_mode))
+        for (label in listOf(shortMode, longMode)) {
+            assertTrue(vehicle.any { it.startsWith(label + " · ") })
+            assertFalse(advanced.any { it.startsWith(label + " · ") })
+        }
+        for (removed in listOf(R.string.settings_dashboard_page_key, R.string.settings_boyue_ultra,
+            R.string.settings_boyue_vehicle_data, R.string.settings_boyue_map, R.string.settings_boyue_diagnostics)) {
+            assertFalse(advanced.any { it.startsWith(text(removed)) })
+        }
         assertTrue(text(R.string.settings_navigation_wheel_volume) in advanced)
         assertFalse(text(R.string.settings_navigation_wheel_volume) in audio)
         assertFalse(text(R.string.settings_navigation_wheel_volume) in vehicle)
@@ -779,6 +790,66 @@ class AdaptiveSettingsUiTest {
 
     @Test @Config(sdk = [29], qualifiers = "ar-ldrtl-w320dp-h600dp")
     fun navigationSliderScreenshotCompactArabicRtlLargeFont() = captureNavigationSlider("compact-ar-rtl", 1.3f)
+
+    @Test @Config(sdk = [29], qualifiers = "zh-rCN-w320dp-h700dp")
+    @org.robolectric.annotation.GraphicsMode(org.robolectric.annotation.GraphicsMode.Mode.NATIVE)
+    fun microphoneSettingsCompactLargeFont() = captureMicrophoneSettings("compact")
+
+    @Test @Config(sdk = [29], qualifiers = "zh-rCN-w1280dp-h720dp")
+    @org.robolectric.annotation.GraphicsMode(org.robolectric.annotation.GraphicsMode.Mode.NATIVE)
+    fun microphoneSettingsFullLargeFont() = captureMicrophoneSettings("full")
+
+    @Test @Config(sdk = [29], qualifiers = "ar-ldrtl-w320dp-h700dp")
+    @org.robolectric.annotation.GraphicsMode(org.robolectric.annotation.GraphicsMode.Mode.NATIVE)
+    fun microphoneSettingsArabicLargeFont() = captureMicrophoneSettings("arabic")
+
+    private fun captureMicrophoneSettings(name: String) {
+        RuntimeEnvironment.setFontScale(1.5f)
+        val screen = openSettings()
+        ReflectionHelpers.setField(screen, "settingsCategory", SettingsCategory.AUDIO)
+        ReflectionHelpers.callInstanceMethod<Unit>(screen, "render")
+        layoutRoot(screen)
+        val row = texts(screen).single { it.text.startsWith(screen.getString(R.string.settings_mic_source) + " · ") }
+        var ancestor = row.parent
+        while (ancestor != null && ancestor !is ScrollView) ancestor = ancestor.parent
+        val scroll = requireNotNull(ancestor as? ScrollView)
+        val position = Rect(0, 0, row.width, row.height)
+        scroll.offsetDescendantRectToMyCoords(row, position)
+        scroll.scrollTo(0, position.top)
+        layoutRoot(screen)
+        val rectangle = Rect()
+        assertTrue(row.getGlobalVisibleRect(rectangle))
+        // Render the actual new controls as a card, independent of ScrollView capture offsets.
+        val panel = LinearLayout(screen).apply {
+            orientation = LinearLayout.VERTICAL
+            setBackgroundColor(android.graphics.Color.rgb(21, 31, 45))
+            val padding = (16 * resources.displayMetrics.density).toInt()
+            setPadding(padding, padding, padding, padding)
+        }
+        ReflectionHelpers.callInstanceMethod<Unit>(screen, "microphoneInputControls",
+            ReflectionHelpers.ClassParameter.from(LinearLayout::class.java, panel))
+        ReflectionHelpers.callInstanceMethod<Unit>(screen, "normalizeSpacing",
+            ReflectionHelpers.ClassParameter.from(LinearLayout::class.java, panel),
+            ReflectionHelpers.ClassParameter.from(Boolean::class.javaPrimitiveType!!, true))
+        panel.layoutDirection = screen.resources.configuration.layoutDirection
+        val width = (screen.resources.configuration.screenWidthDp * screen.resources.displayMetrics.density).toInt()
+        panel.measure(View.MeasureSpec.makeMeasureSpec(width, View.MeasureSpec.EXACTLY),
+            View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED))
+        panel.layout(0, 0, panel.measuredWidth, panel.measuredHeight)
+        val bitmap = Bitmap.createBitmap(panel.width, panel.height, Bitmap.Config.ARGB_8888)
+        try {
+            panel.draw(Canvas(bitmap))
+            val output = Paths.get("build/reports/microphone-input-ui/$name.png")
+            Files.createDirectories(output.parent)
+            Files.newOutputStream(output).use { assertTrue(bitmap.compress(Bitmap.CompressFormat.PNG, 100, it)) }
+        } finally { bitmap.recycle() }
+        row.performClick()
+        val dialog = ShadowAlertDialog.getLatestAlertDialog()
+        shadowOf(dialog).clickOnItem(2)
+        dialog.getButton(android.content.DialogInterface.BUTTON_POSITIVE).performClick()
+        shadowOf(Looper.getMainLooper()).idle()
+        assertEquals(1, AirPlayPersistence.loadMicrophoneInputSource(context))
+    }
 
     private fun captureNavigationSlider(name: String, fontScale: Float) {
         RuntimeEnvironment.setFontScale(fontScale)

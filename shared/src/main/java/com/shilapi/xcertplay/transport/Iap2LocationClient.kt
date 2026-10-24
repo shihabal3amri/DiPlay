@@ -33,6 +33,8 @@ data class CarPlayLocationFix(
 
 /** Supplies location data only while the phone has subscribed to iAP2 LocationInformation. */
 interface Iap2LocationProvider : AutoCloseable {
+    fun supportedComponents(): Set<Int> = setOf(1, 2)
+
     /** The 0xFFFA parameter ids, i.e. the sentence types the iPhone asked for; called before [start]. */
     fun onRequested(components: Set<Int>) = Unit
 
@@ -151,7 +153,9 @@ class Iap2LocationReporter(
     private val provider: Iap2LocationProvider?,
     private val onProgress: (String) -> Unit,
     private val nanoTime: () -> Long = System::nanoTime,
+    private val advertised: Set<Int> = provider?.supportedComponents().orEmpty(),
 ) {
+    private val subscription = Iap2LocationSubscription { nanoTime() / 1_000_000 }
     private var active = false
     private var sentLogged = false
     private var lastAttemptNanos = 0L
@@ -159,15 +163,19 @@ class Iap2LocationReporter(
     /** Handles 0xFFFA/0xFFFC; returns false for any other message. */
     fun handle(frame: Iap2Frame, send: (Iap2Frame) -> Unit): Boolean = when (frame.messageId) {
         Iap2LocationMessages.START_LOCATION_INFORMATION -> {
-            val components = Iap2LocationMessages.requestedComponents(frame)
+            provider?.stop()
+            val valid = subscription.request(frame, advertised)
+            val components = subscription.components
             onProgress("iap2 rx=0xfffa start-location-information components=$components")
             provider?.onRequested(components)
-            start(send)
+            active = false
+            if (valid) start(send)
             true
         }
         Iap2LocationMessages.STOP_LOCATION_INFORMATION -> {
             onProgress("iap2 rx=0xfffc stop-location-information")
             active = false
+            subscription.stop()
             sentLogged = false
             provider?.stop()
             true
@@ -205,7 +213,7 @@ class Iap2LocationReporter(
 
     private fun sendLatest(send: (Iap2Frame) -> Unit) {
         lastAttemptNanos = nanoTime()
-        val sentence = provider?.latestNmea() ?: return
+        val sentence = provider?.latestNmea()?.let(subscription::filter) ?: return
         send(Iap2LocationMessages.locationInformation(sentence))
         if (!sentLogged) {
             sentLogged = true
@@ -234,4 +242,13 @@ object Iap2LocationMessages {
         require(nmeaSentence.isNotEmpty()) { "NMEA sentence must not be empty" }
         return Iap2ControlMessages.locationInformation(nmeaSentence)
     }
+}
+
+/** Intersect user-enabled capabilities with the actual provider; never re-enable bootstrap data. */
+internal fun Iap2IdentificationConfig.withLocationFrom(provider: Iap2LocationProvider?): Iap2IdentificationConfig {
+    if (!locationInformationEnabled) return this
+    val supported = provider?.supportedComponents().orEmpty()
+    val gps = gpsLocationEnabled && supported.any { it == 1 || it == 2 }
+    val speed = vehicleSpeedEnabled && 4 in supported
+    return copy(locationInformationEnabled = gps || speed, gpsLocationEnabled = gps, vehicleSpeedEnabled = speed)
 }

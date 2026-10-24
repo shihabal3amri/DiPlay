@@ -7,6 +7,7 @@ import com.shilapi.xcertplay.iap2.session.Iap2Session
 import com.shilapi.xcertplay.iap2.wire.Iap2Frame
 import com.shilapi.xcertplay.iap2.wire.Iap2Parameter
 import com.shilapi.xcertplay.transport.Iap2VehicleStatus.electricVehicleComponents
+import com.shilapi.xcertplay.transport.Iap2VehicleStatus.partialVehicleComponents
 import java.io.IOException
 import kotlin.math.min
 
@@ -58,6 +59,10 @@ data class Iap2IdentificationConfig(
     val chargingConnectors: EvChargingConnectors = EvChargingConnectors.CCS2_TYPE2,
     /** Also offer wheel speed ($PASCD) in the location component; needs [locationInformationEnabled]. */
     val vehicleSpeedEnabled: Boolean = false,
+    val gpsLocationEnabled: Boolean = true,
+    /** Generic status (for example outside temperature); never declares an electric powertrain. */
+    val vehicleDataEnabled: Boolean = false,
+    val vehicleStatusCapabilities: Set<Int> = emptySet(),
 ) {
     constructor(
         name: String,
@@ -130,6 +135,8 @@ internal fun Iap2IdentificationConfig.forWirelessLink(
             locationInformationEnabled = false,
             vehicleStatusEnabled = false,
             vehicleSpeedEnabled = false,
+            vehicleDataEnabled = false,
+            vehicleStatusCapabilities = emptySet(),
         )
         Iap2WirelessLinkRole.RUNTIME_TUNNEL -> wirelessConfig
     }
@@ -311,7 +318,7 @@ class Iap2IdentificationClient(private val session: Iap2Session) {
             } else {
                 MESSAGES_RECEIVED_FROM_PHONE
             }
-            if (config.vehicleStatusEnabled) {
+            if (config.vehicleStatusEnabled || config.vehicleStatusCapabilities.isNotEmpty()) {
                 sentMessages += Iap2VehicleStatus.VEHICLE_STATUS_UPDATE
                 receivedMessages += intArrayOf(
                     Iap2VehicleStatus.START_VEHICLE_STATUS_UPDATES,
@@ -378,12 +385,13 @@ class Iap2IdentificationClient(private val session: Iap2Session) {
                     }
                 }
                 if (config.vehicleStatusEnabled) electricVehicleComponents(config.manufacturer, config.chargingConnectors)
+                else if (config.vehicleStatusCapabilities.isNotEmpty())
+                    partialVehicleComponents(config.manufacturer, config.vehicleStatusCapabilities)
                 if (config.locationInformationEnabled) {
                     group(22) {
                         u16(0, 0)
                         string(1, config.name)
-                        void(17)
-                        void(18)
+                        if (config.gpsLocationEnabled) { void(17); void(18) }
                         if (config.vehicleSpeedEnabled) void(20)
                     }
                 }

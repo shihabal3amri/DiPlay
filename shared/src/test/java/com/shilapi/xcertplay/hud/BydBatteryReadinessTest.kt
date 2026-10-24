@@ -76,7 +76,7 @@ class BydBatteryReadinessTest {
         assertNull(cache.snapshot(20))
         cache.accept(BydBatteryReading(10.0, 60, 10.0, false, BydBatteryProtocol.CANFD))
         val fresh = cache.snapshot(20)!!
-        assertEquals(10.0, fresh.batteryPercent, 0.001)
+        assertEquals(10.0, fresh.batteryPercent!!, 0.001)
         assertEquals(100_400L, fresh.maxChargeWh)
     }
 
@@ -87,7 +87,7 @@ class BydBatteryReadinessTest {
         assertEquals(100_400L, cache.snapshot(20)!!.maxChargeWh)
         cache.accept(BydBatteryReading(51.0, 36, null, true, BydBatteryProtocol.CAN))
         val can = cache.snapshot(20)!!
-        assertEquals(51.0, can.batteryPercent, 0.001)
+        assertEquals(51.0, can.batteryPercent!!, 0.001)
         assertNull(can.currentChargeWh)
         assertNull(can.maxChargeWh)
         cache.accept(BydBatteryReading(10.0, 60, 5.0, false, BydBatteryProtocol.CANFD))

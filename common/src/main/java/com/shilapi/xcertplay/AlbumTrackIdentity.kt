@@ -2,14 +2,19 @@ package com.shilapi.xcertplay
 
 import com.shilapi.xcertplay.media.CarPlayNowPlaying
 
-/** Lyrics can occupy title. A title change alone must not invalidate the decoded cover. */
+/** Metadata arrives incrementally, often AFTER the artwork for the new transfer reference. */
 internal fun albumTrackChanged(previous: CarPlayNowPlaying, next: CarPlayNowPlaying): Boolean {
     if (previous.artworkTransferId != next.artworkTransferId) return true
-    fun changed(old: Any?, new: Any?) = old != null && old != new
-    if (changed(previous.sourceApp, next.sourceApp) || changed(previous.artist, next.artist) ||
-        changed(previous.album, next.album) || changed(previous.durationMillis, next.durationMillis)) return true
-    // Same album/reference is common. A new title plus a large position restart identifies it;
-    // an ordinary lyric update or a seek without a title change keeps the existing palette.
-    return previous.title != next.title && previous.elapsedMillis?.let { it > 15_000 } == true &&
+    fun hasTrack(info: CarPlayNowPlaying) = !info.title.isNullOrBlank() ||
+        !info.artist.isNullOrBlank() || !info.album.isNullOrBlank()
+    if (hasTrack(previous) && !hasTrack(next)) return true
+    if (!previous.sourceApp.isNullOrBlank() && !next.sourceApp.isNullOrBlank() &&
+        previous.sourceApp != next.sourceApp) return true
+    // Artist, album and duration can still contain the PREVIOUS song's values when its successor's
+    // reference and image arrive. Corrections (including temporary blanks/zero duration) do not
+    // revoke that image. A transfer ID is reusable, so a title change plus a substantial playback
+    // restart still invalidates an old cover; lyrics or seeking alone must not do so.
+    return !previous.title.isNullOrBlank() && !next.title.isNullOrBlank() &&
+        previous.title != next.title && previous.elapsedMillis?.let { it > 15_000 } == true &&
         next.elapsedMillis?.let { it < 3_000 } == true
 }

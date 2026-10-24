@@ -12,12 +12,40 @@ internal object ClusterMusicState {
         val changedAt: Long = 0L, val revision: Long = 0L)
     private val main = Handler(Looper.getMainLooper())
     private val listeners = mutableSetOf<(Snapshot) -> Unit>()
-    private var state = Snapshot()
+    @Volatile private var state = Snapshot()
+    @Volatile private var retainedCoverUpdates = 0L
+    @Volatile private var lastCoverChange = "none"
+
+    fun diagnostic(): String {
+        val current = state
+        return "Cluster music: titlePresent=${!current.info.title.isNullOrBlank()} " +
+            "artistPresent=${!current.info.artist.isNullOrBlank()} transfer=${current.info.artworkTransferId} " +
+            "coverValid=${current.artwork?.let { !it.isRecycled } == true} " +
+            "retainedCoverUpdates=$retainedCoverUpdates lastCoverChange=$lastCoverChange"
+    }
 
     fun publish(info: CarPlayNowPlaying, artwork: Bitmap?) {
         main.post {
             val changed = trackChanged(state.info, info)
-            state = Snapshot(info, artwork, if (changed) SystemClock.elapsedRealtime() else state.changedAt, state.revision + if (changed) 1 else 0)
+            // A position-only update may have no cache entry after LRU eviction or a failed
+            // duplicate artwork transfer. Keep the current cover only for the same track/id.
+            val hasTrack = !info.title.isNullOrBlank() || !info.artist.isNullOrBlank() || !info.album.isNullOrBlank()
+            // Use the publisher's album identity: title may carry lyrics and source/album metadata
+            // may arrive after the picture. Strict title equality used to clear a valid cover.
+            val sameCover = !albumTrackChanged(state.info, info)
+            val cover = if (!hasTrack) null else artwork?.takeUnless { it.isRecycled }
+                ?: state.artwork?.takeIf { !it.isRecycled && sameCover }
+            if (artwork == null && cover != null) retainedCoverUpdates++
+            if (state.artwork !== cover) {
+                lastCoverChange = when {
+                    cover != null -> "decoded"
+                    !hasTrack -> "metadata_cleared"
+                    !sameCover -> "track_or_transfer_changed"
+                    else -> "unavailable_or_recycled"
+                }
+                android.util.Log.i("ClusterMusic", "cover=$lastCoverChange transfer=${info.artworkTransferId}")
+            }
+            state = Snapshot(info, cover, if (changed) SystemClock.elapsedRealtime() else state.changedAt, state.revision + if (changed) 1 else 0)
             listeners.toList().forEach { it(state) }
         }
     }

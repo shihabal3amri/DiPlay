@@ -81,6 +81,99 @@ class WirelessStartupRecoveryTest {
         assertEquals(View.VISIBLE, retry.visibility)
     }
 
+    @Test fun ultraGenericAndTypedFailuresShareThreeRetriesAndThenStop() {
+        ReflectionHelpers.setField(activity, "sessionUltraEnabled", true)
+        repeat(4) { generation ->
+            ReflectionHelpers.setField(activity, "restartGeneration", generation)
+            ReflectionHelpers.setField(activity, "reconnectScheduled", false)
+            report(generation, if (generation == 1) failure else CarPlayStatus.Failed("AirPlay session closed"))
+        }
+        assertEquals(3, budget().retries)
+        assertEquals(3, ReflectionHelpers.getField<Int>(activity, "reconnectAttempts"))
+        assertTrue(ReflectionHelpers.getField(activity, "startupRetryStopped"))
+        assertFalse(ReflectionHelpers.getField(activity, "reconnectScheduled"))
+        assertEquals(View.VISIBLE, retry.visibility)
+    }
+
+    @Test fun ultraFailureBeforeStableDeadlineInvalidatesVideoProof() {
+        ReflectionHelpers.setField(activity, "sessionUltraEnabled", true)
+        val session = Any()
+        budget().firstFrame(session, 1_000)
+        report(status = CarPlayStatus.Failed("Wireless iAP2 tunnel closed"))
+        assertFalse(budget().resetIfStable(session, 61_000))
+        assertEquals(1, budget().retries)
+    }
+
+    @Test fun exhaustedUltraCannotBeRevivedByLateSessionOrVideoCallbacks() {
+        ReflectionHelpers.setField(activity, "sessionUltraEnabled", true)
+        val session = org.mockito.Mockito.mock(com.shilapi.xcertplay.airplay.AirPlaySession::class.java)
+        ReflectionHelpers.setField(activity, "activeAirPlaySession", session)
+        MapMirrors.setStreamActive(true)
+        org.robolectric.Shadows.shadowOf(Looper.getMainLooper()).idle()
+        assertTrue(MapMirrors.streamActive)
+        CarPlayBackgroundSession.active = true
+        repeat(4) { generation ->
+            ReflectionHelpers.setField(activity, "restartGeneration", generation)
+            ReflectionHelpers.setField(activity, "reconnectScheduled", false)
+            report(generation, CarPlayStatus.Failed("AirPlay session closed"))
+        }
+        val listener = ReflectionHelpers.callInstanceMethod<com.shilapi.xcertplay.airplay.AirPlaySessionListener>(
+            activity, "createSessionListener", from(Int::class.javaPrimitiveType, 3))
+        listener.onSessionActive(session)
+        listener.onVideoFrameRendered(session)
+        org.robolectric.Shadows.shadowOf(Looper.getMainLooper()).idle()
+        assertNull(ReflectionHelpers.getField<Any?>(activity, "activeAirPlaySession"))
+        assertFalse(MapMirrors.streamActive)
+        assertFalse(CarPlayBackgroundSession.active)
+        assertEquals(3, budget().retries)
+        assertEquals(View.VISIBLE, retry.visibility)
+    }
+
+    @Test fun ultraControlDeadlineUsesTheSameRetryBudget() {
+        ReflectionHelpers.setField(activity, "sessionUltraEnabled", true)
+        repeat(4) { generation ->
+            ReflectionHelpers.setField(activity, "restartGeneration", generation)
+            ReflectionHelpers.setField(activity, "reconnectScheduled", false)
+            report(generation, CarPlayStatus.ControlEnded)
+        }
+        assertEquals(3, budget().retries)
+        assertTrue(ReflectionHelpers.getField(activity, "startupRetryStopped"))
+        assertEquals(View.VISIBLE, retry.visibility)
+    }
+
+    @Test fun stoppedRecoveryCannotRestartJustBecauseSettingsWereClosed() {
+        ReflectionHelpers.setField(activity, "sessionUltraEnabled", true)
+        ReflectionHelpers.setField(activity, "startupRetryStopped", true)
+        ReflectionHelpers.setField(activity, "menuOpen", true)
+        ReflectionHelpers.setField(activity, "recoveryPendingAfterMenu", true)
+        ReflectionHelpers.callInstanceMethod<Unit>(activity, "finishSettingsMenu",
+            from(String::class.java, "Settings closed"), from(Boolean::class.javaPrimitiveType, false))
+        assertFalse(ReflectionHelpers.getField(activity, "reconnectScheduled"))
+        assertTrue(ReflectionHelpers.getField(activity, "startupRetryStopped"))
+    }
+
+    @Test fun ordinaryCarPlayKeepsItsExistingGenericReconnectBehavior() {
+        repeat(7) { generation ->
+            ReflectionHelpers.setField(activity, "restartGeneration", generation)
+            ReflectionHelpers.setField(activity, "reconnectScheduled", false)
+            report(generation, CarPlayStatus.Failed("AirPlay session closed"))
+        }
+        assertEquals(0, budget().retries)
+        assertTrue(ReflectionHelpers.getField(activity, "reconnectScheduled"))
+        assertFalse(ReflectionHelpers.getField(activity, "startupRetryStopped"))
+    }
+
+    @Test fun ultraSessionAcceptedWithoutVideoDoesNotResetRetryCount() {
+        ReflectionHelpers.setField(activity, "sessionUltraEnabled", true)
+        report()
+        val listener = ReflectionHelpers.callInstanceMethod<com.shilapi.xcertplay.airplay.AirPlaySessionListener>(
+            activity, "createSessionListener", from(Int::class.javaPrimitiveType, 0))
+        val session = org.mockito.Mockito.mock(com.shilapi.xcertplay.airplay.AirPlaySession::class.java)
+        listener.onSessionActive(session)
+        assertEquals(1, budget().retries)
+        assertEquals(1, ReflectionHelpers.getField<Int>(activity, "reconnectAttempts"))
+    }
+
     // No further attempt can make a head unit's Bluetooth reach the phone.
     @Test fun bluetoothThatReachesNoPhoneDoesNotAutomaticallyRetry() {
         report(status = CarPlayStatus.Failed("Android Bluetooth on this head unit reports connections that are not real",

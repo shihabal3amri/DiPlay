@@ -133,7 +133,7 @@ object AirPlayPersistence {
 
     const val DEFAULT_MANUFACTURER = "DiPlay"
     const val DEFAULT_MODEL = "DiPlay"
-    const val DEFAULT_OEM_LABEL = "BYD"
+    const val DEFAULT_OEM_LABEL = "Geely"
     const val DEFAULT_MFI_I2C_PATH = "/dev/i2c-1"
 
     fun loadAmbientDelaySeconds(context: Context): Int =
@@ -585,11 +585,18 @@ object AirPlayPersistence {
             .apply()
     }
 
-    fun loadOemLabel(context: Context): String =
-        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-            .getString(KEY_OEM_LABEL, DEFAULT_OEM_LABEL)
-            // iOS hides the car icon without a label.
-            .orEmpty().ifBlank { DEFAULT_OEM_LABEL }
+    fun loadOemLabel(context: Context): String {
+        val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        // Older builds persisted the BYD default when saving connection settings.
+        // Migrate once so subsequent names chosen by the driver remain editable.
+        if (!prefs.getBoolean("geely_car_button_name_migrated", false)) {
+            val edit = prefs.edit().putBoolean("geely_car_button_name_migrated", true)
+            if (prefs.getString(KEY_OEM_LABEL, null) == "BYD") edit.putString(KEY_OEM_LABEL, DEFAULT_OEM_LABEL)
+            edit.apply()
+        }
+        // iOS hides the car icon without a label.
+        return prefs.getString(KEY_OEM_LABEL, DEFAULT_OEM_LABEL).orEmpty().ifBlank { DEFAULT_OEM_LABEL }
+    }
 
     fun saveOemLabel(context: Context, oemLabel: String) {
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
@@ -721,6 +728,17 @@ object AirPlayPersistence {
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putBoolean(KEY_LOW_LATENCY_DECODER, enabled).apply()
     }
 
+    /** One-time FX11 test-build tuning; keep USB's inherited delay and later manual choices. */
+    fun migrateFx11MusicBuffer(context: Context) {
+        if (!BoyueLSettings.selected(context)) return
+        val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        if (prefs.getBoolean("fx11_music_buffer_v44", false)) return
+        val wired = loadMediaBufferMillis(context, wireless = false)
+        prefs.edit().putInt(KEY_WIRED_MEDIA_BUFFER_MS, wired)
+            .putInt(KEY_MEDIA_BUFFER_MS, com.shilapi.xcertplay.media.MediaAudioBuffer.MOST_STABLE_MILLIS)
+            .putBoolean("fx11_music_buffer_v44", true).apply()
+    }
+
     fun saveMediaBufferMillis(context: Context, wireless: Boolean, millis: Int) {
         val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
         if (wireless) {
@@ -751,6 +769,22 @@ object AirPlayPersistence {
 
     fun saveCallVoiceFilter(context: Context, enabled: Boolean) {
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putBoolean(KEY_CALL_VOICE_FILTER, enabled).apply()
+    }
+
+    fun loadMicrophoneInputSource(context: Context): Int =
+        com.shilapi.xcertplay.media.MicrophoneInput.sanitize(
+            context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getInt("microphone_input_source", -1))
+
+    fun saveMicrophoneInputSource(context: Context, source: Int) {
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
+            .putInt("microphone_input_source", com.shilapi.xcertplay.media.MicrophoneInput.sanitize(source)).apply()
+    }
+
+    fun loadMicrophoneInputDevice(context: Context): String =
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString("microphone_input_device", "").orEmpty()
+
+    fun saveMicrophoneInputDevice(context: Context, key: String) {
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putString("microphone_input_device", key).apply()
     }
 
     fun loadCallSpeakerphone(context: Context): Boolean =
@@ -814,7 +848,8 @@ object AirPlayPersistence {
     }
 
     fun loadClusterMapEnabled(context: Context): Boolean =
-        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getBoolean(KEY_CLUSTER_MAP, false)
+        if (BoyueLSettings.selected(context)) BoyueLSettings.clusterEnabled(context)
+        else context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getBoolean(KEY_CLUSTER_MAP, false)
 
     fun loadAdbClusterEnabled(context: Context): Boolean = loadClusterMapEnabled(context) &&
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getBoolean(KEY_ADB_CLUSTER_ACTIVITY, false)

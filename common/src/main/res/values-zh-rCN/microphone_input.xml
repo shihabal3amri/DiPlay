@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_mic_source">语音输入通道（麦克风）</string>
+    <string name="settings_mic_device">麦克风输入设备</string>
+    <string name="settings_mic_auto">自动</string>
+    <string name="settings_mic_communication">7 · 通话处理</string>
+    <string name="settings_mic_plain">1 · 普通麦克风</string>
+    <string name="settings_mic_recognition">6 · 语音识别</string>
+    <string name="settings_mic_default">0 · 系统默认</string>
+    <string name="settings_mic_camcorder">5 · 摄像录音</string>
+    <string name="settings_mic_unprocessed">9 · 未经处理</string>
+    <string name="settings_mic_missing">所选设备已断开</string>
+    <string name="settings_mic_description">用于通话和 Siri，下次通话或 Siri 会话生效，不中断当前声音。输入通道编号与音乐、导航的输出通道不同。对方听不到时可依次尝试 7、1、6。不支持的输入源或已断开的设备不会自动替换；选择“自动”可恢复自动路由。</string>
+</resources>

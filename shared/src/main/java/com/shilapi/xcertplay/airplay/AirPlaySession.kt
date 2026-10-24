@@ -89,6 +89,7 @@ class AirPlaySession(
     private var clusterStreamSetups = 0
     @Volatile private var mainScreenToken: Any? = null
 
+    private val ultraStreams = UltraDataStreams(this, config)
     private val closed = AtomicBoolean(false)
     internal val isClosed: Boolean get() = closed.get()
     private val notified = AtomicBoolean(false)
@@ -141,6 +142,7 @@ class AirPlaySession(
 
     override fun close() {
         if (!closed.compareAndSet(false, true)) return
+        ultraStreams.close()
         mainScreenToken = null
         clearClusterContent()
         safeClose(socket)
@@ -571,6 +573,8 @@ class AirPlaySession(
             }
             path.endsWith("/info") -> {
                 val info = AirPlayInfoPlist.build(config)
+                if (config.ultra != null) debugLog("Ultra info offered vehicleState=${info.containsKey("vehicleStateProtocolInfo")} " +
+                    "uiSync=${info.containsKey("uiSyncInfo")} cluster=${config.cluster != null}")
                 if (request.body.isNotEmpty()) {
                     val requestInfo = try {
                         BplistCodec.decode(request.body).toString()
@@ -613,6 +617,7 @@ class AirPlaySession(
 
     private fun notifySetupResponseSent() {
         try {
+            ultraStreams.responseSent()
             media.onSetupResponseSent(this)
         } catch (error: Exception) {
             Log.w(TAG, "airplay SETUP response callback failed", error)
@@ -674,6 +679,13 @@ class AirPlaySession(
             response["keepAlivePort"] = openKeepAlive()
         }
         val features = setupEnabledFeatures(config, dict["features"] as? List<*>)
+        ultraStreams.negotiated(features)
+        if (config.ultra != null) {
+            val requested = (dict["features"] as? List<*>).orEmpty()
+            debugLog("Ultra negotiation vehicleStateRequested=${"vehicleStateProtocol" in requested} " +
+                "uiSyncRequested=${"uiSync" in requested} vehicleStateEnabled=${"vehicleStateProtocol" in features} " +
+                "uiSyncEnabled=${"uiSync" in features}; native rendering unverified")
+        }
         val videoPlaybackEnabled = VideoInCar.FEATURE in features
         val videoDelivery = videoPlaybackAvailability.setFeatureEnabled(videoPlaybackEnabled)
         debugLog("airplay video playback negotiated=$videoPlaybackEnabled availability=$videoDelivery")
@@ -726,7 +738,7 @@ class AirPlaySession(
                     }
                 }
                 STREAM_TYPE_DATA -> {
-                    val streamResponse = media.onDataStream(this, stream)
+                    val streamResponse = if (ultraStreams.ownsRequest(stream)) ultraStreams.open(stream) else media.onDataStream(this, stream)
                     debugLog(
                         "airplay data stream type=$type accepted=${streamResponse != null} " +
                             "dataPort=${streamResponse?.get("dataPort") ?: "none"}",
@@ -773,6 +785,7 @@ class AirPlaySession(
         } catch (_: Exception) {
             null
         }
+        ultraStreams.teardown(decodedBody)
         val types = teardownStreamTypes(decodedBody)
 
         debugLog(
@@ -1007,6 +1020,10 @@ internal fun setupEnabledFeatures(config: AirPlayConfig, proposed: List<*>?): Li
     if (config.main.useIphoneCornerMask && proposed.orEmpty().contains("cornerMasks")) features.add("cornerMasks")
     if (config.videoInCar && proposed.orEmpty().contains(VideoInCar.FEATURE)) features.add(VideoInCar.FEATURE)
     if (config.bufferedAudioOutputEnabled && proposed.orEmpty().contains(MAIN_BUFFERED_FEATURE)) features.add(MAIN_BUFFERED_FEATURE)
+    if (config.ultra != null) {
+        val ultra = AirPlayFeatureNegotiation.propose(config, proposed, true)
+        features += ultra.enabledFeatures.filter { it !in features }
+    }
     return features
 }
 

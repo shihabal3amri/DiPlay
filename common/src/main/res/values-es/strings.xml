@@ -145,7 +145,7 @@
     <string name="carplay_session_ended_reconnecting">Sesión de CarPlay finalizada; reconectando</string>
     <string name="carplay_settings">Ajustes de CarPlay</string>
     <string name="carplay_size">Tamaño de CarPlay</string>
-    <string name="changes_the_size_of_carplay_icons_and_text_applying_a_size">Cambia el tamaño de los iconos y el texto de CarPlay. Aplicar un tamaño reconecta CarPlay.</string>
+    <string name="changes_the_size_of_carplay_icons_and_text_applying_a_size">Elige Extragrande o Máximo para ampliar los iconos y el texto de CarPlay. La disposición depende del iPhone. Aplicar un tamaño reconecta CarPlay.</string>
     <string name="channel_0_auto">Canal (0 = auto)</string>
     <string name="channel_is_not_valid_for_the_selected_band">El canal no es válido para la banda seleccionada</string>
     <string name="channel_must_be_0_or_1_196">El canal debe ser 0 o estar entre 1 y 196</string>
@@ -413,6 +413,8 @@
     <string name="your_phone_your_drive">TU TELÉFONO. TU TRAYECTO.</string>
     <string name="your_report_was_saved_to_the_selected_location">Tu informe se guardó en la ubicación seleccionada.</string>
     <string name="cluster_waiting_for_map">DiPlay · esperando el mapa de CarPlay</string>
+    <string name="settings_carplay_size_extra_large">Extragrande</string>
+    <string name="settings_carplay_size_largest">Máximo</string>
     <string name="option_size_large">Grande</string>
     <string name="option_size_medium">Mediano</string>
     <string name="option_size_small">Pequeño</string>

@@ -19,6 +19,8 @@ class Iap2WirelessLinkRoleTest {
         locationInformationEnabled = true,
         vehicleStatusEnabled = true,
         vehicleSpeedEnabled = true,
+        vehicleDataEnabled = true,
+        vehicleStatusCapabilities = setOf(4),
     )
 
     @Test
@@ -31,6 +33,8 @@ class Iap2WirelessLinkRoleTest {
         assertFalse(bootstrap.locationInformationEnabled)
         assertFalse(bootstrap.vehicleSpeedEnabled)
         assertFalse(bootstrap.vehicleStatusEnabled)
+        assertFalse(bootstrap.vehicleDataEnabled)
+        assertTrue(bootstrap.vehicleStatusCapabilities.isEmpty())
         assertNull(parameters.first(20))
         assertNull(parameters.first(21))
         assertNull(parameters.first(22))

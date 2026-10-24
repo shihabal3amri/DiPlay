@@ -55,7 +55,7 @@ internal class ClusterMapPresentation(
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val size = sizeOf(display)
-        val adaptive = DiLink51ClusterLayout.supported()
+        val adaptive = !BoyueLSettings.selected(context) && DiLink51ClusterLayout.supported()
         val plan = if (adaptive) DiLink51ClusterLayout.plan(size.x, size.y, theme) else null
         // The adaptive DiLink 5.1 layout follows the cluster's own contrast; elsewhere the cluster follows DiPlay's theme.
         val dark = if (plan != null) DiLink51ClusterLayout.dark(context, theme) else context.resolveAppNightNow()
@@ -135,10 +135,12 @@ internal class ClusterMapPresentation(
             }, FrameLayout.LayoutParams((40 * density).toInt(), (40 * density).toInt(), Gravity.CENTER))
         }
         root.addView(waitingLabel, FrameLayout.LayoutParams(videoParams))
-        turnCardView = ClusterTurnCardView(context).apply { visibility = View.GONE }
-        root.addView(turnCardView, FrameLayout.LayoutParams(-1, -1))
-        root.addView(ClusterMusicView(context), FrameLayout.LayoutParams(videoParams))
-        root.addView(ClusterSpeedometerView(context), FrameLayout.LayoutParams(-1, -1))
+        if (!BoyueLSettings.selected(context)) {
+            turnCardView = ClusterTurnCardView(context).apply { visibility = View.GONE }
+            root.addView(turnCardView, FrameLayout.LayoutParams(-1, -1))
+            root.addView(ClusterMusicView(context), FrameLayout.LayoutParams(videoParams))
+            root.addView(ClusterSpeedometerView(context), FrameLayout.LayoutParams(-1, -1))
+        }
         // Start with the placeholder visible; SurfaceView would otherwise cover the light
         // backdrop with an empty black surface before the first stream notification.
         // SurfaceView ignores fractional alpha before API 34. Keep its decoder surface
@@ -202,6 +204,7 @@ internal class ClusterMapPresentation(
 
         /** Keep the 5/5.1 selection order, then try the measured DiLink 4 projection display. */
         fun findDisplay(context: Context, theme: DiLink51ClusterLayout.Theme = DiLink51ClusterLayout.theme(context)): Display? {
+            if (BoyueLSettings.selected(context)) return BoyueLSettings.display(context)
             val displays = context.getSystemService(DisplayManager::class.java)
                 ?.getDisplays(DisplayManager.DISPLAY_CATEGORY_PRESENTATION) ?: return null
             val name = DiLink51ClusterLayout.displayName(

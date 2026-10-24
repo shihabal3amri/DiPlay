@@ -1,6 +1,7 @@
 package com.shilapi.xcertplay.update
 
 import android.content.Context
+import org.junit.Before
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -16,6 +17,8 @@ import org.robolectric.annotation.Config
 @Config(sdk = [25, 29, 35])
 class UpdateAvailabilityTest {
     private val context: Context = RuntimeEnvironment.getApplication()
+
+    @Before fun enablePromptsForExistingFlows() = UpdateAvailability.savePromptsDisabled(context, false)
 
     @After fun clear() = UpdateAvailability.clearAllForTest(context)
 
@@ -65,6 +68,27 @@ class UpdateAvailabilityTest {
         assertFalse(UpdateAvailability.shouldCheck(context, now + UpdateAvailability.CHECK_INTERVAL_MILLIS - 1))
         assertTrue(UpdateAvailability.shouldCheck(context, now + UpdateAvailability.CHECK_INTERVAL_MILLIS))
         assertTrue(UpdateAvailability.shouldCheck(context, now - 1))
+    }
+
+    @Test fun customizedBuildDefaultsToNoPromptsOrBackgroundChecks() {
+        UpdateAvailability.clearAllForTest(context)
+        assertTrue(UpdateAvailability.promptsDisabled(context))
+        assertFalse(UpdateAvailability.backgroundChecksEnabled(context))
+        assertFalse(UpdateAvailability.shouldCheck(context, 10_000_000L))
+    }
+
+    @Test fun optingOutClearsCachedReleaseAndIgnoresAnInFlightResult() {
+        UpdateAvailability.save(context, release("v99.0.0"))
+        UpdateAvailability.savePromptsDisabled(context, true)
+        assertNull(UpdateAvailability.available(context, "0.2.15"))
+        UpdateAvailability.save(context, release("v99.0.1"))
+        UpdateAvailability.savePromptsDisabled(context, false)
+        assertNull(UpdateAvailability.available(context, "0.2.15"))
+        assertTrue(UpdateAvailability.backgroundChecksEnabled(context))
+        UpdateAvailability.saveBackgroundChecksEnabled(context, false)
+        UpdateAvailability.savePromptsDisabled(context, true)
+        UpdateAvailability.savePromptsDisabled(context, false)
+        assertFalse(UpdateAvailability.backgroundChecksEnabled(context))
     }
 
     private fun release(tag: String) = UpdateRelease(

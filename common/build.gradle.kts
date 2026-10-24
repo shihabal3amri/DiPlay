@@ -32,6 +32,8 @@ android {
 }
 
 dependencies {
+    // Signatures only. The real HIDL implementation must come from the vehicle framework.
+    compileOnly(project(":fx11-platform-stubs"))
     api(project(":shared"))
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.activity.compose)
@@ -46,6 +48,7 @@ dependencies {
     implementation(libs.androidx.media3.exoplayer.hls)
     implementation(libs.androidx.media3.ui)
     implementation(libs.zxing.core)
+    testImplementation(project(":fx11-platform-stubs"))
     testImplementation(libs.junit)
     testImplementation("org.robolectric:robolectric:4.17")
     testImplementation("org.mockito:mockito-core:5.20.0")

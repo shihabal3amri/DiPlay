@@ -1,0 +1,4 @@
+<resources>
+    <string name="ultra_retries_exhausted">La conexión Ultra no se completó. Se detuvieron los reintentos automáticos. Guarda un informe de diagnóstico y vuelve a intentarlo manualmente o cambia a CarPlay normal.</string>
+    <string name="wireless_handoff_timeout">Se agotó el tiempo de transferencia del canal de control de CarPlay inalámbrico.</string>
+</resources>

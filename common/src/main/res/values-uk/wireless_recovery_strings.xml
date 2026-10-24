@@ -1,0 +1,4 @@
+<resources>
+    <string name="ultra_retries_exhausted">Підключення Ultra не завершено. Автоматичні повтори зупинено. Збережіть звіт діагностики, потім повторіть підключення вручну або перейдіть на звичайний CarPlay.</string>
+    <string name="wireless_handoff_timeout">Час перемикання каналу керування бездротовим CarPlay вичерпано.</string>
+</resources>

@@ -37,7 +37,7 @@ class VehicleProbePublicationSafetyTest {
 
         assertFalse(result.saved)
         assertEquals(saved, BydVehicleFieldStore.load(context))
-        assertEquals(25.0, BydBatteryStatus.snapshot()!!.batteryPercent, 0.0)
+        assertEquals(25.0, BydBatteryStatus.snapshot()!!.batteryPercent!!, 0.0)
     }
 
     private fun capabilities(percent: Double, hasGear: Boolean): BydVehicleCapabilities = BydVehicleCapabilities(

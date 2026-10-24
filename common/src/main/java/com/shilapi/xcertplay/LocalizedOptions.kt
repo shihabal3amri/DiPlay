@@ -8,6 +8,8 @@ import com.shilapi.xcertplay.orchestration.ManualHotspotValidation
 import com.shilapi.xcertplay.transport.EvChargingConnectors
 
 internal fun CarPlaySize.localizedLabel(context: Context): String = context.getString(when (this) {
+    CarPlaySize.LARGEST -> R.string.settings_carplay_size_largest
+    CarPlaySize.EXTRA_LARGE -> R.string.settings_carplay_size_extra_large
     CarPlaySize.LARGE -> R.string.option_size_large
     CarPlaySize.MEDIUM -> R.string.option_size_medium
     CarPlaySize.SMALL -> R.string.option_size_small

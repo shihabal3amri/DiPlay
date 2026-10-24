@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_dashboard_oem_overlay">Наложение на штатные приборы (экспериментально)</string>
+    <string name="settings_dashboard_oem_overlay_description">Сохраняет штатный режим и добавляет небольшое центральное окно с картой, подсказками и музыкой CarPlay. Выберите этот стиль и включите его кнопкой ниже или MODE. После смены стиля переподключите CarPlay. Совместное отображение требует проверки в автомобиле.</string>
+    <string name="settings_dashboard_oem_overlay_hint">MODE включает и закрывает наложение. В режиме MENU переключаются все данные, навигация и музыка. Без данных область прозрачна. При выходе восстанавливается штатный режим.</string>
+    <string name="settings_dashboard_oem_overlay_toggle">Включить / закрыть наложение</string>
+    <string name="dashboard_oem_overlay_active">Центральное окно открыто; проверьте штатные приборы</string>
+    <string name="settings_overlay_path">Способ наложения (экспериментально)</string>
+    <string name="settings_overlay_path_factory">Сохранить штатный режим</string>
+    <string name="settings_overlay_path_dim">Проверка совместимости DIM</string>
+    <string name="settings_overlay_output">Экран наложения (экспериментально)</string>
+    <string name="settings_overlay_output_number">Экран %1$d</string>
+    <string name="settings_overlay_output_hint">Начните со штатного режима. Если центр пуст, попробуйте другой экран. При смене способа или экрана восстанавливается штатный режим, а окно закрывается; снова нажмите MODE. Режим DIM может скрыть штатные приборы: повторное нажатие MODE восстановит их. Нужен доступный экран приборов 1920×532.</string>
+</resources>

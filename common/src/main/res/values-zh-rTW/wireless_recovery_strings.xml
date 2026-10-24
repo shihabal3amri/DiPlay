@@ -1,0 +1,4 @@
+<resources>
+    <string name="ultra_retries_exhausted">Ultra 連線未完成，已停止自動重試。請儲存診斷報告，然後手動重試或切換一般 CarPlay。</string>
+    <string name="wireless_handoff_timeout">無線 CarPlay 控制通道交接逾時。</string>
+</resources>

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_dashboard_oem_overlay">OEM instrument overlay (experimental)</string>
+    <string name="settings_dashboard_oem_overlay_description">Keeps the factory display mode and adds a bounded CarPlay map, guidance and music window in the center. Select this style, then use the toggle below or MODE to open it. Reconnect CarPlay after changing style. Physical coexistence still needs testing on the car.</string>
+    <string name="settings_dashboard_oem_overlay_hint">MODE enables or closes the overlay. MENU paging switches all content → navigation → music. Missing content stays transparent. Closing or changing display mode first restores the factory display.</string>
+    <string name="settings_dashboard_oem_overlay_toggle">Toggle factory instrument overlay</string>
+    <string name="dashboard_oem_overlay_active">Central window opened; verify the factory gauges on the instrument</string>
+    <string name="settings_overlay_path">Overlay display path (experimental)</string>
+    <string name="settings_overlay_path_factory">Keep factory mode</string>
+    <string name="settings_overlay_path_dim">DIM overlay compatibility test</string>
+    <string name="settings_overlay_output">Overlay output (experimental)</string>
+    <string name="settings_overlay_output_number">Display %1$d</string>
+    <string name="settings_overlay_output_hint">Start with Keep factory mode. If the center stays empty, try the other output. Changing the path or output closes the overlay after restoring the factory mode; enable it again with MODE. DIM compatibility mode may hide the factory gauges: press MODE again to restore. The selected output must be an available 1920×532 instrument display.</string>
+</resources>
