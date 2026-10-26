@@ -257,6 +257,7 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
     @Volatile private var updateGeneration = 0
     @Volatile private var updateProgress: Int? = null
     private var updateRelease: UpdateRelease? = null
+    private var releaseNotesExpanded = false
     private var updateFile: File? = null
     private var updateMessage: String? = null
     private var carButtonCard: LinearLayout? = null
@@ -2633,23 +2634,97 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
     private fun backupPageHtml(): ByteArray = assets.open("settings-backup.html").use { it.readBytes() }
 
     private fun updateRow(): View {
+        if (updateStage == UpdateStage.IDLE && updateMessage == getString(R.string.update_up_to_date)) {
+            updateRelease = null
+            availableUpdate = null
+        } else if (updateRelease == null && availableUpdate != null && updateStage == UpdateStage.IDLE) {
+            updateRelease = availableUpdate
+            updateStage = UpdateStage.AVAILABLE
+        }
+        val activeRelease = updateRelease ?: availableUpdate
         val container = column().apply { setPadding(0, dp(12), 0, 0) }
-        updateMessage?.let { container.addView(label(it, 14, MUTED)) }
+
+        val installedVer = version()
+        container.addView(label(getString(R.string.update_installed_version, installedVer), 15, TEXT))
+
+        val latestVer = when {
+            activeRelease != null -> activeRelease.tagName
+            updateStage == UpdateStage.IDLE && updateMessage == getString(R.string.update_up_to_date) -> installedVer
+            else -> null
+        }
+        if (latestVer != null) {
+            container.addView(label(getString(R.string.update_latest_version, latestVer), 15, TEXT).apply {
+                setPadding(0, dp(4), 0, 0)
+            })
+        }
+
+        if (activeRelease != null && (updateStage == UpdateStage.AVAILABLE || updateStage == UpdateStage.DOWNLOADING || updateStage == UpdateStage.VERIFYING || updateStage == UpdateStage.READY)) {
+            val notes = activeRelease.releaseNotes.trim()
+            container.addView(space(10))
+            container.addView(label(getString(R.string.update_release_notes), 14, TEXT, true))
+            if (notes.isEmpty()) {
+                container.addView(label(getString(R.string.update_no_release_notes), 14, MUTED).apply {
+                    setPadding(0, dp(4), 0, 0)
+                })
+            } else {
+                val lines = notes.split('\n')
+                val isLong = lines.size > 5 || notes.length > 200
+                val notesLabel = label(notes, 14, MUTED).apply {
+                    setPadding(0, dp(4), 0, 0)
+                    if (isLong && !releaseNotesExpanded) {
+                        maxLines = 5
+                        ellipsize = android.text.TextUtils.TruncateAt.END
+                    }
+                }
+                container.addView(notesLabel)
+                if (isLong) {
+                    container.addView(button(
+                        getString(if (releaseNotesExpanded) R.string.update_release_notes_less else R.string.update_release_notes_more),
+                        false,
+                    ) {
+                        releaseNotesExpanded = !releaseNotesExpanded
+                        render()
+                    }, matchButton(6, 48))
+                }
+            }
+        }
+
+        updateMessage?.let {
+            val isError = updateStage == UpdateStage.FAILED
+            container.addView(label(it, 14, if (isError) WARNING else MUTED).apply {
+                setPadding(0, dp(8), 0, 0)
+            })
+        }
+
+        container.addView(space(10))
+
         when (updateStage) {
-            UpdateStage.IDLE, UpdateStage.FAILED ->
+            UpdateStage.IDLE, UpdateStage.FAILED -> {
                 container.addView(button(getString(R.string.update_check), false) { checkForUpdates() },
-                    matchButton(if (updateMessage == null) 0 else 10, 60))
-            UpdateStage.CHECKING -> container.addView(label(getString(R.string.update_checking), 14, MUTED))
-            UpdateStage.AVAILABLE -> container.addView(
-                button(getString(R.string.update_download), true) { downloadUpdate() },
-                matchButton(10, 60))
-            UpdateStage.DOWNLOADING -> container.addView(label(getString(R.string.update_downloading, updateProgress ?: 0), 14, MUTED))
-            UpdateStage.VERIFYING -> container.addView(label(getString(R.string.update_verifying), 14, MUTED))
+                    matchButton(0, 60))
+            }
+            UpdateStage.CHECKING -> {
+                container.addView(label(getString(R.string.update_checking), 14, MUTED))
+            }
+            UpdateStage.AVAILABLE -> {
+                container.addView(button(getString(R.string.update_download), true) { downloadUpdate() },
+                    matchButton(0, 60))
+                container.addView(button(getString(R.string.update_check), false) { checkForUpdates() },
+                    matchButton(10, 60))
+            }
+            UpdateStage.DOWNLOADING -> {
+                container.addView(label(getString(R.string.update_downloading, updateProgress ?: 0), 14, MUTED))
+            }
+            UpdateStage.VERIFYING -> {
+                container.addView(label(getString(R.string.update_verifying), 14, MUTED))
+            }
             UpdateStage.READY -> {
                 container.addView(
-                    button(getString(R.string.update_install, updateRelease?.tagName.orEmpty()), true) { installUpdate() },
-                    matchButton(10, 60))
+                    button(getString(R.string.update_install, activeRelease?.tagName.orEmpty()), true) { installUpdate() },
+                    matchButton(0, 60))
                 updateSavedPath?.let { container.addView(label(getString(R.string.update_saved_to, it), 13, MUTED).apply { setPadding(0, dp(10), 0, 0) }) }
+                container.addView(button(getString(R.string.update_check), false) { checkForUpdates() },
+                    matchButton(10, 60))
             }
         }
         return container
@@ -2667,21 +2742,24 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
                 outcome.fold(
                     { release ->
                         UpdateAvailability.recordAttempt(this, System.currentTimeMillis())
-                        availableUpdate = release
                         if (release == null) {
                             UpdateAvailability.clear(this)
+                            availableUpdate = null
+                            updateRelease = null
                             updateMessage = getString(R.string.update_up_to_date)
                             updateStage = UpdateStage.IDLE
                         } else {
                             UpdateAvailability.save(this, release)
+                            availableUpdate = release
                             updateRelease = release
+                            updateMessage = null
                             updateStage = UpdateStage.AVAILABLE
                         }
                         render()
                     },
                     { failure ->
                         Log.w("DiPlay-Update", "update check failed", failure)
-                        updateMessage = failure.message ?: getString(R.string.update_failed)
+                        updateMessage = formatUpdateError(failure)
                         updateStage = UpdateStage.FAILED
                         render()
                     },
@@ -2690,9 +2768,10 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
         }, "diplay-update-check").start()
     }
 
-    private fun latestRelease(): UpdateRelease? {
-        return UpdateReleaseLookup.latest(version(), userAgent())
-    }
+    /** Supplier for fetching remote release; tests can inject or mock. */
+    internal var latestReleaseSupplier: () -> UpdateRelease? = { UpdateReleaseLookup.latest(version(), userAgent()) }
+
+    private fun latestRelease(): UpdateRelease? = latestReleaseSupplier()
 
     private fun openAvailableUpdate(release: UpdateRelease) {
         updateRelease = release
@@ -2722,8 +2801,9 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
             // Each attempt owns its files, including across activity recreation.
             val directory = File(cacheDir, "update/${java.util.UUID.randomUUID()}")
             val outcome = runCatching {
-                // The cached release can be a day old. Download the newest one.
-                release = latestRelease() ?: throw IOException(getString(R.string.update_up_to_date))
+                // Check for the latest release; if lookup succeeds and returns null, no update is available.
+                val remote = latestRelease()
+                release = remote ?: throw IOException(getString(R.string.update_up_to_date))
                 val checksumsFile = File(directory, UpdateCatalog.CHECKSUMS_FILE)
                 UpdateClient.download(release.checksumsUrl, checksumsFile) { _, _ -> }
                 val apkFile = File(directory, release.apkName)
@@ -2760,8 +2840,16 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
                     },
                     { failure ->
                         Log.w("DiPlay-Update", "update download failed", failure)
-                        updateMessage = failure.message ?: getString(R.string.update_failed)
-                        updateStage = UpdateStage.FAILED
+                        if (failure.message == getString(R.string.update_up_to_date)) {
+                            UpdateAvailability.clear(this)
+                            availableUpdate = null
+                            updateRelease = null
+                            updateMessage = getString(R.string.update_up_to_date)
+                            updateStage = UpdateStage.IDLE
+                        } else {
+                            updateMessage = formatUpdateError(failure)
+                            updateStage = UpdateStage.FAILED
+                        }
                         render()
                     },
                 )
@@ -2822,6 +2910,12 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
             if (generation != updateGeneration || isFinishing || isDestroyed || !(page == "settings" && settingsCategory == SettingsCategory.ABOUT)) return@runOnUiThread
             render()
         }
+    }
+
+    private fun formatUpdateError(failure: Throwable): String = when (failure) {
+        is java.net.UnknownHostException, is java.net.SocketTimeoutException, is java.net.ConnectException ->
+            getString(R.string.update_no_internet)
+        else -> failure.message?.takeIf { it.isNotBlank() } ?: getString(R.string.update_failed)
     }
 
     private fun userAgent() = "DiPlay/${version()}"

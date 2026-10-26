@@ -24,6 +24,7 @@ class UpdateCatalogTest {
             "tag_name": "v0.2.14",
             "draft": false,
             "prerelease": true,
+            "body": "Fixed audio latency issue.",
             "assets": [
               {"name": "DiPlay-0.2.14.apk", "browser_download_url": "https://github.com/shihabal3amri/DiPlay/releases/download/v0.2.14/DiPlay-0.2.14.apk"},
               {"name": "SHA256SUMS.txt", "browser_download_url": "https://github.com/shihabal3amri/DiPlay/releases/download/v0.2.14/SHA256SUMS.txt"}
@@ -45,6 +46,99 @@ class UpdateCatalogTest {
             "https://github.com/shihabal3amri/DiPlay/releases/download/v0.2.14/SHA256SUMS.txt",
             release?.checksumsUrl,
         )
+        assertEquals("Fixed audio latency issue.", release?.releaseNotes)
+    }
+
+    @Test
+    fun skipsReleasesMissingAssetsOrApkOrChecksumsAndFindsSubsequentValidRelease() {
+        val json = """
+            [
+              {
+                "tag_name": "v0.2.16",
+                "draft": false,
+                "assets": [
+                  {"name": "source.zip", "browser_download_url": "https://example.com/source.zip"}
+                ]
+              },
+              {
+                "tag_name": "v0.2.15",
+                "draft": false,
+                "assets": [
+                  {"name": "DiPlay-0.2.15.apk", "browser_download_url": "https://example.com/DiPlay-0.2.15.apk"}
+                ]
+              },
+              {
+                "tag_name": "v0.2.14",
+                "draft": false,
+                "assets": [
+                  {"name": "DiPlay-0.2.14.apk", "browser_download_url": "https://example.com/DiPlay-0.2.14.apk"},
+                  {"name": "SHA256SUMS.txt", "browser_download_url": "https://example.com/SHA256SUMS.txt"}
+                ]
+              }
+            ]
+        """.trimIndent()
+        val release = UpdateCatalog.parse(json)
+        assertEquals("v0.2.14", release?.tagName)
+    }
+
+    @Test
+    fun skipsReleasesWithBlankAssetUrlsAndFindsSubsequentValidRelease() {
+        val json = """
+            [
+              {
+                "tag_name": "v0.2.15",
+                "draft": false,
+                "assets": [
+                  {"name": "DiPlay-0.2.15.apk", "browser_download_url": ""},
+                  {"name": "SHA256SUMS.txt", "browser_download_url": "https://example.com/SHA256SUMS.txt"}
+                ]
+              },
+              {
+                "tag_name": "v0.2.14",
+                "draft": false,
+                "assets": [
+                  {"name": "DiPlay-0.2.14.apk", "browser_download_url": "https://example.com/DiPlay-0.2.14.apk"},
+                  {"name": "SHA256SUMS.txt", "browser_download_url": "https://example.com/SHA256SUMS.txt"}
+                ]
+              }
+            ]
+        """.trimIndent()
+        val release = UpdateCatalog.parse(json)
+        assertEquals("v0.2.14", release?.tagName)
+    }
+
+    @Test
+    fun skipsReleasesWithMalformedOrNonHttpsAssetUrlsAndFindsSubsequentValidRelease() {
+        val json = """
+            [
+              {
+                "tag_name": "v0.2.16",
+                "draft": false,
+                "assets": [
+                  {"name": "DiPlay-0.2.16.apk", "browser_download_url": "http://example.com/DiPlay-0.2.16.apk"},
+                  {"name": "SHA256SUMS.txt", "browser_download_url": "https://example.com/SHA256SUMS.txt"}
+                ]
+              },
+              {
+                "tag_name": "v0.2.15",
+                "draft": false,
+                "assets": [
+                  {"name": "DiPlay-0.2.15.apk", "browser_download_url": "not-a-valid-url"},
+                  {"name": "SHA256SUMS.txt", "browser_download_url": "https://example.com/SHA256SUMS.txt"}
+                ]
+              },
+              {
+                "tag_name": "v0.2.14",
+                "draft": false,
+                "assets": [
+                  {"name": "DiPlay-0.2.14.apk", "browser_download_url": "https://example.com/DiPlay-0.2.14.apk"},
+                  {"name": "SHA256SUMS.txt", "browser_download_url": "https://example.com/SHA256SUMS.txt"}
+                ]
+              }
+            ]
+        """.trimIndent()
+        val release = UpdateCatalog.parse(json)
+        assertEquals("v0.2.14", release?.tagName)
     }
 
     @Test

@@ -726,6 +726,13 @@
     <string name="update_failed">فشل التحديث</string>
     <string name="update_available_home">يتوفر تحديث</string>
     <string name="update_saved_to">تم الحفظ في %1$s</string>
+    <string name="update_installed_version">الإصدار المثبت: %1$s</string>
+    <string name="update_latest_version">أحدث إصدار متاح: %1$s</string>
+    <string name="update_release_notes">ملاحظات الإصدار:</string>
+    <string name="update_no_release_notes">لا توجد ملاحظات إصدار متاحة.</string>
+    <string name="update_release_notes_more">عرض كامل ملاحظات الإصدار</string>
+    <string name="update_release_notes_less">عرض أقل</string>
+    <string name="update_no_internet">لا يوجد اتصال بالإنترنت. يرجى التحقق من الشبكة والمحاولة مرة أخرى.</string>
     <string name="backup_title">نسخة احتياطية من الإعدادات</string>
     <string name="backup_open">نسخ احتياطي أو استعادة عبر هاتف</string>
     <string name="backup_open_description">يعرض رمز QR ليتمكن متصفح الهاتف في نفس الشبكة من تصدير إعدادات DiPlay أو استيرادها. تتوقف الخدمة عند مغادرة الصفحة.</string>
