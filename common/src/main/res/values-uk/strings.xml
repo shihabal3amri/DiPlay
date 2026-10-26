@@ -737,6 +737,7 @@
     <string name="update_install">Установити %1$s</string>
     <string name="update_failed">Не вдалося оновити</string>
     <string name="update_available_home">Доступне оновлення</string>
+    <string name="update_available_dialog_message">Доступний DiPlay %1$s. Завантажте його зараз або встановіть пізніше в розділі «Налаштування → Про застосунок».</string>
     <string name="update_saved_to">Збережено в %1$s</string>
     <string name="backup_title">Резервна копія налаштувань</string>
     <string name="backup_open">Резервна копія на телефоні</string>
@@ -749,7 +750,7 @@
     <string name="backup_summary">Імпортовано налаштувань: %1$d, пропущено: %2$d.</string>
     <string name="backup_import_invalid">Цей файл не є резервною копією налаштувань DiPlay.</string>
     <string name="settings_background_update_checks">Перевіряти оновлення у фоні</string>
-    <string name="settings_background_update_checks_description">Раз на добу DiPlay перевіряє GitHub на нову версію і показує її на головному екрані. Завантаження починається лише після вашого дотику.</string>
+    <string name="settings_background_update_checks_description">Раз на добу DiPlay перевіряє GitHub на нову версію і показує її на головному екрані, а коли знаходить — один раз повідомляє. Завантаження починається лише після вашого дотику.</string>
     <string name="setup_guide">Майстер налаштування</string>
     <string name="setup_guide_description">Визначте версію DiLink, оберіть підключення та увімкніть функції, що підходять вашому авто.</string>
     <string name="setup_step_of">КРОК %1$d З %2$d</string>

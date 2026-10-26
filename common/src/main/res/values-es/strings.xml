@@ -725,6 +725,7 @@
     <string name="update_install">Instalar %1$s</string>
     <string name="update_failed">Error de actualización</string>
     <string name="update_available_home">Actualización disponible</string>
+    <string name="update_available_dialog_message">DiPlay %1$s ya está disponible. Descárgalo ahora o instálalo más tarde en Ajustes → Acerca de.</string>
     <string name="update_saved_to">Guardado en %1$s</string>
     <string name="backup_title">Copia de seguridad de ajustes</string>
     <string name="backup_open">Copiar o restaurar en un teléfono</string>
@@ -737,7 +738,7 @@
     <string name="backup_summary">Se importaron %1$d ajustes, se omitieron %2$d.</string>
     <string name="backup_import_invalid">Este archivo no es una copia de seguridad de ajustes de DiPlay.</string>
     <string name="settings_background_update_checks">Buscar actualizaciones en segundo plano</string>
-    <string name="settings_background_update_checks_description">Una vez al día, DiPlay busca una versión nueva en GitHub y la muestra en la pantalla de inicio. Nunca descarga sin que lo toques.</string>
+    <string name="settings_background_update_checks_description">Una vez al día, DiPlay busca una versión nueva en GitHub y la muestra en la pantalla de inicio con un aviso único cuando la encuentra. Nunca descarga sin que lo toques.</string>
     <string name="setup_guide">Guía de configuración</string>
     <string name="setup_guide_description">Detecta tu versión de DiLink, elige una conexión y activa las funciones adecuadas para tu coche.</string>
     <string name="setup_step_of">PASO %1$d DE %2$d</string>

@@ -15,6 +15,7 @@ internal object UpdateAvailability {
     private const val LAST_RESULT_MILLIS = "last_result_millis"
     private const val LAST_INSTALL = "last_install"
     private const val LAST_INSTALL_MILLIS = "last_install_millis"
+    private const val PROMPTED_TAG = "prompted_tag"
 
     internal const val CHECK_INTERVAL_MILLIS = 24L * 60 * 60 * 1000
 
@@ -50,6 +51,24 @@ internal object UpdateAvailability {
             .apply()
     }
 
+    /**
+     * Whether the dialog has yet to offer [release]. It shows once per version, so a driver who chose
+     * **Later** keeps the notice on Home without being interrupted on every return to it (#945).
+     * The record survives [clear]: a release that disappears and comes back is not news again.
+     * Versions are compared, not tag spellings, so a release retagged `v0.3.0` -> `0.3.0` is not re-offered.
+     */
+    fun shouldPrompt(context: Context, release: UpdateRelease): Boolean {
+        val prompted = preferences(context).getString(PROMPTED_TAG, null) ?: return true
+        val promptedVersion = UpdateVersion.parse(prompted)
+        val releaseVersion = UpdateVersion.parse(release.tagName)
+        return if (promptedVersion != null && releaseVersion != null) promptedVersion != releaseVersion
+        else prompted != release.tagName
+    }
+
+    fun recordPrompt(context: Context, release: UpdateRelease) {
+        preferences(context).edit().putString(PROMPTED_TAG, release.tagName).apply()
+    }
+
     fun clear(context: Context) {
         preferences(context).edit()
             .remove(TAG)
@@ -83,6 +102,7 @@ internal object UpdateAvailability {
             ?.let { "${(nowMillis - it).coerceAtLeast(0L) / 60_000} min ago" } ?: "never"
         return "Update check: background=${if (backgroundChecksEnabled(context)) "on" else "off"}; " +
             "lastSuccess=${age(LAST_ATTEMPT_MILLIS)}; cachedRelease=${values.getString(TAG, null) ?: "none"}; " +
+            "promptedFor=${values.getString(PROMPTED_TAG, null) ?: "none"}; " +
             "lastResult=${values.getString(LAST_RESULT, null) ?: "none"} (${age(LAST_RESULT_MILLIS)}); " +
             "lastInstall=${values.getString(LAST_INSTALL, null) ?: "none"} (${age(LAST_INSTALL_MILLIS)})"
     }
