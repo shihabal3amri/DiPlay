@@ -84,3 +84,38 @@ For a current report, reproduce the problem on **0.2.14**, then open **Settings 
 Reports record requested frequencies, station association state, fallback failures and remembered-configuration events. Android 10+ can verify the actual group frequency; Android 9 reports its accepted channel request as unverified and system-default as channel 0. Wi-Fi credentials and protocol payloads are excluded. A successful hotspot is not itself a successful CarPlay session.
 
 Android references: [SupplicantState](https://developer.android.com/reference/android/net/wifi/SupplicantState), [explicit P2P operating frequency](https://developer.android.com/reference/android/net/wifi/p2p/WifiP2pConfig.Builder#setGroupOperatingFrequency(int)).
+
+## Vendor-Neutral Compatibility Matrix
+
+DiPlay utilizes a capability-driven architecture (`HeadUnitCapabilities`) rather than relying exclusively on manufacturer branding. Unknown Android displays receive safe generic defaults.
+
+| Vendor / Platform | Device Capability Detection | USB Host | Wi-Fi Direct | Hotspot | Bluetooth Audio | OEM HUD / Steering Controls | Status |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| BYD DiLink 3.0 / 4.0 / 5.0 / 5.1 | System version, controller version, fingerprint | Supported | Supported | Supported | Supported | Supported (DiLink HUD & Cluster) | Confirmed |
+| Geely / Lynk & Co (`geely_fx11`) | Custom input service (`com.geely.inputservice`) | Supported | Supported | Supported | Supported | Supported (Vendor steering keys) | Confirmed |
+| Android Automotive OS (AAOS) | `FEATURE_AUTOMOTIVE` system feature | Supported | Supported | Supported | Supported | Standard Android APIs | Generic Supported |
+| Generic Android Aftermarket Head Units | Safe generic fallback (`HeadUnitCapabilities`) | Supported (if hardware host) | Supported (if P2P hardware) | Supported (Android 8.0+) | Supported | Standard KEYCODE_MEDIA events | Safe Generic Fallback |
+
+---
+
+## Feasibility Assessment: CarPlay & Android Auto Receivers
+
+### 1. Apple CarPlay Receiver Feasibility
+- **Integration Options:** Wired (USB NCM / Accessory / Accessory Server) and Wireless (Wi-Fi Direct / Local Hotspot / mDNS AirPlay discovery).
+- **Authentication & Security:** Requires MFi authentication accessory handshake. Source tree builds are clean and credential-free; standalone release test packages use runtime identity assets supplied at build time via `DIPLAY_AUTH_ASSETS_DIR`.
+- **Supported Phones:** iPhones running iOS 12 through iOS 18+.
+- **Feasibility:** Fully feasible and active in DiPlay.
+
+### 2. Android Auto Receiver Feasibility
+- **Integration Options:** Wireless (Wi-Fi P2P / Hotspot + Bluetooth A2DP/RFCOMM connection handshake) and Wired (USB Accessory Mode). Protocol uses Google's Wireless Android Auto projection protocol over SSL/TLS socket connections.
+- **Protocol & Certification Requirements:** Official Android Auto head-unit integration requires Google Automotive Services (GAS) certification and proprietary protobuf handshake specifications.
+- **Licensing & Redistribution Constraints:** Open-source Android Auto receiver implementations (e.g. OpenAuto) utilize reverse-engineered protobuf schemas. Official certificates cannot be distributed without authorization.
+- **Feasibility:** Technically feasible via an independent open protocol adapter module. Recommended as a distinct standalone integration path to prevent polluting CarPlay session logic.
+
+---
+
+## Security & Privacy Boundary Verification
+
+- **Zero Hardcoded Secrets:** Source tree and CI assets contain no hardcoded private keys or unauthorized production MFi certificates.
+- **Privacy-Safe Diagnostics:** `DiagnosticRedactor` filters out MAC addresses, IP addresses, credentials, passwords, tokens, and named identifiers before exporting diagnostic reports.
+- **Permission Minimization:** Requests minimum required permissions (USB host, Wi-Fi, Bluetooth) and respects OS-level user grants.
