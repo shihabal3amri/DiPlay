@@ -497,7 +497,16 @@ class AirPlaySession(
                             "bodyHex=${request.body.toHex()}"
                     }
                     val response = try {
-                        handle(request)
+                        if (cipher == null && !allowedBeforePairVerify(request)) {
+                            debugLog(
+                                AirPlayControlDiagnostics.request(request.method, request.path, request.body.size) +
+                                    " refused before pair-verify",
+                                false,
+                            )
+                            RtspMessage.Response(status = STATUS_AUTHORIZATION_REQUIRED)
+                        } else {
+                            handle(request)
+                        }
                     } catch (error: Exception) {
                         Log.e(
                             TAG,
@@ -532,6 +541,20 @@ class AirPlaySession(
         } finally {
             debugLog("airplay control closing reason=$closeReason activeStreams=$activeStreams")
             close()
+        }
+    }
+
+    /**
+     * The control cipher exists only after the controller proved its key in pair-verify M3, so a request
+     * that arrives without it comes from a peer nobody has authenticated. Only pairing and the static
+     * device info may be answered then. A real iPhone sends nothing else before it is encrypted.
+     */
+    private fun allowedBeforePairVerify(request: RtspMessage.Request): Boolean {
+        val path = request.path.lowercase()
+        return when (request.method) {
+            "POST" -> path.endsWith("/pair-setup") || path.endsWith("/pair-verify")
+            "GET" -> path.endsWith("/info")
+            else -> false
         }
     }
 
@@ -977,6 +1000,7 @@ class AirPlaySession(
         const val PLIST_CONTENT_TYPE = "application/x-apple-binary-plist"
         const val PAIRING_CONTENT_TYPE = "application/pairing+tlv8"
         const val OCTET_CONTENT_TYPE = "application/octet-stream"
+        const val STATUS_AUTHORIZATION_REQUIRED = 470
 
         const val STREAM_TYPE_MAIN_SCREEN = 110
         const val STREAM_TYPE_ALT_SCREEN = 111

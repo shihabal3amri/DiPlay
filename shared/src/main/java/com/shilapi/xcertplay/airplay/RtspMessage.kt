@@ -39,6 +39,7 @@ object RtspMessage {
         200 to "OK",
         400 to "Bad Request",
         404 to "Not Found",
+        470 to "Connection Authorization Required",
         500 to "Internal Server Error",
     )
 
