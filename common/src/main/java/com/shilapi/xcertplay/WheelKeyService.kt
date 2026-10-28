@@ -1,6 +1,7 @@
 package com.shilapi.xcertplay
 
 import android.accessibilityservice.AccessibilityService
+import android.accessibilityservice.AccessibilityServiceInfo
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
@@ -43,6 +44,11 @@ import com.shilapi.xcertplay.hud.BydOutputSettings
 class WheelKeyService : AccessibilityService() {
     private val keys = WheelZoomKeys()
     private val navigationKeys = NavigationWheelKeyPolicy()
+    // 本次新增过滤健康状态；其余滚轮/通话处理沿用上游。
+    private val filterHealth = WheelFilterHealthPolicy()
+    @Volatile private var filteringHealthy: Boolean? = null
+    @Volatile private var filterRecoveryRequired = false
+    private var filterRestoreRequested = false
     private val joystick = WheelJoystick()
     private val siriKey = WheelSiriKey()
     /** A remapped media key is handled by the same accessibility input filter as the Siri key. */
@@ -99,6 +105,7 @@ class WheelKeyService : AccessibilityService() {
         override fun run() {
             if (running !== this@WheelKeyService) return
             refreshEligibility()
+            refreshKeyFilter()
             handler.postDelayed(this, ELIGIBILITY_POLL_MILLIS)
         }
     }
@@ -106,6 +113,7 @@ class WheelKeyService : AccessibilityService() {
     override fun onServiceConnected() {
         lastObservedDoubleSiriEvent = null
         running = this
+        refreshKeyFilter()
         NavigationWheelSettings.recordAuthorization(this)
         CarPlayCallKeys.install(this)
         // Lets the watcher for other apps' calls run whenever this accessibility service does.
@@ -330,21 +338,55 @@ class WheelKeyService : AccessibilityService() {
     private fun adjustNavigation(delta: Int): Boolean {
         val stream = navigationStream() ?: return false
         val audio = getSystemService(Context.AUDIO_SERVICE) as? AudioManager ?: return false
-        return try {
-            val minimum = navigationWheelMinimum(stream, android.os.Build.VERSION.SDK_INT) {
+        // 本次补充写后失败不回落到原车重复调音的处理。
+        return NavigationWheelAudioAdjustment.adjust(
+            delta = delta,
+            eligible = { navigationStream() == stream },
+            minimum = { navigationWheelMinimum(stream, android.os.Build.VERSION.SDK_INT) {
                 if (android.os.Build.VERSION.SDK_INT >= 28) audio.getStreamMinVolume(it) else 0
-            }
-            val current = audio.getStreamVolume(stream)
-            val maximum = audio.getStreamMaxVolume(stream)
-            val target = navigationWheelTarget(current, minimum, maximum, delta) ?: return false
-            if (navigationStream() != stream) return false
-            audio.setStreamVolume(stream, target, AudioManager.FLAG_SHOW_UI)
-            // Failed/unsupported writes leave the initial press with the head unit.
-            audio.getStreamVolume(stream) == target
-        } catch (error: Exception) {
-            Log.w(TAG, "navigation volume unavailable for stream $stream", error)
-            WheelKeyLog.note("navigation volume unavailable for stream $stream: ${error.javaClass.simpleName}")
-            false
+            } },
+            maximum = { audio.getStreamMaxVolume(stream) },
+            current = { audio.getStreamVolume(stream) },
+            write = { audio.setStreamVolume(stream, it, AudioManager.FLAG_SHOW_UI) },
+            readback = { audio.getStreamVolume(stream) },
+            failed = { error ->
+                Log.w(TAG, "navigation volume unavailable for stream $stream", error)
+                WheelKeyLog.note("navigation volume unavailable for stream $stream: ${error.javaClass.simpleName}")
+            },
+        )
+    }
+
+    /** 已绑定不代表仍有按键过滤权限；先原地修复，连续确认失败后才走原有授权恢复。 */
+    // 本次新增低频过滤检查和已有授权内的有限恢复。
+    private fun refreshKeyFilter() {
+        if (!NavigationWheelSettings.enabled(this)) {
+            filteringHealthy = null
+            filterRecoveryRequired = false
+            filterRestoreRequested = false
+            filterHealth.observed(null)
+            return
+        }
+        val now = android.os.SystemClock.elapsedRealtime()
+        if (!filterHealth.shouldInspect(now)) return
+        val flag = AccessibilityServiceInfo.FLAG_REQUEST_FILTER_KEY_EVENTS
+        val info = runCatching { serviceInfo }.getOrNull()
+        // Unknown framework state is diagnostic evidence, never proof that a rebind is needed.
+        if (info == null) { filteringHealthy = null; filterRecoveryRequired = false; filterRestoreRequested = false; filterHealth.observed(null); return }
+        val before = info.flags and flag != 0
+        if (!before) runCatching {
+            info.flags = info.flags or flag
+            serviceInfo = info
+        }
+        val healthy = runCatching { serviceInfo?.flags?.let { it and flag != 0 } }.getOrNull()
+        filteringHealthy = healthy
+        if (healthy != false) { filterRecoveryRequired = false; filterRestoreRequested = false }
+        if (filterHealth.observed(healthy)) {
+            filterRecoveryRequired = true
+            note("wheel key filter still disabled after local repair; checking authorized restore")
+        }
+        if (filterRecoveryRequired && !filterRestoreRequested && !inCall(this)) {
+            filterRestoreRequested = true
+            restoreIfNeeded(this)
         }
     }
 
@@ -537,7 +579,7 @@ class WheelKeyService : AccessibilityService() {
             if (access != LocalAdb.Access.READY) return@use access
             if (!mayAsk && !needsRestore(context)) return@use if (connected()) access else LocalAdb.Access.UNREACHABLE
             val allowed = applyServiceSettings(context, adb::shell) {
-                mayAsk || wanted(context)
+                mayAsk || (wanted(context) && (!connected() || !inCall(context)))
             }
             if (allowed && mayAsk) NavigationWheelSettings.recordAuthorization(context)
             if (allowed) note("wheel key service allowed over adb")
@@ -573,7 +615,7 @@ class WheelKeyService : AccessibilityService() {
             // it for a moment first.
             lists.first?.let {
                 if (!shouldContinue()) return false
-                if (!connected() && checkedShell(
+                if ((!connected() || running?.filterRecoveryRequired == true) && checkedShell(
                         "settings put secure enabled_accessibility_services '$it' && sleep $CRASH_RESET_PAUSE_SECONDS",
                         shell,
                     ) == null
@@ -589,7 +631,9 @@ class WheelKeyService : AccessibilityService() {
                 Settings.Secure.getInt(context.contentResolver, Settings.Secure.ACCESSIBILITY_ENABLED, 0) == 1
         }
 
-        internal fun needsRestore(context: Context): Boolean = !connected() && wanted(context)
+        // 本次仅追加已绑定但过滤失效的恢复条件，并避开通话。
+        internal fun needsRestore(context: Context): Boolean =
+            (!connected() || (running?.filterRecoveryRequired == true && !inCall(context))) && wanted(context)
 
         /**
          * The call controls need the service too: outside the CarPlay screen the call key reaches DiPlay
@@ -669,7 +713,7 @@ class WheelKeyService : AccessibilityService() {
                 "attempt=${prefs.getInt("attempt", 0)} adb=${prefs.getString("adb", null)} " +
                     "ageMs=${System.currentTimeMillis() - at}"
             return "Wheel key service: wanted=${wanted(context)} allowedInSettings=${enabledInSettings(context)} " +
-                "bound=${connected()} lastRestore=$last " +
+                "bound=${connected()} keyFilter=${running?.filteringHealthy ?: "unknown"} lastRestore=$last " +
                 "siriDoublePress=${WheelZoomSettings.siriDoublePress(context)} " +
                 "siriDoubleIntervalMs=${WheelZoomSettings.siriDoublePressIntervalMillis(context)} " +
                 "siriTriggerDelayMs=${WheelZoomSettings.siriTriggerDelayMillis(context)}"
