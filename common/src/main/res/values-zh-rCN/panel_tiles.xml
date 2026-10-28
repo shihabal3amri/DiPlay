@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Tile titles on the side panel and in the add drawer. -->
+    <string name="panel_tile_clock">时钟</string>
+    <string name="panel_tile_battery">电池</string>
+    <string name="panel_tile_tyres">胎压</string>
+    <string name="panel_tile_system">车机状态</string>
+    <string name="panel_tile_energy">电量</string>
+    <string name="panel_tile_range">续航</string>
+    <string name="panel_tile_soc">剩余电量</string>
+    <string name="panel_tile_kwh">电池能量</string>
+    <string name="panel_tile_ev_range">电动续航</string>
+    <string name="panel_tile_avg_consumption">平均能耗</string>
+    <string name="panel_tile_soh">电池健康</string>
+    <string name="panel_tile_odometer">总里程</string>
+    <string name="panel_tile_speed">车速</string>
+    <string name="panel_tile_gear">挡位</string>
+    <string name="panel_tile_battery_power">电池功率</string>
+    <string name="panel_tile_accelerator">油门</string>
+    <string name="panel_tile_brake">刹车</string>
+    <string name="panel_tile_max_cell">最高电芯电压</string>
+    <string name="panel_tile_min_cell">最低电芯电压</string>
+    <string name="panel_tile_max_batt_temp">电池最高温</string>
+    <string name="panel_tile_min_batt_temp">电池最低温</string>
+    <string name="panel_tile_hv_volt">高压电压</string>
+    <string name="panel_tile_hv_current">高压电流</string>
+    <string name="panel_tile_v12">12 V</string>
+    <string name="panel_tile_outside_temp">车外温度</string>
+    <string name="panel_tile_inside_temp">车内温度</string>
+    <string name="panel_tile_light">光照</string>
+    <string name="panel_tile_fuel">油量</string>
+    <string name="panel_tile_fuel_range">油量续航</string>
+    <string name="panel_tile_engine_rpm">发动机转速</string>
+    <string name="panel_tile_energy_mode">动力模式</string>
+    <string name="panel_tile_drive_mode">驾驶模式</string>
+    <string name="panel_tile_power_state">电源状态</string>
+    <string name="panel_tile_insulation">绝缘电阻</string>
+    <string name="panel_tile_compressor">压缩机功率</string>
+    <string name="panel_tile_fan">风量</string>
+    <string name="panel_tile_recirculation">内外循环</string>
+    <string name="panel_tile_defrost">前挡除霜</string>
+    <string name="panel_tile_wind_mode">出风模式</string>
+    <string name="panel_tile_ac_control">空调模式</string>
+    <string name="panel_tile_drl">日行灯</string>
+    <string name="panel_tile_turn_signal">转向灯</string>
+    <string name="panel_tile_sunroof">天窗</string>
+    <string name="panel_tile_lock">主驾门锁</string>
+    <string name="panel_tile_key_battery">钥匙电量</string>
+    <string name="panel_tile_fuel_total">累计耗油</string>
+    <string name="panel_tile_hev_mileage">HEV 里程</string>
+    <string name="panel_tile_ev_mileage">EV 里程</string>
+
+    <!-- Grouped tiles that show several related signals side by side. -->
+    <string name="panel_tile_motor_rpm">电机转速</string>
+    <string name="panel_tile_motor_current">电机电流</string>
+    <string name="panel_tile_motor_temp">电机温度</string>
+    <string name="panel_tile_inverter_temp">逆变器温度</string>
+    <string name="panel_tile_climate">空调</string>
+    <string name="panel_tile_seat_driver">主驾座椅</string>
+    <string name="panel_tile_seat_passenger">副驾座椅</string>
+    <string name="panel_tile_lights">灯光</string>
+    <string name="panel_tile_doors">四门</string>
+    <string name="panel_tile_windows">四窗</string>
+    <string name="panel_tile_openings">后备箱 / 引擎盖</string>
+    <string name="panel_tile_seatbelts">安全带</string>
+    <string name="panel_tile_occupancy">座椅占用</string>
+    <string name="panel_tile_wipers">雨刮</string>
+
+    <!-- The panel editor and the add drawer. -->
+    <string name="panel_edit">编辑</string>
+    <string name="panel_done">完成</string>
+    <string name="panel_add_tiles">添加小组件</string>
+    <string name="panel_edit_hint">长按并拖动小组件排序，点尺寸改大小，点 × 移除。</string>
+    <string name="panel_no_data">无数据</string>
+    <string name="panel_group_clock">时钟</string>
+    <string name="panel_group_energy">能量</string>
+    <string name="panel_group_drive">行驶</string>
+    <string name="panel_group_climate">空调</string>
+    <string name="panel_group_hybrid">混动</string>
+    <string name="panel_group_tech">电池</string>
+    <string name="panel_group_lights">灯光</string>
+    <string name="panel_group_safety">安全</string>
+    <string name="panel_group_system">系统</string>
+    <string name="panel_group_body">车身</string>
+    <!-- Status words a tile value shows; the formatter carries these resource ids. -->
+    <string name="panel_state_on">开</string>
+    <string name="panel_state_off">关</string>
+    <string name="panel_state_open">已开</string>
+    <string name="panel_state_closed">已关</string>
+    <string name="panel_state_locked">已锁</string>
+    <string name="panel_state_unlocked">已解锁</string>
+    <string name="panel_state_drive">行驶</string>
+    <string name="panel_state_ok">正常</string>
+    <string name="panel_state_low">偏低</string>
+    <string name="panel_state_moving">移动中</string>
+    <string name="panel_mode_eco">经济</string>
+    <string name="panel_mode_sport">运动</string>
+    <string name="panel_mode_normal">标准</string>
+    <string name="panel_mode_snow">雪地</string>
+    <string name="panel_wind_face">面部</string>
+    <string name="panel_wind_feet">脚部</string>
+    <string name="panel_wind_glass">挡风</string>
+    <string name="panel_air_recirc">内循环</string>
+    <string name="panel_air_fresh">外循环</string>
+    <string name="panel_air_auto">自动</string>
+    <string name="panel_air_manual">手动</string>
+</resources>

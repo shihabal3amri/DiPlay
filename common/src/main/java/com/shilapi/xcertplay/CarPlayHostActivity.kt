@@ -76,6 +76,9 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
+import androidx.lifecycle.setViewTreeLifecycleOwner
+import androidx.lifecycle.setViewTreeViewModelStoreOwner
+import androidx.savedstate.setViewTreeSavedStateRegistryOwner
 import com.shilapi.xcertplay.adb.LocalAdb
 import com.shilapi.xcertplay.airplay.CarPlayMediaButton
 import com.shilapi.xcertplay.airplay.AirPlayConfig
@@ -683,12 +686,9 @@ open class CarPlayHostActivity : ComponentActivity() {
             "intervalMs=${pending.intervalMillis} delayMs=${pending.triggerDelayMillis}")
     }
     private var sidePanel: LinearLayout? = null
-    // Everything on the panel's card, in one layout so the resize blur covers it as a whole.
-    private var sidePanelContents: LinearLayout? = null
-    private var sidePanelBattery: TextView? = null
-    // The side panel's tyres (TPMS), front left, front right, rear left, rear right; hidden without a reading.
-    private var sidePanelTyres: LinearLayout? = null
-    private var sidePanelTyreTexts: List<TextView> = emptyList()
+    // Everything on the panel's card, in one Compose surface so the resize blur covers it as a whole.
+    private var sidePanelCompose: androidx.compose.ui.platform.ComposeView? = null
+    private var sidePanelModel: com.shilapi.xcertplay.panel.SidePanelModel? = null
     // The side panel's whole screen in window pixels and the panel edge that faces CarPlay (Gravity.START when
     // the panel is right of CarPlay, END when left of it, TOP when below it), for dragging that edge.
     private var sidePanelScreen: RectF? = null
@@ -721,7 +721,7 @@ open class CarPlayHostActivity : ComponentActivity() {
     private fun finishSidePanelBlur() {
         sidePanelBlurActive = false
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            sidePanelContents?.setRenderEffect(null)
+            sidePanelCompose?.setRenderEffect(null)
         }
         sidePanelBlur?.let { overlay ->
             if (overlay.visibility != View.VISIBLE) return@let
@@ -743,6 +743,26 @@ open class CarPlayHostActivity : ComponentActivity() {
         }
     }
     private var sidePanelShown = false
+    private var sidePanelOpenSplit = false
+    private var sidePanelOpenPortrait = false
+    private var sidePanelAreaAttempts = 0
+    private var sidePanelAreaForShow = false
+    // The view-area command can be refused while the session's main-screen token is not ready yet
+    // (seen on the first open of a fresh session); the panel shows anyway and the command is retried
+    // with a short backoff until it lands or the panel's state changes.
+    private val sidePanelAreaRetry = object : Runnable {
+        override fun run() {
+            if (sidePanelShown != sidePanelAreaForShow || sidePanelAreaAttempts >= SIDE_PANEL_AREA_RETRIES) return@run
+            sidePanelAreaAttempts++
+            if (sendSidePanelArea(sidePanelAreaForShow)) return@run
+            mainHandler.postDelayed(this, sidePanelRetryDelay(sidePanelAreaAttempts))
+        }
+    }
+    private fun sidePanelRetryDelay(attempt: Int): Long = when (attempt) {
+        0 -> 800L
+        1 -> 2_000L
+        else -> 4_000L
+    }
     private val sidePanelTick = object : Runnable {
         override fun run() {
             refreshSidePanel()
@@ -2220,29 +2240,45 @@ open class CarPlayHostActivity : ComponentActivity() {
             background = sidePanelBackground()
         }
         panel.setOnTouchListener { view, event -> onSidePanelTouch(view, event) }
-        val contents = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            gravity = Gravity.CENTER
-            setPadding(dp(24), dp(24), dp(24), dp(24))
+        val compose = androidx.compose.ui.platform.ComposeView(this).apply {
+            setViewViewTreeOwners()
+            setContent {
+                val model = sidePanelModel ?: com.shilapi.xcertplay.panel.SidePanelModel(com.shilapi.xcertplay.panel.TileCatalog.defaultLayout)
+                com.shilapi.xcertplay.panel.SidePanelPanel(model, sidePanelPalette())
+            }
         }
-        sidePanelContents = contents
-        panel.addView(contents, LinearLayout.LayoutParams(-1, -1))
-        contents.addView(android.widget.TextClock(this).apply {
-            format24Hour = "HH:mm"
-            format12Hour = "h:mm"
-            textSize = 72f
-            setTextColor(SIDE_PANEL_PRIMARY)
-            gravity = Gravity.CENTER
-        })
-        sidePanelBattery = TextView(this).apply {
-            textSize = 30f
-            setTextColor(SIDE_PANEL_SECONDARY)
-            gravity = Gravity.CENTER
-            setPadding(0, dp(24), 0, dp(32))
-        }
-        contents.addView(sidePanelBattery)
-        contents.addView(buildSidePanelTyres())
+        sidePanelCompose = compose
+        sidePanelModel = com.shilapi.xcertplay.panel.SidePanelModel(com.shilapi.xcertplay.panel.SidePanelLayoutStore.load(this))
+            .also { it.context = applicationContext }
+        panel.addView(compose, LinearLayout.LayoutParams(-1, -1))
         return panel
+    }
+
+    // The host is a ComponentActivity, so its lifecycle and SavedStateOwners drive the ComposeView.
+    private fun androidx.compose.ui.platform.ComposeView.setViewViewTreeOwners() {
+        this.setViewTreeLifecycleOwner(this@CarPlayHostActivity)
+        this.setViewTreeViewModelStoreOwner(this@CarPlayHostActivity)
+        this.setViewTreeSavedStateRegistryOwner(this@CarPlayHostActivity)
+    }
+
+    /** The tile colours, taken from the overlay palette so the panel follows day/night like the rest. */
+    private fun sidePanelPalette(): com.shilapi.xcertplay.panel.TilePalette {
+        val p = overlayPalette
+        fun rgb(value: Int) = androidx.compose.ui.graphics.Color(value)
+        // Tiles are frosted glass: a translucent fill the card shows through, edged with a hairline.
+        // The day tint is a light neutral so a tile still reads against the white card; night is a raised dark.
+        val glass = if (appNight) 0xFF2C2C34.toInt() else 0xFF8A8A8E.toInt()
+        val glassEdge = if (appNight) 0x1FFFFFFF else 0x1F000000
+        return com.shilapi.xcertplay.panel.TilePalette(
+            secondary = rgb(p.overlaySecondaryText),
+            primary = rgb(p.overlayPrimaryText),
+            accent = rgb(p.overlayAccent),
+            warn = rgb(p.overlayDanger),
+            good = rgb(p.overlayOnAccent),
+            tile = rgb(glass).copy(alpha = if (appNight) 0.62f else 0.22f),
+            tileEdit = rgb(if (appNight) glass else 0xFFFFFFFF.toInt()).copy(alpha = 0.96f),
+            tileBorder = rgb(glassEdge),
+        )
     }
 
     // A rounded card like CarPlay's, with a grip on the edge that faces CarPlay.
@@ -2377,37 +2413,6 @@ open class CarPlayHostActivity : ComponentActivity() {
         Gravity.TOP -> (edge - screen.top) / screen.height()
         Gravity.END -> (screen.right - edge) / screen.width()
         else -> (edge - screen.left) / screen.width()
-    }
-
-    // TPMS as the cluster shows it: front tyres on the top row, rear on the bottom, left and right columns.
-    private fun buildSidePanelTyres(): LinearLayout {
-        val texts = List(4) { position ->
-            TextView(this).apply {
-                textSize = 24f
-                setTextColor(SIDE_PANEL_PRIMARY)
-                gravity = if (position % 2 == 0) Gravity.START else Gravity.END
-            }
-        }
-        sidePanelTyreTexts = texts
-        fun row(left: TextView, right: TextView) = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            addView(left, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
-            addView(right, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
-            setPadding(0, dp(8), 0, dp(8))
-        }
-        return LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            visibility = View.GONE
-            setPadding(dp(8), 0, dp(8), dp(28))
-            addView(TextView(this@CarPlayHostActivity).apply {
-                text = "TPMS"
-                textSize = 18f
-                setTextColor(SIDE_PANEL_SECONDARY)
-                gravity = Gravity.CENTER
-            })
-            addView(row(texts[0], texts[1]))
-            addView(row(texts[2], texts[3]))
-        }.also { sidePanelTyres = it }
     }
 
     // The panel's strip of the stream, mapped through the video's layout in the window.
@@ -2682,7 +2687,7 @@ open class CarPlayHostActivity : ComponentActivity() {
         overlay.animate().cancel()
         val radius = dp(24).toFloat()
         val contents = dp(32).toFloat()
-        sidePanelContents?.setRenderEffect(
+        sidePanelCompose?.setRenderEffect(
             RenderEffect.createBlurEffect(contents, contents, Shader.TileMode.DECAL))
         val content = contentRect(view.width, view.height)
         val width = (content.width / 4).toInt().coerceAtLeast(1)
@@ -2721,22 +2726,61 @@ open class CarPlayHostActivity : ComponentActivity() {
         mainHandler.post(sidePanelBlurEnd)
     }
 
-    private fun showSidePanel(show: Boolean) {
-        val areas = sessionDisplay?.viewAreas ?: return
-        val view = videoView ?: return
+    /**
+     * Sends the CarPlay view-area move for the panel's show or hide. False when a move was required
+     * but the session could not take it yet (worth retrying); true when it was sent, or when there is
+     * no view area to move at all.
+     */
+    private fun sendSidePanelArea(show: Boolean): Boolean {
+        val areas = sessionDisplay?.viewAreas ?: return true
+        val view = videoView ?: return true
         val split = isMultiWindowActive()
         val portrait = if (split) screenPortrait() else view.height > view.width
-        val target = if (show) areas.sidePanel(portrait, SidePanelSettings.sixths(this)) else areas.indexFor(view.width, view.height, split, portrait)
+        val target = if (show) {
+            areas.sidePanel(portrait, SidePanelSettings.sixths(this))
+        } else {
+            areas.indexFor(view.width, view.height, split, portrait)
+        }
         val sent = target != null && controller?.showViewArea(target) == true
         appendLog("Side panel ${if (show) "shown" else "hidden"}: view area $target sent=$sent")
-        if (!sent || target == null) return
-        areas.use(target)
+        if (sent && target != null) areas.use(target)
+        return target == null || sent
+    }
+
+    /**
+     * Shows or hides the panel. The CarPlay view-area move is fire-and-forget with a short retry, and
+     * the panel's own surface shows regardless: a refused command (the session's token not ready on a
+     * first open) must not leave an opened tab with nothing behind it.
+     */
+    private fun showSidePanel(show: Boolean) {
+        val view = videoView ?: return
+        if (show && sessionDisplay?.viewAreas == null) {
+            appendLog("Side panel ${if (show) "shown" else "hidden"}: no session view areas yet")
+            return
+        }
+        mainHandler.removeCallbacks(sidePanelAreaRetry)
+        sidePanelAreaForShow = show
+        sidePanelAreaAttempts = 0
+        if (!sendSidePanelArea(show)) {
+            mainHandler.postDelayed(sidePanelAreaRetry, sidePanelRetryDelay(0))
+        }
         sidePanelShown = show
         sidePanel?.visibility = if (show) View.VISIBLE else View.GONE
+        if (show) {
+            sidePanelOpenSplit = isMultiWindowActive()
+            sidePanelOpenPortrait = if (sidePanelOpenSplit) screenPortrait() else view.height > view.width
+        }
         mainHandler.removeCallbacks(sidePanelTick)
-        if (show) startSidePanelTyres() else com.shilapi.xcertplay.hud.BydTyreStatus.stop()
-        if (show) sidePanelTick.run()
-        if (show) showSidePanelGripHint()
+        if (show) {
+            startSidePanelTyres()
+            com.shilapi.xcertplay.panel.SystemStatus.start()
+            sidePanelTick.run()
+            showSidePanelGripHint()
+        } else {
+            sidePanelModel?.closed()
+            com.shilapi.xcertplay.hud.BydTyreStatus.stop()
+            com.shilapi.xcertplay.panel.SystemStatus.stop()
+        }
         updateVideoLayout(view.width, view.height)
     }
 
@@ -2744,7 +2788,9 @@ open class CarPlayHostActivity : ComponentActivity() {
         sidePanelShown = false
         sidePanel?.visibility = View.GONE
         mainHandler.removeCallbacks(sidePanelTick)
+        sidePanelModel?.closed()
         com.shilapi.xcertplay.hud.BydTyreStatus.stop()
+        com.shilapi.xcertplay.panel.SystemStatus.stop()
         videoView?.let { placeSidePanelTab(it.width, it.height) }
     }
 
@@ -2781,19 +2827,9 @@ open class CarPlayHostActivity : ComponentActivity() {
         }
     }
 
-    // The battery shows only where DiPlay already reads it for the iPhone.
+    // One panel tick: tell the repository which fields the placed tiles need, and recompose with fresh values.
     private fun refreshSidePanel() {
-        val battery = if (com.shilapi.xcertplay.hud.BydOutputSettings.batteryToIphoneActive(this)) {
-            com.shilapi.xcertplay.hud.BydNavigationOutputs.batteryStatus(applicationContext).snapshot()
-        } else null
-        sidePanelBattery?.text = battery?.let { "🔋 ${Math.round(it.batteryPercent)} %  ·  ${it.rangeKm} km" }.orEmpty()
-        val tyres = com.shilapi.xcertplay.hud.BydTyreStatus.latest()
-        sidePanelTyres?.visibility = if (tyres == null) View.GONE else View.VISIBLE
-        if (tyres != null) sidePanelTyreTexts.forEachIndexed { tyre, text ->
-            val pressure = tyres.pressureKpa.getOrNull(tyre)?.let { "$it kPa" } ?: "—"
-            val temperature = tyres.temperatureC.getOrNull(tyre)?.let { "\n$it °C" }.orEmpty()
-            text.text = pressure + temperature
-        }
+        sidePanelModel?.refresh(applicationContext)
     }
 
     private val overlayPalette: DiPlayPalette get() = DiPlayPalette.of(appNight)
@@ -2801,8 +2837,6 @@ open class CarPlayHostActivity : ComponentActivity() {
     private val MENU_BACKGROUND: Int get() = overlayPalette.overlayBackground
     // The side panel card follows the app theme: black when dark, white (for now) when light.
     private val SIDE_PANEL_CARD: Int get() = if (appNight) Color.BLACK else Color.WHITE
-    private val SIDE_PANEL_PRIMARY: Int get() = MENU_PRIMARY
-    private val SIDE_PANEL_SECONDARY: Int get() = MENU_SECONDARY
     private val MENU_PRIMARY: Int get() = overlayPalette.overlayPrimaryText
     private val MENU_SECONDARY: Int get() = overlayPalette.overlaySecondaryText
     private val MENU_ACCENT: Int get() = overlayPalette.overlayAccent
@@ -2853,11 +2887,7 @@ open class CarPlayHostActivity : ComponentActivity() {
         }
         sidePanel?.let { panel ->
             panel.background = sidePanelBackground()
-            val contents = sidePanelContents ?: return@let
-            (contents.getChildAt(0) as? TextView)?.setTextColor(SIDE_PANEL_PRIMARY)
-            sidePanelBattery?.setTextColor(SIDE_PANEL_SECONDARY)
-            sidePanelTyreTexts.forEach { it.setTextColor(SIDE_PANEL_PRIMARY) }
-            (sidePanelTyres?.getChildAt(0) as? TextView)?.setTextColor(SIDE_PANEL_SECONDARY)
+            sidePanelModel?.refreshTheme()
         }
         (picturePanel as? CarPlayPicturePanel)?.applyPalette(overlayPalette)
     }
@@ -5907,7 +5937,22 @@ open class CarPlayHostActivity : ComponentActivity() {
             }
         }
         val target = areas.indexFor(size.width, size.height, split, portrait) ?: return false
-        if (sidePanelShown) resetSidePanel() // a turn or the split screen ends the side panel
+        // Only a real turn, or entering/leaving split screen, ends the side panel. A same-shape window
+        // change (a camera shrink, a video renegotiation) keeps CarPlay beside the panel as it was.
+        if (sidePanelShown && (turned || split != sidePanelOpenSplit || portrait != sidePanelOpenPortrait)) {
+            resetSidePanel()
+        }
+        if (sidePanelShown) {
+            // The window changed but the panel's geometry did not: re-fit the video, keep the view area.
+            activeDisplaySize = size
+            sessionDisplay = display.copy(rotation = displayRotation())
+            videoView?.let { updateVideoLayout(it.width, it.height) }
+            val kept = "Window ${previous?.width}x${previous?.height} -> ${size.width}x${size.height} " +
+                "split=$split portrait=$portrait: side panel kept, view area ${areas.current}"
+            appendLog(kept)
+            Log.i(TAG, kept)
+            return true
+        }
         // The same whole-screen area without a turn (a camera window, say) keeps the usual handling.
         if (!turned && target == areas.current && areas.kindOf(target) == CarPlayViewAreas.Kind.FULL_SCREEN) return false
         activeDisplaySize = size
@@ -6942,6 +6987,8 @@ open class CarPlayHostActivity : ComponentActivity() {
         const val CLUSTER_SMALL_WINDOW_ON = 1
         const val CLUSTER_SMALL_WINDOW_AUTO = 2
         const val SIDE_PANEL_REFRESH_MILLIS = 5_000L
+        /** Retries of a refused view-area move on top of the first attempt, before giving up. */
+        const val SIDE_PANEL_AREA_RETRIES = 3
         /** CarPlay's share past which letting go of the panel edge closes the panel: halfway from two thirds to all. */
         const val SIDE_PANEL_CLOSE_SHARE = 5f / 6f
         /** How long the last picture may stand in for the video after returning, and the wait to copy it. */
