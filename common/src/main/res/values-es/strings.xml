@@ -938,6 +938,13 @@
     <string name="iphone_corner_mask_mode">Máscara del iPhone (experimental)</string>
     <string name="settings_launcher_bubble">Burbuja de la pantalla de inicio (experimental)</string>
     <string name="settings_launcher_bubble_description">Muestra el icono de DiPlay como una burbuja sobre la pantalla de inicio del coche: tócala para volver a CarPlay y arrástrala donde quieras. Se oculta al abrir DiPlay y vuelve al salir. Mantén pulsado para fijar su posición y vuelve a mantener pulsado para liberarla. Necesita el permiso para mostrarse sobre otras aplicaciones.</string>
+    <string name="settings_adas_tile_title">Panel ADAS del cuadro (experimental)</string>
+    <string name="settings_adas_tile_keep_small">Mantener pequeño el panel ADAS</string>
+    <string name="settings_adas_tile_keep_small_description">Mientras el mapa de CarPlay está en el cuadro, el coche puede abrir encima su escena ADAS grande. Con esto activado, DiPlay lo detecta y pide de nuevo el panel pequeño al cuadro, igual que el botón de menú del volante. No se oculta nada: el panel pequeño y sus avisos siguen ahí. Necesita el ADB de red del coche. Envía una trama al receptor de pruebas del cuadro de BYD, que el cuadro no confirma. Probado en un BYD Han.</string>
+    <string name="settings_adas_tile_show_small">Mostrar ahora el panel pequeño</string>
+    <string name="settings_adas_tile_sent">Solicitud enviada. El cuadro no la confirma.</string>
+    <string name="settings_adas_tile_send_failed">No se pudo enviar la solicitud.</string>
+    <string name="settings_adas_tile_unavailable">Esta unidad no tiene el receptor de pruebas del cuadro (com.byd.clusterdebug), así que no se puede controlar el panel ADAS.</string>
     <string name="settings_launcher_bubble_size">Tamaño de la burbuja</string>
     <string name="settings_launcher_bubble_locked">Posición fijada</string>
     <string name="settings_launcher_bubble_unlocked">Posición liberada</string>

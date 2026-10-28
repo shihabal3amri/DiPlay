@@ -1040,6 +1040,13 @@
     <string name="iphone_corner_mask_mode">iPhoneのマスク（実験的機能）</string>
     <string name="settings_launcher_bubble">ホーム画面のバブル（実験的機能）</string>
     <string name="settings_launcher_bubble_description">車載機のホーム画面に DiPlay のアイコンをバブルとして表示します。タップすると CarPlay に戻り、ドラッグでどこへでも移動できます。DiPlay の画面を開くと隠れ、離れると再び表示されます。長押しで位置をロックし、もう一度長押しで解除します。「他のアプリの上に重ねて表示」が必要です。</string>
+    <string name="settings_adas_tile_title">メーターのADASタイル（実験的機能）</string>
+    <string name="settings_adas_tile_keep_small">ADASタイルを小さいまま保つ</string>
+    <string name="settings_adas_tile_keep_small_description">CarPlayの地図がメーターにある間、車が大きなADASシーンを重ねて開くことがあります。オンにすると、DiPlayがそれを検知し、ステアリングのメニューボタンと同じように小さいタイルへ戻すようメーターに要求します。何も非表示にしません。小さいタイルとその警告はそのままです。車のネットワークADBが必要です。BYDのメーター用テストレシーバーにフレームを送りますが、メーターは確認応答を返しません。BYD Hanで確認済み。</string>
+    <string name="settings_adas_tile_show_small">小さいタイルを今すぐ表示</string>
+    <string name="settings_adas_tile_sent">リクエストを送信しました。メーターは確認応答を返しません。</string>
+    <string name="settings_adas_tile_send_failed">リクエストを送信できませんでした。</string>
+    <string name="settings_adas_tile_unavailable">このヘッドユニットにはメーターのテストレシーバー（com.byd.clusterdebug）がないため、ADASタイルを制御できません。</string>
     <string name="settings_launcher_bubble_size">バブルのサイズ</string>
     <string name="settings_launcher_bubble_locked">位置をロック中</string>
     <string name="settings_launcher_bubble_unlocked">位置のロックを解除</string>

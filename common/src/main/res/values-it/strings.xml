@@ -1012,6 +1012,13 @@
     <string name="iphone_corner_mask_mode">Maschera iPhone (sperimentale)</string>
     <string name="settings_launcher_bubble">Bolla nella schermata Home (sperimentale)</string>
     <string name="settings_launcher_bubble_description">Mostra l’icona di DiPlay in una bolla sopra la schermata Home della head unit: toccala per tornare a CarPlay e trascinala dove vuoi. Scompare quando è aperta una schermata di DiPlay e riappare quando la lasci. Tienila premuta per bloccarne la posizione e premila di nuovo a lungo per sbloccarla. Richiede il permesso “Mostra sopra altre app”.</string>
+    <string name="settings_adas_tile_title">Riquadro ADAS del quadro (sperimentale)</string>
+    <string name="settings_adas_tile_keep_small">Mantieni piccolo il riquadro ADAS</string>
+    <string name="settings_adas_tile_keep_small_description">Mentre la mappa CarPlay è sul quadro, l\'auto può aprire sopra la sua grande scena ADAS. Con questa opzione, DiPlay se ne accorge e chiede di nuovo al quadro il riquadro piccolo, come il pulsante menu del volante. Non viene nascosto nulla: il riquadro piccolo e i suoi avvisi restano. Richiede l\'ADB di rete dell\'auto. Invia un frame al ricevitore di test del quadro BYD, che il quadro non conferma. Provato su una BYD Han.</string>
+    <string name="settings_adas_tile_show_small">Mostra ora il riquadro piccolo</string>
+    <string name="settings_adas_tile_sent">Richiesta inviata. Il quadro non la conferma.</string>
+    <string name="settings_adas_tile_send_failed">Impossibile inviare la richiesta.</string>
+    <string name="settings_adas_tile_unavailable">Questa unità non ha il ricevitore di test del quadro (com.byd.clusterdebug), quindi il riquadro ADAS non può essere controllato.</string>
     <string name="settings_launcher_bubble_size">Dimensione della bolla</string>
     <string name="settings_launcher_bubble_locked">Posizione bloccata</string>
     <string name="settings_launcher_bubble_unlocked">Posizione sbloccata</string>

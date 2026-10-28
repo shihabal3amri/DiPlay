@@ -987,6 +987,13 @@
     <string name="iphone_corner_mask_mode">قناع iPhone (تجريبي)</string>
     <string name="settings_launcher_bubble">فقاعة الشاشة الرئيسية (تجريبي)</string>
     <string name="settings_launcher_bubble_description">يعرض أيقونة DiPlay كفقاعة فوق الشاشة الرئيسية للوحدة: المسها للعودة إلى CarPlay واسحبها إلى أي مكان. تختفي فور فتح DiPlay وتعود عند مغادرته. اضغط مطولاً لتثبيت الموضع واضغط مطولاً مرة أخرى لتحريره. تحتاج إلى إذن العرض فوق التطبيقات الأخرى.</string>
+    <string name="settings_adas_tile_title">بطاقة ADAS في العداد (تجريبي)</string>
+    <string name="settings_adas_tile_keep_small">إبقاء بطاقة ADAS صغيرة</string>
+    <string name="settings_adas_tile_keep_small_description">عندما تكون خريطة CarPlay على لوحة العدادات، قد تفتح السيارة فوقها مشهد ADAS الكبير. عند التفعيل، يلاحظ DiPlay ذلك ويطلب من اللوحة البطاقة الصغيرة مجددًا، كما يفعل زر القائمة في المقود. لا يُخفى شيء: تبقى البطاقة الصغيرة وتنبيهاتها. يحتاج إلى ADB الشبكي للسيارة. يرسل إطارًا إلى مستقبِل اختبار لوحة العدادات من BYD، ولا تؤكده اللوحة. جُرّب على BYD Han.</string>
+    <string name="settings_adas_tile_show_small">إظهار البطاقة الصغيرة الآن</string>
+    <string name="settings_adas_tile_sent">تم إرسال الطلب. لا تؤكده لوحة العدادات.</string>
+    <string name="settings_adas_tile_send_failed">تعذّر إرسال الطلب.</string>
+    <string name="settings_adas_tile_unavailable">لا يحتوي هذا الجهاز على مستقبِل اختبار لوحة العدادات (com.byd.clusterdebug)، لذلك لا يمكن التحكم في بطاقة ADAS.</string>
     <string name="settings_launcher_bubble_size">حجم الفقاعة</string>
     <string name="settings_launcher_bubble_locked">تم تثبيت الموضع</string>
     <string name="settings_launcher_bubble_unlocked">تم تحرير الموضع</string>

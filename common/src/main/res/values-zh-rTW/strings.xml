@@ -998,6 +998,13 @@
     <string name="iphone_corner_mask_mode">iPhone 遮罩（實驗性）</string>
     <string name="settings_launcher_bubble">桌面懸浮球（實驗性）</string>
     <string name="settings_launcher_bubble_description">在車機桌面顯示一個 DiPlay 懸浮球：點它直接回到 CarPlay，可拖動位置；打開 DiPlay 時自動隱藏，離開後重新出現。長按鎖定位置，再次長按解鎖。需要「顯示在其他應用上層」權限。</string>
+    <string name="settings_adas_tile_title">儀表 ADAS 小窗（實驗性）</string>
+    <string name="settings_adas_tile_keep_small">保持 ADAS 小窗為小尺寸</string>
+    <string name="settings_adas_tile_keep_small_description">CarPlay 地圖顯示在儀表上時，車輛可能會在其上開啟大的 ADAS 場景。開啟後，DiPlay 會發現這個情況，並像方向盤上的選單鍵一樣，要求儀表重新顯示小窗。不會隱藏任何內容：小窗及其警示都會保留。需要車輛的網路 ADB。向 BYD 的儀表測試接收器傳送一個影格，儀表不會確認。已在 BYD 漢上測試。</string>
+    <string name="settings_adas_tile_show_small">立即顯示小窗</string>
+    <string name="settings_adas_tile_sent">已傳送要求。儀表不會確認。</string>
+    <string name="settings_adas_tile_send_failed">無法傳送要求。</string>
+    <string name="settings_adas_tile_unavailable">此車機沒有儀表測試接收器（com.byd.clusterdebug），因此無法控制 ADAS 小窗。</string>
     <string name="settings_launcher_bubble_size">懸浮球大小</string>
     <string name="settings_launcher_bubble_locked">位置已鎖定</string>
     <string name="settings_launcher_bubble_unlocked">位置已解鎖</string>

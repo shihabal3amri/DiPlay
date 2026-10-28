@@ -11,6 +11,7 @@ object BydOutputSettings {
     private const val PREFS = "diplay_byd_outputs"
     private const val KEY_ENABLED = "navigation_enabled"
     private const val KEY_CLUSTER_STREAM_PAUSE = "cluster_stream_pause"
+    private const val KEY_ADAS_TILE_SMALL = "adas_tile_small"
     private const val KEY_CLUSTER_PROJECTION_SHAPE = "cluster_projection_shape"
     private const val KEY_BATTERY_TO_IPHONE = "battery_to_iphone"
     private const val KEY_LOW_CHARGE_PERCENT = "low_charge_percent"
@@ -40,6 +41,12 @@ object BydOutputSettings {
 
     fun setClusterStreamPause(context: Context, enabled: Boolean) =
         prefs(context).edit().putBoolean(KEY_CLUSTER_STREAM_PAUSE, enabled).apply()
+
+    /** Asks the cluster for its small ADAS tile whenever the car opens the large scene over DiPlay's map. */
+    fun keepAdasTileSmall(context: Context): Boolean = prefs(context).getBoolean(KEY_ADAS_TILE_SMALL, false)
+
+    fun setKeepAdasTileSmall(context: Context, enabled: Boolean) =
+        prefs(context).edit().putBoolean(KEY_ADAS_TILE_SMALL, enabled).apply()
 
     /**
      * How the CarPlay map is projected on the cluster: half screen (default) keeps the cluster's own

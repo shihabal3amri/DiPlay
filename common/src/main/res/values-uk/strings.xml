@@ -950,6 +950,13 @@
     <string name="iphone_corner_mask_mode">Маска iPhone (експериментально)</string>
     <string name="settings_launcher_bubble">Бульбашка на головному екрані (експериментально)</string>
     <string name="settings_launcher_bubble_description">Показує значок DiPlay як бульбашку поверх головного екрана: торкніться, щоб повернутися до CarPlay, і перетягуйте її будь-куди. Вона ховається, коли відкрито DiPlay, і повертається після виходу. Утримуйте, щоб закріпити положення, і утримуйте знову, щоб зняти закріплення. Потрібен дозвіл «показ поверх інших програм».</string>
+    <string name="settings_adas_tile_title">Плитка ADAS на панелі приладів (експериментально)</string>
+    <string name="settings_adas_tile_keep_small">Тримати плитку ADAS маленькою</string>
+    <string name="settings_adas_tile_keep_small_description">Поки карта CarPlay на панелі приладів, автомобіль може відкрити поверх неї велику сцену ADAS. Якщо ввімкнути, DiPlay помітить це і знову попросить у панелі маленьку плитку, як кнопка меню на кермі. Нічого не приховується: маленька плитка та її попередження залишаються. Потрібен мережевий ADB автомобіля. Надсилає кадр тестовому приймачу панелі BYD, який панель не підтверджує. Перевірено на BYD Han.</string>
+    <string name="settings_adas_tile_show_small">Показати маленьку плитку зараз</string>
+    <string name="settings_adas_tile_sent">Запит надіслано. Панель його не підтверджує.</string>
+    <string name="settings_adas_tile_send_failed">Не вдалося надіслати запит.</string>
+    <string name="settings_adas_tile_unavailable">У цього головного пристрою немає тестового приймача панелі (com.byd.clusterdebug), тому керувати плиткою ADAS не можна.</string>
     <string name="settings_launcher_bubble_size">Розмір бульбашки</string>
     <string name="settings_launcher_bubble_locked">Положення закріплено</string>
     <string name="settings_launcher_bubble_unlocked">Закріплення знято</string>

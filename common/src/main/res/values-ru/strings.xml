@@ -938,6 +938,13 @@
     <string name="iphone_corner_mask_mode">Маска iPhone (экспериментально)</string>
     <string name="settings_launcher_bubble">Пузырь на главном экране (экспериментально)</string>
     <string name="settings_launcher_bubble_description">Показывает значок DiPlay в виде пузыря поверх главного экрана: нажмите, чтобы вернуться в CarPlay, и перетаскивайте его куда угодно. Он скрывается при открытии DiPlay и возвращается после выхода. Удерживайте, чтобы закрепить положение, и удерживайте снова, чтобы снять закрепление. Нужно разрешение «показ поверх других приложений».</string>
+    <string name="settings_adas_tile_title">Плитка ADAS на приборной панели (экспериментально)</string>
+    <string name="settings_adas_tile_keep_small">Держать плитку ADAS маленькой</string>
+    <string name="settings_adas_tile_keep_small_description">Пока карта CarPlay на приборной панели, автомобиль может открыть поверх неё большую сцену ADAS. Если включить, DiPlay заметит это и снова запросит у панели маленькую плитку, как кнопка меню на руле. Ничего не скрывается: маленькая плитка и её предупреждения остаются. Нужен сетевой ADB автомобиля. Отправляет кадр тестовому приёмнику приборной панели BYD, который панель не подтверждает. Проверено на BYD Han.</string>
+    <string name="settings_adas_tile_show_small">Показать маленькую плитку сейчас</string>
+    <string name="settings_adas_tile_sent">Запрос отправлен. Панель его не подтверждает.</string>
+    <string name="settings_adas_tile_send_failed">Не удалось отправить запрос.</string>
+    <string name="settings_adas_tile_unavailable">У этого головного устройства нет тестового приёмника приборной панели (com.byd.clusterdebug), поэтому управлять плиткой ADAS нельзя.</string>
     <string name="settings_launcher_bubble_size">Размер пузыря</string>
     <string name="settings_launcher_bubble_locked">Положение закреплено</string>
     <string name="settings_launcher_bubble_unlocked">Закрепление снято</string>

@@ -202,6 +202,22 @@ While the CarPlay call holds the state, DiPlay records the call from `VOICE_RECO
 
 **Calls at the call's own rate** (Settings → Advanced, experimental, off by default, applies at the next connection) changes what DiPlay offers for the call stream. On the same Han the iPhone's SETUP for a call reported `vocoderInfo={sampleRate=8000.0}`, a narrowband call, and DiPlay still chose `audioFormat=0x40000000`, 48 kHz Opus, so the call was decoded and played at 48 kHz. The stock CarPlay service sets up its audio processing for the vocoder rate (8, 16, 24 or 32 kHz) and applies receive-side tuning for it. With the setting on, the call's output and microphone offers are both PCM mono at those four rates only, so the iPhone picks the call's own rate; every other stream is unchanged. The microphone offer has to be restricted too: on the call stream the iPhone chooses one `audioFormat` for both directions, so a 48 kHz microphone offer let it keep choosing 48 kHz. On a Geely Monjaro (ECARX KX11, Android 9, wired CarPlay) with the output restricted alone, a WhatsApp call still arrived as 48 kHz (`audioFormat=16384`) and was torn down and set up again every 3.5 to 4 s; restricting both gave one stable 32 kHz call (`formatBits=0x100`) that the other person could hear (reported and tested by kuanysh-baltagarayev, #898). Whether a wireless iPhone accepts a PCM-only call offer is not established; if a call has no sound, turn the setting off.
 
+### Cluster ADAS tile (experimental)
+
+Settings → Advanced has **ADAS tile on the cluster** on BYD head units. **Keep the ADAS tile small** is off by default. While DiPlay's CarPlay map is on the cluster, the car can open a large ADAS scene in the centre of the cluster, over the map; the steering wheel's menu button closes it. With the setting on, DiPlay notices the large scene and asks the cluster for the small tile again, as the menu button does. It hides nothing: the small tile and its warnings stay. **Show the small tile now** sends the same request once.
+
+- It needs the car's network ADB, and it works only where `com.byd.clusterdebug/.BroadcastReceiverCAN` is exported without a permission; otherwise both controls are disabled with an explanation.
+- It runs only while the setting is on and the CarPlay map is on the cluster. Elsewhere nothing is read or sent.
+- The cluster does not confirm the request. Log tag `DiPlay-AdasTile`.
+
+How it works on a BYD Han (DiLink 3.0, `eng.build.20260204.025317`). The car reports the cluster's ADAS view as the instrument event `26f00028` (`BYDAutoInstrumentDevice`, device 1007), which appears in the log as `postEvent device_type: 1007, event_type =26f00028, value = N`: 1 is the normal small tile and 6 is the large scene (other short values, such as 3, belong to other popups and are left alone). Pressing the wheel's menu button while the large scene is up makes the car report `26f00028 = 1`. The frame `26,F0,00,28,01,01` (the broadcast `com.byd.cluster.spi` with the extra `wholeFrame`, five times) sets the same value, and it returned the cluster from the large scene to the small tile twice on the car, once with a control run that confirmed the large scene was still showing before the frame was sent.
+
+DiPlay cannot register for the event, because `BYDAutoInstrumentDevice` checks a BYD permission, so while the setting is active it reads the event's log lines (`logcat -d -s BYDAutoInstrumentDevice:D`) over the network ADB every two seconds. A scene already in the log when DiPlay starts watching never triggers a send, a send needs a newer event that leaves the view at 6, and sends are limited to one every three seconds and six a minute.
+
+Not established: whether a head unit other than the Han reports the same event, and the effect of the request while driving beyond the observations above. The log was read on the car while driving; frames were sent only while parked.
+
+The cluster's own app (`libBydCluster.so`, QML in `cluster_theme1.rcc`) shows the small tile for `adasInterfaceDisplay` 2 and the large scene for 1, with the large scene at the highest centre priority. No frame is known that moves or resizes the small tile.
+
 ## ADB vehicle-data settings and firmware scope
 
 Settings → Location contains **Advanced vehicle data**, collapsed by default, with two saved modes.
