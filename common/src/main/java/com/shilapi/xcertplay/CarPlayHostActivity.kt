@@ -1125,7 +1125,13 @@ open class CarPlayHostActivity : ComponentActivity() {
 
     private fun requestWirelessPermissions() {
         val permissions = requiredWirelessPermissions()
-        if (permissions.all { checkSelfPermission(it) == PackageManager.PERMISSION_GRANTED }) {
+        // Only request permissions that are not already granted. Some OEM ROMs (e.g. Samsung One UI)
+        // silently deny the whole batch when a merged permission request array contains a permission
+        // whose rationale state is not expected, so filtering ahead of time keeps the system dialog
+        // focused on exactly the missing permissions.
+        val permissionsNotGranted = permissions.filter { checkSelfPermission(it) != PackageManager.PERMISSION_GRANTED }
+        if (permissionsNotGranted.isEmpty()) {
+            Log.i("Evan", "all granted")
             wirelessPermissionsReady = true
             updateHotspotStatusBlock()
             maybeStartCarPlay()
@@ -1134,7 +1140,7 @@ open class CarPlayHostActivity : ComponentActivity() {
         wirelessPermissionsReady = false
         updateHotspotStatusBlock()
         awaitingWirelessPermissions = true
-        wirelessPermissions.launch(permissions.toTypedArray())
+        wirelessPermissions.launch(permissionsNotGranted.toTypedArray())
     }
 
     private fun hasRequiredWirelessPermissions(): Boolean =
