@@ -2209,8 +2209,34 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
                 render()
             }
             if (clusterMapEnabled) {
-                clusterSpeedometerControls(card)
-                clusterMusicControls(card)
+                val player = com.shilapi.xcertplay.airplay.ClusterPlayerSettings.selected(this)
+                choice(card, getString(R.string.settings_cluster_player_mode), listOf(
+                    getString(R.string.settings_cluster_player_map), getString(R.string.settings_cluster_player)),
+                    if (player) 1 else 0, reconnects = false) {
+                    com.shilapi.xcertplay.airplay.ClusterPlayerSettings.save(this, it == 1)
+                    render()
+                }
+                card.addView(label(getString(R.string.settings_cluster_player_description), 14, MUTED))
+                if (player) {
+                    toggle(card, getString(R.string.settings_cluster_player_fit_visible),
+                        getString(R.string.settings_cluster_player_fit_visible_description),
+                        com.shilapi.xcertplay.airplay.ClusterPlayerSettings.fitVisible(this)) {
+                        com.shilapi.xcertplay.airplay.ClusterPlayerSettings.saveFitVisible(this, it)
+                    }
+                    toggle(card, getString(R.string.settings_cluster_player_speed),
+                        getString(R.string.settings_cluster_player_speed_description),
+                        com.shilapi.xcertplay.airplay.ClusterPlayerSettings.speed(this)) {
+                        com.shilapi.xcertplay.airplay.ClusterPlayerSettings.saveSpeed(this, it)
+                    }
+                    toggle(card, getString(R.string.settings_cluster_player_vehicle),
+                        getString(R.string.settings_cluster_player_vehicle_description),
+                        com.shilapi.xcertplay.airplay.ClusterPlayerSettings.vehicle(this)) {
+                        com.shilapi.xcertplay.airplay.ClusterPlayerSettings.saveVehicle(this, it)
+                    }
+                } else {
+                    clusterSpeedometerControls(card)
+                    clusterMusicControls(card)
+                }
                 toggle(card, getString(R.string.center_map_card),
                     if (clusterDisplay != null || adbCluster) getString(R.string.center_map_card_description)
                     else getString(R.string.center_map_card_virtual_description),
