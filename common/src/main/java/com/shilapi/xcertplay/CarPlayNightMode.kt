@@ -81,7 +81,8 @@ internal class CarPlayNightModeController(
     }
     private val scheduleTick = object : Runnable {
         override fun run() {
-            if (!resumed || mode != CarPlayNightMode.SCHEDULE) return
+            if (!resumed) return
+            if (mode != CarPlayNightMode.SCHEDULE && !ambientScheduleFallback()) return
             applySchedule()
         }
     }
@@ -115,9 +116,7 @@ internal class CarPlayNightModeController(
 
     fun systemChanged(night: Boolean) {
         systemNight = night
-        val ambientFallback = mode == CarPlayNightMode.AMBIENT &&
-            (!light.available || (resumed && !listening))
-        if (mode == CarPlayNightMode.SYSTEM || ambientFallback) applyNight(night)
+        if (mode == CarPlayNightMode.SYSTEM) applyNight(night)
     }
 
     private fun applyMode() {
@@ -128,12 +127,12 @@ internal class CarPlayNightModeController(
             CarPlayNightMode.SCHEDULE -> applySchedule()
             CarPlayNightMode.AMBIENT -> {
                 if (!light.available) {
-                    applyNight(systemNight)
+                    applyAmbientFallback()
                 } else if (resumed && !listening) {
                     listening = light.start(::onLux)
                     if (!listening) {
                         light.stop()
-                        applyNight(systemNight)
+                        applyAmbientFallback()
                     }
                 }
             }
@@ -168,10 +167,20 @@ internal class CarPlayNightModeController(
     private fun applySchedule() {
         val time = timeSource.snapshot()
         applyNight(schedule.isNight(time.minuteOfDay))
-        if (!resumed || mode != CarPlayNightMode.SCHEDULE) return
+        if (!resumed || (mode != CarPlayNightMode.SCHEDULE && !ambientScheduleFallback())) return
         scheduler.remove(scheduleTick)
         scheduler.postDelayed(scheduleTick, time.millisUntilNextMinute.coerceIn(1, 60_000))
     }
+
+    /**
+     * Head units like BYD DiLink keep the system day/night signal frozen (always night) and hide
+     * the light sensor from apps, so a missing or failed sensor falls back to the user's schedule
+     * instead of a system state that never changes.
+     */
+    private fun ambientScheduleFallback() =
+        mode == CarPlayNightMode.AMBIENT && (!light.available || (resumed && !listening))
+
+    private fun applyAmbientFallback() = applySchedule()
 
     private fun cancelPending() {
         scheduler.remove(transition)

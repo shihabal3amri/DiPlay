@@ -18,6 +18,9 @@
     <string name="carplay_night_schedule_hint">使用车机本地时间。开始和结束时间须不同，可设置跨午夜时段。</string>
     <string name="carplay_night_schedule_same_time">开始和结束时间不能相同。</string>
     <string name="carplay_night_hint">保存后返回 CarPlay 即可应用。</string>
-    <string name="carplay_night_ambient_hint">使用下方的亮度门槛与切换延迟。若没有光线传感器，则跟随 Android 系统。</string>
+    <string name="carplay_night_ambient_hint">使用下方的亮度门槛与切换延迟。若没有可用的光线传感器，则改用定时切换的时间表。</string>
+    <string name="ambient_sensor_status_unavailable">光线传感器：不可用</string>
+    <string name="ambient_sensor_status_waiting">光线传感器：可用，尚未收到读数</string>
+    <string name="ambient_sensor_status_reading">光线传感器：可用，当前 %1$d lux</string>
     <string name="carplay_night_time_note">在 CarPlay 内的外观设置选择“自动”时，也会参考 iPhone 时间。即使选择固定日间，在夜间仍可能显示深色外观。</string>
 </resources>
