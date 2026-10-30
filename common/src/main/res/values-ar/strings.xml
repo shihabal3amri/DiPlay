@@ -1003,4 +1003,6 @@
     <string name="cluster_projection_shape_description">يُبقي وضع نصف الشاشة السرعة وحالة السيارة اللتين تعرضهما اللوحة عادةً بجانب الخريطة؛ أما ملء الشاشة فتغطي الخريطة اللوحة بالكامل. يضبط DiPlay هذا الشكل عند ظهور خريطة CarPlay، وإلا فإنه يلغي الشكل المختار في السيارة. يتطلب ADB عبر الشبكة على وحدة القيادة.</string>
     <string name="settings_cluster_speedometer_album_color">استخدام لون الألبوم لخلفية عداد السرعة</string>
     <string name="settings_cluster_speedometer_album_color_description">يطابق لون إطار الألبوم بانتقالات سلسة مع الحفاظ على التعتيم المحدد.</string>
+    <string name="settings_force_video_in_car">فرض دعم الفيديو داخل السيارة (تجريبي)</string>
+    <string name="settings_force_video_in_car_description">يُعلن لـ iPhone عن دعم الفيديو داخل السيارة عبر CarPlay ويسمح بتشغيله دون التحقق من وضع ناقل الحركة أو الحاجة إلى ADB. حفاظًا على السلامة، فعّل هذا الخيار فقط عندما تكون السيارة متوقفة بأمان. عند تفعيله، يتجاوز قيد ناقل الحركة الخاص بميزة فيديو BYD أثناء التوقف. يسري التغيير عند الاتصال التالي. يعتمد التشغيل الفعلي على iOS وتطبيق الفيديو.</string>
 </resources>

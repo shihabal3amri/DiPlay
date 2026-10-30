@@ -1,9 +1,9 @@
 package com.shilapi.xcertplay
 
-import android.app.Activity
 import android.content.res.ColorStateList
 import android.graphics.Color
 import android.graphics.drawable.GradientDrawable
+import android.graphics.drawable.InsetDrawable
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.net.Uri
@@ -21,6 +21,8 @@ import android.widget.LinearLayout
 import android.widget.SeekBar
 import android.widget.TextView
 import androidx.annotation.OptIn
+import androidx.activity.ComponentActivity
+import androidx.activity.OnBackPressedCallback
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
@@ -42,6 +44,7 @@ import com.shilapi.xcertplay.host.R
 import java.util.Locale
 import androidx.media3.ui.R as Media3R
 import kotlin.math.roundToInt
+import kotlin.math.ceil
 
 /**
  * The car's own player for iOS 27 video in car (see [CarPlayVideo]). Full screen over CarPlay, which
@@ -54,7 +57,7 @@ import kotlin.math.roundToInt
  * protected item that cannot play here is easy to tell apart.
  */
 @OptIn(UnstableApi::class)
-class CarPlayVideoActivity : Activity() {
+class CarPlayVideoActivity : ComponentActivity() {
     private val main = Handler(Looper.getMainLooper())
     private lateinit var player: ExoPlayer
     private lateinit var controls: View
@@ -79,6 +82,14 @@ class CarPlayVideoActivity : Activity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        if (!CarPlayVideo.attachPlayer(this)) {
+            finish()
+            return
+        }
+        window.addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() = returnToCarPlay()
+        })
         WindowCompat.setDecorFitsSystemWindows(window, false)
         WindowInsetsControllerCompat(window, window.decorView).apply {
             hide(WindowInsetsCompat.Type.systemBars())
@@ -120,41 +131,60 @@ class CarPlayVideoActivity : Activity() {
             addView(controls, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
         })
         view.setOnClickListener { showControls() }
-        CarPlayVideo.activity = this
         load()
         showControls()
     }
 
     private fun controlBar(): View {
-        val back = TextView(this).apply {
-            text = "‹  " + getString(R.string.video_back_to_carplay)
+        val back = IconAlignedTextView(this).apply {
+            text = getString(R.string.video_back_to_carplay)
             setTextColor(Color.WHITE)
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, 20f)
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, BACK_TEXT_SIZE_SP)
+            maxLines = 1
+            val iconSize = maxOf(dp(BACK_ICON_SIZE_DP), (textSize * BACK_ICON_TEXT_RATIO).roundToInt())
+                .coerceAtMost(dp(BACK_ICON_MAX_SIZE_DP))
+            val iconSideInset = (iconSize * BACK_ICON_SIDE_INSET_FRACTION).roundToInt()
+            val backIcon = getDrawable(R.drawable.ic_dp_back)?.mutate()?.let { drawable ->
+                // Keep the shared arrow at its original scale, but remove its transparent side
+                // bearings from text layout. The wrapper also preserves automatic RTL mirroring.
+                InsetDrawable(drawable, -iconSideInset, 0, -iconSideInset, 0).apply {
+                    isAutoMirrored = true
+                    setBounds(0, 0, iconSize - iconSideInset * 2, iconSize)
+                }
+            }
+            setCompoundDrawablesRelative(backIcon, null, null, null)
+            compoundDrawablePadding = dp(BACK_ICON_GAP_DP)
             gravity = Gravity.CENTER
-            minHeight = dp(64)
+            minHeight = dp(BACK_MIN_HEIGHT_DP)
             minWidth = dp(64)
-            setPadding(dp(24), 0, dp(24), 0)
-            background = GradientDrawable().apply { cornerRadius = dp(32).toFloat(); setColor(0xB3000000.toInt()) }
-            setOnClickListener { finish() }
+            setPadding(dp(BACK_HORIZONTAL_PADDING_DP), dp(BACK_VERTICAL_PADDING_DP),
+                dp(BACK_HORIZONTAL_PADDING_DP), dp(BACK_VERTICAL_PADDING_DP))
+            background = GradientDrawable().apply { setColor(0xB3000000.toInt()) }
+            setOnClickListener { returnToCarPlay() }
         }
         fun round(icon: Int, label: String, onClick: () -> Unit) = ImageView(this).apply {
             setImageResource(icon)
             setColorFilter(Color.WHITE)
             contentDescription = label
             scaleType = ImageView.ScaleType.FIT_CENTER
-            setPadding(dp(18), dp(18), dp(18), dp(18))
+            val padding = dp(CarPlayVideoControlsLayout.FULL_ICON_PADDING_DP)
+            setPadding(padding, padding, padding, padding)
             background = GradientDrawable().apply { shape = GradientDrawable.OVAL; setColor(0x80000000.toInt()) }
             setOnClickListener { onClick(); showControls() }
         }
         playPause = round(Media3R.drawable.exo_icon_play, "") { CarPlayVideo.setPlaying(!CarPlayVideo.playing) }
+        val rewind = round(Media3R.drawable.exo_icon_rewind, getString(Media3R.string.exo_controls_rewind_description)) {
+            skip(-CarPlayVideo.SKIP_MILLIS)
+        }
+        val forward = round(Media3R.drawable.exo_icon_fastforward, getString(Media3R.string.exo_controls_fastforward_description)) {
+            skip(CarPlayVideo.SKIP_MILLIS)
+        }
         val buttons = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER
-            addView(round(Media3R.drawable.exo_icon_rewind, getString(Media3R.string.exo_controls_rewind_description)) { skip(-CarPlayVideo.SKIP_MILLIS) },
-                LinearLayout.LayoutParams(dp(80), dp(80)))
-            addView(playPause, LinearLayout.LayoutParams(dp(96), dp(96)).apply { marginStart = dp(48); marginEnd = dp(48) })
-            addView(round(Media3R.drawable.exo_icon_fastforward, getString(Media3R.string.exo_controls_fastforward_description)) { skip(CarPlayVideo.SKIP_MILLIS) },
-                LinearLayout.LayoutParams(dp(80), dp(80)))
+            addView(rewind, LinearLayout.LayoutParams(dp(CarPlayVideoControlsLayout.FULL_SKIP_SIZE_DP), dp(CarPlayVideoControlsLayout.FULL_SKIP_SIZE_DP)))
+            addView(playPause, LinearLayout.LayoutParams(dp(CarPlayVideoControlsLayout.FULL_PLAY_SIZE_DP), dp(CarPlayVideoControlsLayout.FULL_PLAY_SIZE_DP)))
+            addView(forward, LinearLayout.LayoutParams(dp(CarPlayVideoControlsLayout.FULL_SKIP_SIZE_DP), dp(CarPlayVideoControlsLayout.FULL_SKIP_SIZE_DP)))
         }
         fun timeText() = TextView(this).apply {
             setTextColor(Color.WHITE)
@@ -196,15 +226,63 @@ class CarPlayVideoActivity : Activity() {
         }
         val bottom = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(dp(32), dp(48), dp(32), dp(24))
+            setPadding(dp(CarPlayVideoControlsLayout.CONTENT_HORIZONTAL_INSET_DP), dp(48),
+                dp(CarPlayVideoControlsLayout.CONTENT_HORIZONTAL_INSET_DP), dp(24))
             background = GradientDrawable(GradientDrawable.Orientation.BOTTOM_TOP, intArrayOf(0xCC000000.toInt(), 0))
             addView(buttons)
             addView(timeRow, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
                 .apply { topMargin = dp(16) })
         }
-        return FrameLayout(this).apply {
+        return object : FrameLayout(this) {
+            override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
+                val windowWidth = MeasureSpec.getSize(widthMeasureSpec).coerceAtLeast(1)
+                val density = resources.displayMetrics.density
+                val sizes = CarPlayVideoControlsLayout.resolve(
+                    (windowWidth / density).toInt(), (MeasureSpec.getSize(heightMeasureSpec) / density).toInt())
+                val contentInset = dp(CarPlayVideoControlsLayout.CONTENT_HORIZONTAL_INSET_DP)
+                (back.layoutParams as LayoutParams).setMargins(contentInset, dp(BACK_TOP_MARGIN_DP), contentInset, 0)
+                val available = (windowWidth - contentInset * 2).coerceAtLeast(0)
+                val skipSize = dp(sizes.skipDp)
+                // Keep translated labels on one line within the shared content edges. Reset first
+                // so text can grow back to its preferred size when the window gets wider.
+                back.setTextSize(TypedValue.COMPLEX_UNIT_SP, BACK_TEXT_SIZE_SP)
+                val labelSpace = (available - back.compoundPaddingLeft - back.compoundPaddingRight).coerceAtLeast(0)
+                var labelSizeSp = BACK_TEXT_SIZE_SP
+                // Font fallback and glyph hinting do not scale linearly in every locale. Measure
+                // each candidate rather than assuming a proportional size will fit.
+                while (back.paint.measureText(back.text.toString()) > labelSpace && labelSizeSp > 0f) {
+                    labelSizeSp = (labelSizeSp - BACK_TEXT_STEP_SP).coerceAtLeast(0f)
+                    back.setTextSize(TypedValue.COMPLEX_UNIT_SP, labelSizeSp)
+                }
+                fun updateBackWidth() {
+                    (back.layoutParams as LayoutParams).width = minOf(available,
+                        ceil(back.paint.measureText(back.text.toString())).toInt() +
+                            back.compoundPaddingLeft + back.compoundPaddingRight)
+                }
+                updateBackWidth()
+                val playSize = minOf(dp(sizes.playDp), (available - skipSize * 2).coerceAtLeast(0))
+                val gap = minOf(dp(sizes.gapDp), (available - skipSize * 2 - playSize).coerceAtLeast(0) / 2)
+                for (button in listOf(rewind, forward, playPause)) {
+                    val size = if (button === playPause) playSize else skipSize
+                    (button.layoutParams as LinearLayout.LayoutParams).apply {
+                        width = size
+                        height = size
+                        // Both sides are equal; set resolved margins during measurement so a resize
+                        // does not reuse the previous layout-direction resolution.
+                        leftMargin = if (button === playPause) gap else 0
+                        rightMargin = if (button === playPause) gap else 0
+                    }
+                    val padding = dp(sizes.iconPaddingDp)
+                    button.setPadding(padding, padding, padding, padding)
+                }
+                super.onMeasure(widthMeasureSpec, heightMeasureSpec)
+                // Wrap the actual text/icon height, including fallback fonts and scaled text.
+                (back.background as GradientDrawable).cornerRadius = back.measuredHeight / 2f
+            }
+        }.apply {
             addView(back, FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.TOP or Gravity.START)
-                .apply { setMargins(dp(24), dp(24), dp(24), dp(24)) })
+                .apply { setMargins(dp(CarPlayVideoControlsLayout.CONTENT_HORIZONTAL_INSET_DP), dp(BACK_TOP_MARGIN_DP),
+                    dp(CarPlayVideoControlsLayout.CONTENT_HORIZONTAL_INSET_DP), 0) })
             addView(bottom, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.BOTTOM))
             // A tap on the picture while the controls show hides them again.
             setOnClickListener { hideControls.run() }
@@ -219,6 +297,14 @@ class CarPlayVideoActivity : Activity() {
         main.postDelayed(tick, TICK_MILLIS)
         main.removeCallbacks(hideControls)
         if (!scrubbing) main.postDelayed(hideControls, CONTROLS_MILLIS)
+    }
+
+    private fun returnToCarPlay() {
+        if (isFinishing) return
+        CarPlayVideo.dismissPlayer(if (prepared) player.currentPosition.toInt() else null)
+        // The player may have been opened from the app task; finish alone can expose the start page.
+        OwnScreenStart.start(this, CarPlayScreen.intent(this))
+        finish()
     }
 
     private fun updatePlayPause() {
@@ -336,9 +422,11 @@ class CarPlayVideoActivity : Activity() {
         main.removeCallbacks(tick)
         if (CarPlayVideo.activity === this) {
             CarPlayVideo.activity = null
-            CarPlayVideo.onPlayerClosed(if (prepared) player.currentPosition.toInt() else null)
+            if (!isChangingConfigurations) {
+                CarPlayVideo.onPlayerClosed(if (::player.isInitialized && prepared) player.currentPosition.toInt() else null)
+            }
         }
-        player.release()
+        if (::player.isInitialized) player.release()
         super.onDestroy()
     }
 
@@ -348,5 +436,17 @@ class CarPlayVideoActivity : Activity() {
         const val TAG = "DiPlay-Video"
         const val CONTROLS_MILLIS = 5_000L
         const val TICK_MILLIS = 500L
+        const val BACK_ICON_SIZE_DP = 28
+        const val BACK_TEXT_SIZE_SP = 20f
+        const val BACK_TEXT_STEP_SP = 1f
+        const val BACK_ICON_MAX_SIZE_DP = 32
+        const val BACK_ICON_GAP_DP = 8
+        // ic_dp_back has four transparent units on each side of its 24-unit viewport.
+        const val BACK_ICON_SIDE_INSET_FRACTION = 4f / 24f
+        const val BACK_ICON_TEXT_RATIO = 1f
+        const val BACK_HORIZONTAL_PADDING_DP = 24
+        const val BACK_VERTICAL_PADDING_DP = 12
+        const val BACK_MIN_HEIGHT_DP = 48
+        const val BACK_TOP_MARGIN_DP = 24
     }
 }

@@ -1050,4 +1050,6 @@
     <string name="connection_help_hotspot_interface_not_found">연결 설정에서 저장된 핫스팟 편집을 누르고 핫스팟 인터페이스(선택 사항)를 비운 뒤 다시 시도하세요.</string>
     <string name="connection_help_car_hotspot_off">차량 설정에서 차량 핫스팟을 켠 뒤 다시 시도하세요.</string>
     <string name="last_connection_attempt">마지막 연결 시도(%1$s): %2$s</string>
+    <string name="settings_force_video_in_car">차내 동영상 지원 강제 활성화 (실험 기능)</string>
+    <string name="settings_force_video_in_car_description">iPhone에 CarPlay 차내 동영상 지원을 알리고 차량 기어를 확인하지 않고 동영상 재생을 허용합니다. ADB는 필요하지 않습니다. 안전을 위해 차량을 안전하게 주차한 상태에서만 이 옵션을 켜세요. 활성화하면 BYD 주차 중 동영상 재생의 기어 제한보다 우선 적용됩니다. 변경 사항은 다음 연결부터 적용되며 실제 재생 가능 여부는 iOS와 동영상 앱에 따라 달라집니다.</string>
 </resources>
