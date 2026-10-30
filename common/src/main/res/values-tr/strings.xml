@@ -1042,4 +1042,6 @@
     <string name="wifi_direct_channel_unavailable">Wi-Fi Direct tercih edilen kanalı kullanamıyor</string>
     <string name="settings_existing_wifi_interface">Ağ arayüzü (isteğe bağlı)</string>
     <string name="settings_existing_wifi_interface_description">Yalnızca yerel ağ (LAN) bağlantısı Android\'in Wi-Fi olarak bildirmediği bir arayüzde (örneğin eth1 üzerindeki bir USB ağ kartı) çalışan üniteler içindir. Otomatik seçilmesi için boş bırakın.</string>
+    <string name="settings_force_video_in_car">Araç içi video desteğini zorla (deneysel)</string>
+    <string name="settings_force_video_in_car_description">iPhone’a CarPlay araç içi video desteğini bildirir ve vites konumunu denetlemeden, ADB gerektirmeden video oynatmaya izin verir. Güvenlik için bu seçeneği yalnızca araç güvenli bir şekilde park edildiğinde açın. Açıkken BYD park hâlinde video özelliğinin vites kısıtlamasına göre önceliklidir. Değişiklik bir sonraki bağlantıda geçerli olur. Videonun oynatılabilmesi iOS ve video uygulamasına bağlıdır.</string>
 </resources>

@@ -88,6 +88,8 @@ data class AirPlayConfig(
     val icons: List<AirPlayIcon> = emptyList(),
     /** iOS 27 video in car (see [VideoInCar]); video plays only while [VideoInCar.allowed]. */
     val videoInCar: Boolean = false,
+    /** Explicit override of the parked-state gate; captured for this connection, never inferred from gear. */
+    val forceVideoInCar: Boolean = false,
     /**
      * CarPlay's main buffered audio (see [BufferedAudioStream]): apps that support it send music
      * ahead of time over TCP, so short Wi-Fi gaps do not interrupt it.

@@ -1056,4 +1056,6 @@
     <string name="cluster_projection_shape_description">小画面ではメーター本来の車速や状態表示が地図の横に残ります。全画面では地図がメーター全体を覆います。CarPlayの地図が表示されるとDiPlayがこの形態を設定するため、クルマ側で選んだナビモードは上書きされます。車載機のネットワークADBが必要です。</string>
     <string name="settings_cluster_speedometer_album_color">速度計の背景にアルバムの色を使用</string>
     <string name="settings_cluster_speedometer_album_color_description">アルバムの枠の色に滑らかに切り替わります。選択した不透明度は維持されます。</string>
+    <string name="settings_force_video_in_car">車内動画への対応を強制的に通知（実験的機能）</string>
+    <string name="settings_force_video_in_car_description">iPhone に CarPlay の車内動画に対応していることを通知し、シフト位置を確認せずに動画再生を許可します。ADB は不要です。安全のため、車両を安全に駐車した状態でのみ有効にしてください。有効な間は、BYD の駐車中動画再生のシフト位置による制限より優先されます。変更は次回の接続時に反映されます。実際に再生できるかどうかは iOS と動画アプリによって異なります。</string>
 </resources>

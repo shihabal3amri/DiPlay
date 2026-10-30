@@ -21,7 +21,8 @@ import java.util.concurrent.atomic.AtomicLong
 /**
  * iOS 27 video in car (see [VideoInCar]). The iPhone hands the car a media URL (insertPlayQueueItem)
  * and drives it (setRate, seek, stop); the car plays it in [CarPlayVideoActivity], which opens as soon
- * as the iPhone starts the item (or sends requestUI "videoplayback:") and only while the car is in P.
+ * as the iPhone starts the item (or sends requestUI "videoplayback:") and only while the shared
+ * video gate allows it (normally P, or the explicit force-video override).
  */
 internal object CarPlayVideo : CarPlayVideoListener {
     private const val TAG = "DiPlay-Video"
@@ -46,12 +47,27 @@ internal object CarPlayVideo : CarPlayVideoListener {
     var playing = false
         private set
     var pendingSeekMillis: Int? = null
+    // Separate user intent from iPhone playback messages and an Activity start not yet delivered.
+    private var dismissedByUser = false
+    private var playerOpening = false
     var activity: CarPlayVideoActivity? = null
+        set(value) {
+            field = value
+            if (value != null) playerOpening = false
+        }
 
     fun attach(context: Context, next: CarPlayController) {
         appContext = context.applicationContext
         controller = next
         next.videoListener = this
+    }
+
+    /** A queued Activity start may arrive after Back, stop, or a session/gear change. */
+    fun attachPlayer(next: CarPlayVideoActivity): Boolean {
+        playerOpening = false
+        if (url == null || !VideoInCar.allowed || dismissedByUser) return false
+        activity = next
+        return true
     }
 
     override fun readParked(): Boolean? = appContext?.let(BydNavigationOutputs::parked)
@@ -92,6 +108,7 @@ internal object CarPlayVideo : CarPlayVideoListener {
 
     /** Play or pause from the car (wheel or on-screen button); tells the iPhone at once. Main thread. */
     fun setPlaying(next: Boolean) {
+        if (next) dismissedByUser = false
         playing = next
         activity?.applyRate()
         streamId?.let { reply(it, VideoInCar.playbackStateNotification(next, itemUuid)) }
@@ -114,6 +131,12 @@ internal object CarPlayVideo : CarPlayVideoListener {
         if (playing) setPlaying(false)
     }
 
+    /** Back is a local pause, not permission for the next delayed setRate to open the player again. */
+    fun dismissPlayer(positionMillis: Int?) {
+        dismissedByUser = true
+        onPlayerClosed(positionMillis)
+    }
+
     private fun handle(streamId: Long, message: Map<String, Any?>) {
         this.streamId = streamId
         val request = message["kind"] == "request"
@@ -125,6 +148,8 @@ internal object CarPlayVideo : CarPlayVideoListener {
                     Log.w(TAG, "queue item this player cannot play")
                     return
                 }
+                if (dismissedByUser && item.uuid == itemUuid && item.url == url) return
+                dismissedByUser = false
                 Log.i(TAG, "queue item app=${(message["item"] as? Map<*, *>)?.get("clientBundleID")}")
                 url = item.url
                 itemUuid = item.uuid
@@ -135,6 +160,11 @@ internal object CarPlayVideo : CarPlayVideoListener {
                 activity?.load()
             }
             "setRate" -> {
+                if (dismissedByUser) {
+                    // Keep reporting pause even if an in-flight/repeated phone command asks to play.
+                    reply(streamId, VideoInCar.playbackStateNotification(false, itemUuid))
+                    return
+                }
                 playing = ((message["rate"] as? Number)?.toDouble() ?: 0.0) > 0.0
                 // The iPhone starts the item at once, as Apple's receiver plays it straight
                 // away, so open the player now instead of waiting for Now Playing's video button.
@@ -232,10 +262,23 @@ internal object CarPlayVideo : CarPlayVideoListener {
         when {
             url == null -> Log.w(TAG, "video player requested without a playable item")
             !VideoInCar.allowed -> Log.w(TAG, "video player requested while not parked")
-            activity != null -> Unit
-            else -> context.startActivity(
-                Intent(context, CarPlayVideoActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
-            )
+            dismissedByUser || playerOpening || activity != null -> Unit
+            else -> {
+                playerOpening = true
+                // Starting from the live host keeps the player over the correct CarPlay task/display.
+                val host = CarPlayScreen.current()
+                if (host != null) {
+                    if (!OwnScreenStart.start(host, Intent(host, CarPlayVideoActivity::class.java))) playerOpening = false
+                } else {
+                    try {
+                        context.startActivity(Intent(context, CarPlayVideoActivity::class.java)
+                            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                    } catch (error: RuntimeException) {
+                        playerOpening = false
+                        Log.w(TAG, "could not open video player", error)
+                    }
+                }
+            }
         }
     }
 
@@ -246,6 +289,8 @@ internal object CarPlayVideo : CarPlayVideoListener {
     }
 
     private fun stop() {
+        dismissedByUser = false
+        playerOpening = false
         url = null
         itemUuid = null
         playing = false

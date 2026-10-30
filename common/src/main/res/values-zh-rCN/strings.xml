@@ -1014,4 +1014,6 @@
     <string name="cluster_projection_shape_description">半屏会在仪表盘地图旁保留仪表原本的车速与状态信息；全屏则让地图占满整个仪表盘。CarPlay 地图出现时 DiPlay 会设置该形态，否则会覆盖你在车机上选好的导航模式。需要车机已授权网络 ADB。</string>
     <string name="settings_cluster_speedometer_album_color">速度表背景使用专辑颜色</string>
     <string name="settings_cluster_speedometer_album_color_description">平滑过渡到专辑边框的颜色，并保留所选的不透明度。</string>
+    <string name="settings_force_video_in_car">强制声明支持车内视频（实验性）</string>
+    <string name="settings_force_video_in_car_description">向 iPhone 声明支持 CarPlay 车内视频并允许播放，不检查车辆挡位，也不需要 ADB。为了安全，请仅在车辆停稳后开启此选项。开启时优先于 BYD 驻车视频的挡位限制。更改在下次连接时生效，实际播放能力取决于 iOS 和视频 App。</string>
 </resources>
