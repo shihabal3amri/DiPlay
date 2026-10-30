@@ -1695,7 +1695,7 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
     }
 
     private fun advancedVehicleDataSettings(content: LinearLayout) {
-        section(content, getString(R.string.settings_vehicle), R.drawable.ic_dp_dashboard) { card ->
+        section(content, getString(R.string.settings_vehicle), R.drawable.ic_dp_car) { card ->
             card.addView(button(getString(if (bydVehicleAdvancedExpanded)
                 R.string.hide_advanced_vehicle_data else R.string.advanced_vehicle_data), false) {
                 bydVehicleAdvancedExpanded = !bydVehicleAdvancedExpanded
@@ -1983,7 +1983,7 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
         }
         // Opt-in controls that can cost sound or video on some head units.
         filteredSection(content, SettingsSection.ADVANCED_MEDIA,
-            getString(R.string.settings_advanced_media), R.drawable.ic_dp_advanced) { card ->
+            getString(R.string.settings_advanced_media), R.drawable.ic_dp_media) { card ->
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q && CarHotspotSetup.isBydHeadUnit(this)) {
                 toggle(card, getString(R.string.settings_hide_byd_call_popup),
                     getString(R.string.settings_hide_byd_call_popup_description),
@@ -2115,10 +2115,11 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
             getString(R.string.settings_navigation_wheel_volume), R.drawable.ic_dp_audio) { card ->
             navigationWheelControls(card)
         }
-        filteredSection(content, SettingsSection.AMBIENT_LIGHTING, getString(R.string.settings_ambient_title)) { card ->
+        filteredSection(content, SettingsSection.AMBIENT_LIGHTING,
+            getString(R.string.settings_ambient_title), R.drawable.ic_dp_ambient_lighting) { card ->
             card.addView(button(ambientConfigurationLabel(AmbientMusicSettings.load(this)), false) {
                 showAmbientConfiguration()
-            }, matchButton(0, 60))
+            }.apply { minHeight = dp(60) }, LinearLayout.LayoutParams(-1, -2))
             carRhythmControl(card)
             toggle(card, getString(R.string.settings_ambient_car_rhythm_feed),
                 getString(R.string.settings_ambient_car_rhythm_feed_description), AmbientMusicSettings.load(this).carRhythmFeed) { on ->
@@ -4540,6 +4541,7 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
             announcesReconnect = vehicleDataSwitchesOn(),
             // A switch during ADB work would be dropped by the running step.
             enabled = !adbSwitchChangePending && !vehicleAdbWorkInProgress(),
+            contentSizedOptions = true,
         ) { selectVehicleDataMode(it == 1) }
         if (!legacyMode) {
             defaultVehicleData(card)
@@ -6451,11 +6453,12 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
             refreshAmbient()
         }
         refreshAmbient()
-        val dialog = AlertDialog.Builder(this).setTitle(getString(R.string.settings_ambient_configuration))
-            .setView(ScrollView(this).apply { addView(body) })
+        val dialog = appDialogBuilder().setTitle(getString(R.string.settings_ambient_configuration))
+            .setView(ScrollView(appDialogContext()).apply { addView(body) })
             .setPositiveButton(getString(R.string.save), null)
             .setNegativeButton(getString(R.string.cancel), null).create()
         dialog.setOnShowListener {
+            dialog.addVerticalWindowInsets()
             val save = dialog.getButton(AlertDialog.BUTTON_POSITIVE)
             save.setOnClickListener {
                 val selected = draft.copy(colorCycle = draft.music)
@@ -6505,14 +6508,37 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
 
     // [announcesReconnect] labels a choice whose [save] reconnects by itself.
     private fun choice(parent: LinearLayout, title: String, options: List<String>, current: Int, reconnects: Boolean = true,
-        announcesReconnect: Boolean = reconnects, enabled: Boolean = true, save: (Int) -> Unit) {
+        announcesReconnect: Boolean = reconnects, enabled: Boolean = true, contentSizedOptions: Boolean = false,
+        save: (Int) -> Unit) {
         var selection = current
         val button = button("$title · ${options[selection]}", false) {}.apply { isEnabled = enabled }
         button.setOnClickListener {
             var pendingSelection = selection
-            appDialogBuilder().setTitle(title)
-                .setSingleChoiceItems(options.toTypedArray(), selection) { _, index -> pendingSelection = index }
-                .setPositiveButton(getString(if (announcesReconnect && CarPlayBackgroundSession.hasSession()) R.string.apply_and_reconnect else R.string.save)) { _, _ ->
+            val builder = appDialogBuilder().setTitle(title)
+            if (contentSizedOptions) {
+                // Radio rows measure their full wrapped text; ScrollView only scrolls when necessary.
+                val choices = RadioGroup(builder.context).apply {
+                    orientation = LinearLayout.VERTICAL
+                    setPadding(dp(SETTINGS_DIALOG_CONTENT_PADDING_DP), 0, dp(SETTINGS_DIALOG_CONTENT_PADDING_DP), 0)
+                    options.forEachIndexed { index, option ->
+                        addView(RadioButton(context).apply {
+                            id = View.generateViewId()
+                            text = option
+                            textSize = 18f
+                            gravity = Gravity.CENTER_VERTICAL
+                            minHeight = dp(SETTINGS_CHOICE_MIN_HEIGHT_DP)
+                            setPaddingRelative(0, dp(SETTINGS_CHOICE_VERTICAL_PADDING_DP),
+                                0, dp(SETTINGS_CHOICE_VERTICAL_PADDING_DP))
+                            isChecked = index == selection
+                            setOnClickListener { pendingSelection = index }
+                        }, RadioGroup.LayoutParams(-1, -2))
+                    }
+                }
+                builder.setView(ScrollView(builder.context).apply { addView(choices) })
+            } else {
+                builder.setSingleChoiceItems(options.toTypedArray(), selection) { _, index -> pendingSelection = index }
+            }
+            val dialog = builder.setPositiveButton(getString(if (announcesReconnect && CarPlayBackgroundSession.hasSession()) R.string.apply_and_reconnect else R.string.save)) { _, _ ->
                     if (pendingSelection != selection) {
                         selection = pendingSelection
                         save(selection)
@@ -6521,7 +6547,9 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
                             connect(AirPlayPersistence.loadWirelessEnabled(this))
                         }
                     }
-                }.setNegativeButton(getString(R.string.cancel), null).show()
+                }.setNegativeButton(getString(R.string.cancel), null).create()
+            if (contentSizedOptions) dialog.setOnShowListener { dialog.addVerticalWindowInsets() }
+            dialog.show()
         }
         parent.addView(button, matchButton(0, 60)); parent.addView(space(12))
     }
@@ -6990,6 +7018,9 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
         private const val NOTE_LINE_GAP_DP = 4
         private const val NOTE_ATTACH_GAP_DP = 6
         private const val SETTINGS_BLOCK_GAP_DP = 16
+        private const val SETTINGS_DIALOG_CONTENT_PADDING_DP = 24
+        private const val SETTINGS_CHOICE_MIN_HEIGHT_DP = 48
+        private const val SETTINGS_CHOICE_VERTICAL_PADDING_DP = 12
         /** The inset a control uses for its text, so a note below it lines up instead of starting at 0. */
         private const val SETTINGS_CONTROL_INSET_DP = 16
         /** Gap under an explanatory note, so it never touches the next control. */
