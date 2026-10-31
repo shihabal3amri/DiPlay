@@ -7,6 +7,8 @@ import java.util.ArrayDeque
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -50,6 +52,14 @@ class NcmUsbBridgeWriteTimeoutTest {
         NcmWriteReplay.results.add(-1)
         withBridge { ncm -> ncm.send(frame, 5) }
         assertEquals(listOf(5), NcmWriteReplay.timeouts)
+    }
+
+    @Test fun sendReportsWhetherThePhoneAcceptedTheFrame() {
+        NcmWriteReplay.results.addAll(listOf(-1, NcmWriteReplay.ALL))
+        withBridge { ncm ->
+            assertFalse(ncm.send(frame, 2_000))
+            assertTrue(ncm.send(frame, 2_000))
+        }
     }
 
     private fun withBridge(block: (NcmUsbBridge) -> Unit): List<String> {

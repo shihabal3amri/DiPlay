@@ -74,8 +74,8 @@ class NcmUsbBridge internal constructor(
         }
     }
 
-    /** Wraps one Ethernet frame in one NTB16 block and writes it to bulk OUT. */
-    fun send(frame: ByteArray, timeoutMillis: Int) = synchronized(writeLock) {
+    /** Writes one Ethernet frame; false means the phone did not accept it before the timeout. */
+    fun send(frame: ByteArray, timeoutMillis: Int): Boolean = synchronized(writeLock) {
         checkOpen()
         require(timeoutMillis > 0) { "timeoutMillis must be positive" }
         val sequence = synchronized(stateLock) {
@@ -102,7 +102,7 @@ class NcmUsbBridge internal constructor(
                 loggedWriteTimeout = true
                 Log.i(IphoneCarPlayConfiguration.TAG, "ncm bulk-out not ready; retaining bridge for retry")
             }
-            return@synchronized
+            return@synchronized false
         }
         if (!bulkOutAccepted) {
             bulkOutAccepted = true
@@ -119,6 +119,7 @@ class NcmUsbBridge internal constructor(
             loggedWriteTimeout = false
             Log.i(IphoneCarPlayConfiguration.TAG, "ncm bulk-out became ready")
         }
+        true
     }
 
     /** Frames to and from the iPhone so far, for a report line; see [NcmTrafficCounter]. */
@@ -152,32 +153,38 @@ class NcmUsbBridge internal constructor(
     }
 
     override fun close() {
-        statusRunning.set(false)
-        val requestToClose = synchronized(stateLock) {
-            if (closed) return
-            closed = true
-            readRequest
-        }
-        // Wakes a reader blocked in requestWait(); it then observes the closed state.
-        runCatching { requestToClose?.cancel() }
-        statusThread?.let { thread ->
-            thread.interrupt()
-            try {
-                thread.join(STATUS_POLL_TIMEOUT_MILLIS + 250L)
-            } catch (_: InterruptedException) {
-                Thread.currentThread().interrupt()
+        // Serialize with send(): closing the connection under an in-flight bulkTransfer() makes
+        // usbfs unlink a URB whose musb endpoint may already be gone, and this MT6580 kernel
+        // panics in musb_advance_schedule on exactly that path. `closed` is set first, so no new
+        // write can start while the lock is held.
+        synchronized(writeLock) {
+            statusRunning.set(false)
+            val requestToClose = synchronized(stateLock) {
+                if (closed) return
+                closed = true
+                readRequest
             }
-        }
-        for (usbInterface in claimedInterfaces.asReversed()) {
-            try {
-                connection.releaseInterface(usbInterface)
-            } catch (_: RuntimeException) {
-                // Best-effort release; the connection close below is authoritative.
+            // Wakes a reader blocked in requestWait(); it then observes the closed state.
+            runCatching { requestToClose?.cancel() }
+            statusThread?.let { thread ->
+                thread.interrupt()
+                try {
+                    thread.join(STATUS_POLL_TIMEOUT_MILLIS + 250L)
+                } catch (_: InterruptedException) {
+                    Thread.currentThread().interrupt()
+                }
             }
+            for (usbInterface in claimedInterfaces.asReversed()) {
+                try {
+                    connection.releaseInterface(usbInterface)
+                } catch (_: RuntimeException) {
+                    // Best-effort release; the connection close below is authoritative.
+                }
+            }
+            readRequests.close()
+            connection.close()
+            runCatching { requestToClose?.close() }
         }
-        readRequests.close()
-        connection.close()
-        runCatching { requestToClose?.close() }
     }
 
     private fun drainStatus(endpoint: UsbEndpoint) {
