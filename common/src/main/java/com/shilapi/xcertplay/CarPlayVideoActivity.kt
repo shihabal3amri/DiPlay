@@ -181,6 +181,8 @@ class CarPlayVideoActivity : ComponentActivity() {
         }
         val buttons = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
+            // Media transport follows playback direction, independently of the surrounding locale.
+            layoutDirection = View.LAYOUT_DIRECTION_LTR
             gravity = Gravity.CENTER
             addView(rewind, LinearLayout.LayoutParams(dp(CarPlayVideoControlsLayout.FULL_SKIP_SIZE_DP), dp(CarPlayVideoControlsLayout.FULL_SKIP_SIZE_DP)))
             addView(playPause, LinearLayout.LayoutParams(dp(CarPlayVideoControlsLayout.FULL_PLAY_SIZE_DP), dp(CarPlayVideoControlsLayout.FULL_PLAY_SIZE_DP)))
@@ -219,6 +221,7 @@ class CarPlayVideoActivity : ComponentActivity() {
         }
         val timeRow = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
+            layoutDirection = View.LAYOUT_DIRECTION_LTR
             gravity = Gravity.CENTER_VERTICAL
             addView(position)
             addView(timeBar, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))

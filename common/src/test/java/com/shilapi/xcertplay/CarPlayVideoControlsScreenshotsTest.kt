@@ -48,6 +48,8 @@ class CarPlayVideoControlsScreenshotsTest {
             try {
                 val controls = ReflectionHelpers.callInstanceMethod<View>(activity, "controlBar")
                 controls.layoutDirection = activity.resources.configuration.layoutDirection
+                ReflectionHelpers.getField<TextView>(activity, "position").text = "1:24"
+                ReflectionHelpers.getField<TextView>(activity, "length").text = "12:00"
                 val scale = activity.resources.displayMetrics.density
                 val width = (widthDp * scale).roundToInt()
                 val height = (640 * scale).roundToInt()
@@ -85,6 +87,7 @@ class CarPlayVideoControlsScreenshotsTest {
                 assertTrue(back.layout.height + back.compoundPaddingTop + back.compoundPaddingBottom <= back.height)
                 assertEquals(back.text.length, back.layout.getLineEnd(back.layout.lineCount - 1))
                 assertEquals(controls.layoutDirection, back.layoutDirection)
+                assertMediaControlsStayLeftToRight(activity, controls)
                 assertTrue("Remove font padding just like the Settings return button", !back.includeFontPadding)
                 val expectedEdgeDp = CarPlayVideoControlsLayout.CONTENT_HORIZONTAL_INSET_DP
                 val edge = if (back.layoutDirection == View.LAYOUT_DIRECTION_RTL) width - back.right else back.left
@@ -159,6 +162,26 @@ class CarPlayVideoControlsScreenshotsTest {
     }
 
     private data class Screen(val name: String, val widthDp: Int, val density: String, val language: String)
+
+    private fun assertMediaControlsStayLeftToRight(activity: CarPlayVideoActivity, controls: View) {
+        val buttons = descendants(controls).filterIsInstance<ImageView>().toList()
+        assertEquals(View.LAYOUT_DIRECTION_LTR, (buttons.first().parent as View).layoutDirection)
+        for ((previous, next) in buttons.zipWithNext()) {
+            assertTrue("Rewind, play/pause and fast-forward keep their physical order", previous.right <= next.left)
+        }
+        val position = ReflectionHelpers.getField<TextView>(activity, "position")
+        val length = ReflectionHelpers.getField<TextView>(activity, "length")
+        val timeBar = ReflectionHelpers.getField<android.widget.SeekBar>(activity, "timeBar")
+        assertEquals(View.LAYOUT_DIRECTION_LTR, (position.parent as View).layoutDirection)
+        assertTrue("Elapsed time stays before the timeline", position.right <= timeBar.left)
+        assertTrue("Duration stays after the timeline", timeBar.right <= length.left)
+        val previousProgress = timeBar.progress
+        timeBar.progress = 0
+        val start = timeBar.thumb.bounds.centerX()
+        timeBar.progress = timeBar.max
+        assertTrue("Media progress increases from left to right", timeBar.thumb.bounds.centerX() > start)
+        timeBar.progress = previousProgress
+    }
 
     private fun assertMatchesSettingsAlignment(activity: CarPlayVideoActivity, back: TextView, scale: Float) {
         val settings = Robolectric.buildActivity(DiPlayActivity::class.java).get()
