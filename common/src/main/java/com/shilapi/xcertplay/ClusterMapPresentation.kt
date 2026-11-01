@@ -263,6 +263,10 @@ internal class ClusterMapPresentation(
                         GeelyClusterDisplay.matches(display, size.x, size.y)
                     }
                 }
+                // The generic non-BYD route (e.g. Q07) does NOT use this Presentation path: it
+                // launches AdbClusterActivity onto the cluster display via setLaunchDisplayId
+                // (see GenericClusterDisplay / AdbClusterRouter). findDisplay() returns null for
+                // those units, so the Activity route owns the cluster instead of a Presentation.
                 return displays.firstOrNull { display ->
                     val size = sizeOf(display)
                     DiLink4ClusterDisplay.accepts(display.name, size.x, size.y)
@@ -285,6 +289,7 @@ internal class ClusterMapPresentation(
 
         fun diagnosticReport(context: Context): String = buildString {
             appendLine("clusterEnabled=${AirPlayPersistence.loadClusterMapEnabled(context)}")
+            appendLine("genericClusterEnabled=${AirPlayPersistence.loadGenericClusterEnabled(context)}")
             appendLine("navigationReceiverAvailable=${com.shilapi.xcertplay.hud.BydOutputSettings.navigationAvailable(context)}")
             appendLine("allDisplays=${describeDisplays(context)}")
             val presentations = context.getSystemService(DisplayManager::class.java)

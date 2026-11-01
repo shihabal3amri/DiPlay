@@ -875,7 +875,7 @@ object AirPlayPersistence {
         val edit = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
             .putBoolean(KEY_ADB_CLUSTER_ACTIVITY, enabled)
             .putBoolean("platform21_cluster_enabled", false)
-        if (enabled) edit.putBoolean(KEY_CLUSTER_MAP, true)
+        if (enabled) edit.putBoolean(KEY_CLUSTER_MAP, true).putBoolean("generic_cluster_enabled", false)
         edit.apply()
     }
 
@@ -890,6 +890,7 @@ object AirPlayPersistence {
         val edit = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
             .putBoolean("platform21_cluster_enabled", enabled)
         if (enabled) edit.putBoolean(KEY_CLUSTER_MAP, true).putBoolean(KEY_ADB_CLUSTER_ACTIVITY, false)
+            .putBoolean("generic_cluster_enabled", false)
         edit.apply()
     }
 
@@ -902,6 +903,38 @@ object AirPlayPersistence {
 
     fun saveClusterProjectionHeld(context: Context, held: Boolean) {
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putBoolean(KEY_CLUSTER_PROJECTION_HELD, held).apply()
+    }
+
+    /**
+     * Generic cluster route for non-BYD/non-Geely units (e.g. Q07): render DiPlay's CarPlay
+     * cluster stream on a secondary display via a no-ADB setLaunchDisplayId Activity launch.
+     * Mutually exclusive with the BYD ADB / Platform-21 routes.
+     */
+    fun loadGenericClusterEnabled(context: Context): Boolean = loadClusterMapEnabled(context) &&
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getBoolean("generic_cluster_enabled", false)
+
+    fun saveGenericClusterEnabled(context: Context, enabled: Boolean) {
+        val edit = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
+            .putBoolean("generic_cluster_enabled", enabled)
+        if (enabled) edit.putBoolean(KEY_CLUSTER_MAP, true)
+            .putBoolean(KEY_ADB_CLUSTER_ACTIVITY, false)
+            .putBoolean("platform21_cluster_enabled", false)
+        edit.apply()
+    }
+
+    /** Optional driver-pinned cluster resolution, to disambiguate units with several secondary displays. */
+    fun loadGenericClusterTarget(context: Context): Pair<Int, Int>? {
+        val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        val w = prefs.getInt("generic_cluster_width", 0)
+        val h = prefs.getInt("generic_cluster_height", 0)
+        return if (w > 0 && h > 0) w to h else null
+    }
+
+    fun saveGenericClusterTarget(context: Context, widthPixels: Int, heightPixels: Int) {
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
+            .putInt("generic_cluster_width", widthPixels.coerceAtLeast(0))
+            .putInt("generic_cluster_height", heightPixels.coerceAtLeast(0))
+            .apply()
     }
 
     /** The dashboard map as a card on the centre screen while DiPlay is in the background. */

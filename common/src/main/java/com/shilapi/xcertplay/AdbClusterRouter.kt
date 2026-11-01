@@ -14,6 +14,10 @@ internal object AdbClusterRouter {
     fun enabled(context: Context): Boolean {
         if (DiLink51ClusterLayout.supported()) return false
         val public = ClusterMapPresentation.findDisplay(context)
+        // Generic non-BYD route (e.g. Q07): owns the independent cluster task via a no-ADB
+        // setLaunchDisplayId launch (see launch() below). It reaches this Activity pipeline only
+        // when no OEM presentation display matched, so BYD/Geely units are untouched.
+        if (GenericClusterDisplay.isEnabled(context)) return public == null
         if (AirPlayPersistence.loadLegacyClusterEnabled(context)) {
             // Only the measured projection may use the independent task; public 5/5.1 wins.
             return public == null || DiLink4ClusterDisplay.matches(public.name,
@@ -63,6 +67,14 @@ internal object AdbClusterRouter {
     }
 
     fun launch(context: Context, token: String, holdStockMap: Boolean = true, prepare: (Int) -> Boolean): Result {
+        // Generic non-BYD route (e.g. Q07): launch the cluster Activity onto a secondary display
+        // directly, with no ADB and no OEM stock-map hold, mirroring how the unit's own nav app
+        // reaches the panel. Taken before any LocalAdb use so these units never touch ADB.
+        if (GenericClusterDisplay.isEnabled(context)) {
+            val result = GenericClusterDisplay.launch(context, token, prepare)
+            runCatching { File(context.filesDir, REPORT).writeText(result.report) }
+            return result
+        }
         var success = false
         val text = buildString {
             appendLine("ADB direct cluster launch capturedAt=${java.util.Date()}")
