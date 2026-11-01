@@ -56,6 +56,7 @@ class AmbientAlbumUiScreenshotsTest {
             val activity = Robolectric.buildActivity(DiPlayActivity::class.java).get()
             activity.applicationInfo.flags = activity.applicationInfo.flags or ApplicationInfo.FLAG_SUPPORTS_RTL
             activity.setTheme(android.R.style.Theme_Material_NoActionBar)
+            ReflectionHelpers.setField(activity, "page", "settings")
             try {
                 val sections = LinearLayout(activity).apply {
                     orientation = LinearLayout.VERTICAL

@@ -5,6 +5,10 @@ import android.app.Dialog
 import android.content.Context
 import android.graphics.drawable.InsetDrawable
 import android.view.ContextThemeWrapper
+import android.view.View
+import android.view.ViewGroup
+import android.widget.ListAdapter
+import android.widget.ListView
 import com.shilapi.xcertplay.host.R
 import kotlin.math.roundToInt
 
@@ -25,6 +29,24 @@ internal fun Context.appDialogContext(): Context = ContextThemeWrapper(this, app
 internal fun Context.appDialogBuilder(): AlertDialog.Builder = AlertDialog.Builder(this, appDialogTheme())
 
 internal fun Context.appDialog(): Dialog = Dialog(this, appDialogTheme())
+
+/** Resolve relative icon padding before ListView measures detached rows for its wrap-content height. */
+internal fun AlertDialog.prepareSingleChoiceRows() {
+    create()
+    val choices = listView ?: return
+    val nativeAdapter = choices.adapter ?: return
+    val checkedPosition = choices.checkedItemPosition
+    choices.adapter = object : ListAdapter by nativeAdapter {
+        override fun getView(position: Int, convertView: View?, parent: ViewGroup): View =
+            nativeAdapter.getView(position, convertView, parent).apply {
+                layoutDirection = parent.resources.configuration.layoutDirection
+            }
+    }
+    if (checkedPosition != ListView.INVALID_POSITION) {
+        choices.setItemChecked(checkedPosition, true)
+        choices.setSelection(checkedPosition)
+    }
+}
 
 /** Reserve visible space above and below tall dialogs using the native window background padding. */
 internal fun Dialog.addVerticalWindowInsets() {
