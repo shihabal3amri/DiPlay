@@ -62,18 +62,29 @@ internal object GenericClusterDisplay {
      */
     fun pickDisplayId(context: Context): Int {
         val dm = context.getSystemService(DisplayManager::class.java) ?: return -1
-        val candidates = dm.displays.orEmpty().filter { d ->
-            d.isValid && d.displayId != Display.DEFAULT_DISPLAY && realSize(d).let { it.first > 0 && it.second > 0 }
+        val all = dm.displays.orEmpty()
+        // Log every display so a single logcat reveals the panel to target. Mirrors the
+        // reference nav app: the only hard filter is "not the main screen" (id 0).
+        all.forEach { d ->
+            val (w, h) = realSize(d)
+            Log.i(TAG, "display id=${d.displayId} name=${d.name} ${w}x${h} flags=${d.flags} valid=${d.isValid}")
         }
-        if (candidates.isEmpty()) return -1
+        val candidates = all.filter { d ->
+            d.displayId != Display.DEFAULT_DISPLAY && realSize(d).let { it.first > 0 && it.second > 0 }
+        }
+        if (candidates.isEmpty()) { Log.w(TAG, "no secondary display found"); return -1 }
 
         AirPlayPersistence.loadGenericClusterTarget(context)?.let { (w, h) ->
-            candidates.firstOrNull { realSize(it) == (w to h) }?.let { return it.displayId }
+            candidates.firstOrNull { realSize(it) == (w to h) }?.let {
+                Log.i(TAG, "picked pinned ${w}x${h} -> display ${it.displayId}"); return it.displayId
+            }
         }
-        candidates.singleOrNull()?.let { return it.displayId }
+        candidates.singleOrNull()?.let {
+            Log.i(TAG, "picked sole secondary -> display ${it.displayId}"); return it.displayId
+        }
         return candidates.maxWithOrNull(
             compareBy({ aspect(realSize(it)) }, { realSize(it).first }),
-        )?.displayId ?: -1
+        )?.also { Log.i(TAG, "picked widest secondary -> display ${it.displayId}") }?.displayId ?: -1
     }
 
     /** Real pixel size of the display this route would target, or null when none is found. */
