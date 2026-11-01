@@ -651,6 +651,8 @@
     <string name="adb_cluster_activity_label">Cluster Map</string>
     <string name="adb_cluster_activity_mode">DiLink 4 cluster video via ADB (experimental)</string>
     <string name="adb_cluster_activity_description">Launch the map directly on the verified cluster display through internal ADB. Authorize ADB, then reconnect the iPhone.</string>
+    <string name="generic_cluster_mode">Generic cluster for non-BYD units — Q07 (experimental)</string>
+    <string name="generic_cluster_description">For non-BYD/non-Geely head units: draw the iPhone cluster map on a secondary display with no ADB. Turn on, reconnect the iPhone, then set the safe area so the car\'s own gear/park readouts stay visible.</string>
     <string name="adb_cluster_authorize">Authorize ADB / retry cluster routing</string>
     <string name="adb_cluster_open">Retry cluster map</string>
     <string name="adb_cluster_routing">Launching cluster map through ADB…</string>

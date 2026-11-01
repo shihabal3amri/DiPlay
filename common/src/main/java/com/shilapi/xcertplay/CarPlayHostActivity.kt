@@ -1579,6 +1579,21 @@ open class CarPlayHostActivity : ComponentActivity() {
         if (AdbClusterRouter.enabled(this)) {
             adbClusterConfigured = true
             clusterStreamOnDisplay = true
+            // Generic non-BYD route (e.g. Q07): size the stream to the real cluster panel, not the
+            // fixed BYD 1920x720. The activity scales the stream to the panel either way, but a
+            // panel-matched stream keeps the correct aspect and safe area.
+            if (GenericClusterDisplay.isEnabled(this)) {
+                GenericClusterDisplay.streamConfig(this,
+                    AirPlayPersistence.loadClusterContent(this),
+                    safeAreaRect = AirPlayPersistence.loadClusterSafeAreaRect(this),
+                    markerXPercent = AirPlayPersistence.loadClusterMarkerXPercent(this),
+                    markerYPercent = AirPlayPersistence.loadClusterMarkerYPercent(this),
+                    scalePercent = AirPlayPersistence.loadClusterMapScalePercent(this))?.let {
+                    MapMirrors.streamAspect = it.widthPixels.toDouble() / it.heightPixels
+                    appendLog("Cluster activity (generic): requesting stream 111 at ${it.widthPixels}x${it.heightPixels}; safeArea=${it.safeArea}; no-ADB display task")
+                    return it
+                }
+            }
             return DiLink4ClusterDisplay.streamConfig(AirPlayPersistence.loadClusterContent(this),
                 safeAreaRect = AirPlayPersistence.loadClusterSafeAreaRect(this),
                 markerXPercent = AirPlayPersistence.loadClusterMarkerXPercent(this),
@@ -5538,8 +5553,9 @@ open class CarPlayHostActivity : ComponentActivity() {
             return false
         }
         displayDiagnosticAttempt = DisplayDiagnosticSnapshot.currentAttempt(this)
-        adbClusterConfigured = AdbClusterRouter.enabled(this) && snapshot.controller.configuredClusterSize() ==
-            (DiLink4ClusterDisplay.STREAM_WIDTH to DiLink4ClusterDisplay.STREAM_HEIGHT)
+        adbClusterConfigured = AdbClusterRouter.enabled(this) && (GenericClusterDisplay.isEnabled(this) ||
+            snapshot.controller.configuredClusterSize() ==
+            (DiLink4ClusterDisplay.STREAM_WIDTH to DiLink4ClusterDisplay.STREAM_HEIGHT))
         controller = snapshot.controller
         updateClusterMapShown()
         sink = snapshot.sink

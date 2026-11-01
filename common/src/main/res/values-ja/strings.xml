@@ -1056,4 +1056,6 @@
     <string name="cluster_projection_shape_description">小画面ではメーター本来の車速や状態表示が地図の横に残ります。全画面では地図がメーター全体を覆います。CarPlayの地図が表示されるとDiPlayがこの形態を設定するため、クルマ側で選んだナビモードは上書きされます。車載機のネットワークADBが必要です。</string>
     <string name="settings_cluster_speedometer_album_color">速度計の背景にアルバムの色を使用</string>
     <string name="settings_cluster_speedometer_album_color_description">アルバムの枠の色に滑らかに切り替わります。選択した不透明度は維持されます。</string>
+    <string name="generic_cluster_mode">非BYD車機向け汎用クラスター — Q07（実験的機能）</string>
+    <string name="generic_cluster_description">非BYD/非Geely車機向け：ADBなしでiPhoneのクラスターマップをセカンダリーディスプレイに表示します。オンにしてiPhoneを再接続し、セーフエリアを設定して車両本体のギア/パーキング表示が隠れないようにします。</string>
 </resources>
