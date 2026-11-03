@@ -816,6 +816,16 @@
     <string name="car_button_description">CarPlay shows this icon and name in its app list. Tap it to return to the car\'s own screen. Changes apply the next time CarPlay connects.</string>
     <string name="car_button_saved_next_connection">Saved. CarPlay shows the new icon and name the next time it connects.</string>
     <string name="this_head_unit_has_no_image_picker">This head unit has no image picker.</string>
+    <string name="settings_car_brand_title">Car brand badge</string>
+    <string name="settings_car_brand_summary">Picks the BYD-series badge and name CarPlay shows in its app list.</string>
+    <string name="settings_car_brand_default">Default (BYD)</string>
+    <string name="settings_car_brand_wangchao">Dynasty</string>
+    <string name="settings_car_brand_haiyang">Ocean</string>
+    <string name="settings_car_brand_fangchengbao">Fang Cheng Bao</string>
+    <string name="settings_car_brand_denza">Denza</string>
+    <string name="settings_car_brand_yangwang">Yangwang</string>
+    <string name="settings_car_brand_linghui">Linghui</string>
+    <string name="settings_car_brand_reset">Restore default badge and name</string>
 
     <!-- Optional BYD ambient lighting. -->
     <string name="settings_ambient_title">Ambient lighting (experimental)</string>
