@@ -6512,10 +6512,9 @@ open class CarPlayHostActivity : ComponentActivity() {
 
     private fun attachSurface(surface: Surface) {
         sink?.setSurface(SCREEN_TYPE_MAIN, surface)
-        if (AirPlayPersistence.loadClusterMapEnabled(this)) {
-            if (clusterOutputReady()) clusterSurface?.let { sink?.setSurface(SCREEN_TYPE_ALT, it) }
-        } else {
-            sink?.setSurface(SCREEN_TYPE_ALT, surface)
+        // Never give the cluster stream the main surface: a Surface takes one codec, and the loser's configure throws.
+        if (AirPlayPersistence.loadClusterMapEnabled(this) && clusterOutputReady()) {
+            clusterSurface?.let { sink?.setSurface(SCREEN_TYPE_ALT, it) }
         }
     }
 

@@ -149,6 +149,14 @@ class CarPlayHostClusterStartupTest {
         assertFalse(get("reconnectScheduled") as Boolean)
     }
 
+    @Test fun theMainSurfaceNeverReachesTheClusterStreamWhenTheClusterMapIsOff() {
+        AirPlayPersistence.saveClusterMapEnabled(activity, false)
+        val main = mock(Surface::class.java)
+        invokeSurface("attachSurface", main)
+        verify(sink).setSurface(110, main)
+        verify(sink, never()).setSurface(111, main)
+    }
+
     @Test fun staleSessionsAndControllerGenerationsCannotLaunchTheCluster() {
         display()
         val stale = mock(AirPlaySession::class.java)
