@@ -6,7 +6,6 @@ import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
 import android.os.Looper
-import androidx.core.graphics.ColorUtils
 import com.shilapi.xcertplay.media.CarPlayNowPlaying
 import java.io.File
 import java.time.Duration
@@ -25,7 +24,7 @@ import org.robolectric.util.ReflectionHelpers
 @Config(sdk = [29], manifest = Config.NONE)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class ClusterSpeedometerContrastTest {
-    @Test fun automaticContrastTracksEveryFadeFrameAndRestoresOriginalTextWhenDisabled() {
+    @Test fun animatedBackgroundKeepsPlayerTypographyAndSelectedOpacity() {
         val context = RuntimeEnvironment.getApplication()
         context.getSharedPreferences("xcertplay_airplay", 0).edit().clear().commit()
         ClusterMusicState.publish(CarPlayNowPlaying(), null)
@@ -43,36 +42,37 @@ class ClusterSpeedometerContrastTest {
         val canvas = Canvas(bitmap)
         val speed = ReflectionHelpers.getField<Paint>(view, "speedPaint")
         val unit = ReflectionHelpers.getField<Paint>(view, "unitPaint")
-        val background = ReflectionHelpers.getField<Paint>(view, "backgroundPaint")
         val directory = File("build/reports/cluster-speedometer-contrast").apply { mkdirs() }
         fun render() {
-            canvas.drawColor(Color.rgb(232, 235, 239))
+            bitmap.eraseColor(Color.TRANSPARENT)
             view.draw(canvas)
         }
-        fun verifyContrast() {
+        fun verifyRendering() {
             render()
             assertTrue(speed.color == Color.BLACK || speed.color == Color.WHITE)
-            assertEquals(speed.color, unit.color)
-            // The actual map is a separate surface: validate contrast against card RGB,
-            // without claiming a guarantee for arbitrary content behind transparency.
-            val opaque = ColorUtils.setAlphaComponent(background.color, 255)
-            assertTrue(ColorUtils.calculateContrast(speed.color, opaque) >= 4.5)
+            assertEquals(Color.argb(210, 220, 220, 225), unit.color)
+            val card = ReflectionHelpers.getField<android.graphics.RectF>(view, "rect")
+            val pixel = bitmap.getPixel((card.left + card.width() * .2f).toInt(), card.centerY().toInt())
+            val opacity = AirPlayPersistence.loadClusterSpeedometerOpacity(context)
+            assertEquals(opacity * 255 / 100, Color.alpha(pixel))
+            assertEquals(Color.TRANSPARENT, bitmap.getPixel(0, 0))
+
         }
         try {
             for ((name, color, expected) in listOf(
-                Triple("yellow", Color.YELLOW, Color.BLACK),
+                Triple("yellow", Color.YELLOW, Color.WHITE),
                 Triple("dark-blue", Color.rgb(10, 20, 65), Color.WHITE),
-                Triple("beige", Color.rgb(226, 192, 156), Color.BLACK),
+                Triple("beige", Color.rgb(226, 192, 156), Color.WHITE),
                 Triple("black", Color.BLACK, Color.WHITE),
-                Triple("white", Color.WHITE, Color.BLACK),
+                Triple("white", Color.WHITE, Color.WHITE),
             )) {
                 val artwork = Bitmap.createBitmap(24, 24, Bitmap.Config.ARGB_8888).apply { eraseColor(color) }
                 ClusterMusicState.publish(CarPlayNowPlaying(title = name), artwork)
                 shadowOf(Looper.getMainLooper()).idle()
-                verifyContrast()
+                verifyRendering()
                 repeat(25) {
                     shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(16))
-                    verifyContrast()
+                    verifyRendering()
                 }
                 assertEquals(expected, speed.color)
                 File(directory, "$name.png").outputStream().use {
@@ -82,10 +82,9 @@ class ClusterSpeedometerContrastTest {
             for (opacity in listOf(20, 40, 85, 100)) {
                 AirPlayPersistence.saveClusterSpeedometerOpacity(context, opacity)
                 shadowOf(Looper.getMainLooper()).idle()
-                verifyContrast()
-                assertEquals(opacity * 255 / 100, Color.alpha(background.color))
-                assertEquals(Color.BLACK, speed.color)
-                assertEquals(Color.BLACK, unit.color)
+                verifyRendering()
+                assertEquals(Color.WHITE, speed.color)
+                assertEquals(Color.argb(210, 220, 220, 225), unit.color)
             }
             AirPlayPersistence.saveClusterSpeedometerAlbumColor(context, false)
             shadowOf(Looper.getMainLooper()).idle()
@@ -95,12 +94,12 @@ class ClusterSpeedometerContrastTest {
             AirPlayPersistence.saveClusterSpeedometerAlbumColor(context, true)
             shadowOf(Looper.getMainLooper()).idle()
             shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(400))
-            verifyContrast()
-            assertEquals(Color.BLACK, speed.color)
+            verifyRendering()
+            assertEquals(Color.WHITE, speed.color)
             ClusterMusicState.publish(CarPlayNowPlaying(), null)
             shadowOf(Looper.getMainLooper()).idle()
             shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(400))
-            verifyContrast()
+            verifyRendering()
             assertEquals(Color.WHITE, speed.color)
             assertEquals(1, subscriptions)
         } finally {

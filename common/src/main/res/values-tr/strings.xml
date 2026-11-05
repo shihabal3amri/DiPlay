@@ -1029,8 +1029,8 @@
     <string name="settings_call_at_call_rate_description">Orijinal CarPlay alıcısının yaptığı gibi, aramaları 48 kHz Opus yerine aramanın kendi hızında (8, 16, 24 veya 32 kHz) PCM olarak sunar. Bir sonraki bağlantıda geçerli olur. Bir aramada ses yoksa bunu kapatın.</string>
     <string name="settings_carplay_same_task">CarPlay\'i başlatıcı kartında tut (deneysel)</string>
     <string name="settings_carplay_same_task_description">BYD\'nin DiYou masaüstü gibi DiPlay\'i bir kartta veya pencere içinde pencere görünümünde gösteren başlatıcılar içindir. CarPlay, ayrı bir tam ekran pencere yerine 0.2.11 ve önceki sürümlerdeki gibi DiPlay\'in kendi penceresinde açılır. Bağlantıyı kesmeden, CarPlay\'in bir sonraki açılışında geçerli olur.</string>
-    <string name="settings_cluster_speedometer_album_color">Hız göstergesi arka planı için albüm rengini kullan</string>
-    <string name="settings_cluster_speedometer_album_color_description">Yumuşak geçişlerle albüm çerçevesi rengiyle eşleştirir. Seçilen opaklığı korur.</string>
+    <string name="settings_cluster_speedometer_album_color">Oynatıcının hareketli arka planını kullan</string>
+    <string name="settings_cluster_speedometer_album_color_description">Oynatıcının hareketli albüm renklerini kullanır. Seçilen opaklığı korur; siyah arka plan için kapatın.</string>
     <string name="settings_navigation_prompt_audio_focus">Navigasyon komutları ses odağı istesin</string>
     <string name="settings_navigation_prompt_audio_focus_description">Her CarPlay navigasyon komutu sırasında DiPlay, diğer seslerin kısılmasını sağlayan geçici bir ses odağı talep eder ve komuttan sonra serbest bırakır. Müzik çalana kadar komutlar sessiz kalıyorsa veya komutlar sırasında müziğin kısılması gerekiyorsa bunu deneyin. Ana ünitenin kendi sesi komutlar sırasında kısılabilir veya duraklayabilir. Bir sonraki CarPlay bağlantısında geçerli olur.</string>
     <string name="setup_features_description_unknown">İstediğiniz özellikleri şimdi açın; her şey Ayarlar\'da kalır ve daha sonra değiştirilebilir.</string>

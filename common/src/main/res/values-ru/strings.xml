@@ -952,6 +952,6 @@
     <string name="cluster_projection_shape_half">Половина экрана</string>
     <string name="cluster_projection_shape_full">Весь экран</string>
     <string name="cluster_projection_shape_description">При половине экрана скорость и состояние, которые панель обычно показывает, остаются рядом с картой; на весь экран карта занимает всю панель. DiPlay задаёт этот вид при каждом появлении карты CarPlay и иначе перекрывает вид, выбранный в машине. Требуется ADB по сети на головном устройстве.</string>
-    <string name="settings_cluster_speedometer_album_color">Цвет альбома для фона спидометра</string>
-    <string name="settings_cluster_speedometer_album_color_description">Плавно меняет фон на цвет рамки альбома. Сохраняет выбранную непрозрачность.</string>
+    <string name="settings_cluster_speedometer_album_color">Анимированный фон плеера</string>
+    <string name="settings_cluster_speedometer_album_color_description">Использует анимированные цвета обложки из плеера. Сохраняет выбранную непрозрачность; выключите для чёрного фона.</string>
 </resources>

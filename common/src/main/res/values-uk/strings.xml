@@ -964,6 +964,6 @@
     <string name="cluster_projection_shape_half">Пів екрана</string>
     <string name="cluster_projection_shape_full">Увесь екран</string>
     <string name="cluster_projection_shape_description">На пів екрана швидкість і стан, які панель зазвичай показує, залишаються поруч із картою; на весь екран карта займає всю панель. DiPlay задає цей вигляд щоразу, коли з&#8217;являється карта CarPlay, інакше він перекриває вигляд, вибраний в автомобілі. Потрібен ADB через мережу на головному пристрої.</string>
-    <string name="settings_cluster_speedometer_album_color">Колір альбому для тла спідометра</string>
-    <string name="settings_cluster_speedometer_album_color_description">Плавно змінює тло на колір рамки альбому. Зберігає вибрану непрозорість.</string>
+    <string name="settings_cluster_speedometer_album_color">Анімоване тло програвача</string>
+    <string name="settings_cluster_speedometer_album_color_description">Використовує анімовані кольори обкладинки з програвача. Зберігає вибрану непрозорість; вимкніть для чорного тла.</string>
 </resources>

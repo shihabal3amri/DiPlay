@@ -114,7 +114,7 @@ class ClusterSpeedometerSettingsTest {
         controller.pause().stop().destroy()
     }
 
-    @Test fun albumBackgroundFadesRetainsOpacityAndRestoresDefaultWithoutRestartingSpeed() {
+    @Test fun animatedBackgroundRetainsOpacityAndRestoresDefaultWithoutRestartingSpeed() {
         ClusterMusicState.publish(com.shilapi.xcertplay.media.CarPlayNowPlaying(), null)
         shadowOf(Looper.getMainLooper()).idle()
         AirPlayPersistence.saveClusterSpeedometerEnabled(context, true)
@@ -128,8 +128,10 @@ class ClusterSpeedometerSettingsTest {
         view.setSpeedKmh(188)
         val output = Bitmap.createBitmap(1280, 480, Bitmap.Config.ARGB_8888)
         fun color(): Int {
+            output.eraseColor(Color.TRANSPARENT)
             view.draw(Canvas(output))
-            return ReflectionHelpers.getField<android.graphics.Paint>(view, "backgroundPaint").color
+            val rect = ReflectionHelpers.getField<android.graphics.RectF>(view, "rect")
+            return output.getPixel((rect.left + rect.width() * .2f).toInt(), rect.centerY().toInt())
         }
         val original = color()
         val red = Bitmap.createBitmap(24, 24, Bitmap.Config.ARGB_8888).apply { eraseColor(Color.RED) }
@@ -143,15 +145,15 @@ class ClusterSpeedometerSettingsTest {
         AirPlayPersistence.saveClusterSpeedometerAlbumColor(context, true)
         shadowOf(Looper.getMainLooper()).idle()
         shadowOf(Looper.getMainLooper()).idleFor(java.time.Duration.ofMillis(400))
-        assertEquals(ClusterMusicView.coverFrameColor(red) and 0xffffff, color() and 0xffffff)
+        assertTrue(Color.red(color()) > Color.blue(color()))
         assertEquals(102, Color.alpha(color()))
         publish(blue)
         shadowOf(Looper.getMainLooper()).idleFor(java.time.Duration.ofMillis(200))
         val middle = color()
         assertTrue(Color.red(middle) > 0 && Color.blue(middle) > 0)
-        publish(null) // metadata-only update must not reset the transition
+        publish(null) // Metadata-only updates retain the current artwork.
         shadowOf(Looper.getMainLooper()).idleFor(java.time.Duration.ofMillis(200))
-        assertEquals(ClusterMusicView.coverFrameColor(blue) and 0xffffff, color() and 0xffffff)
+        assertTrue(Color.blue(color()) > Color.red(color()))
         AirPlayPersistence.saveClusterSpeedometerAlbumColor(context, false)
         shadowOf(Looper.getMainLooper()).idle()
         shadowOf(Looper.getMainLooper()).idleFor(java.time.Duration.ofMillis(400))
@@ -167,6 +169,52 @@ class ClusterSpeedometerSettingsTest {
         controller.pause().stop().destroy()
         assertNull(ReflectionHelpers.getField<Any?>(view, "stopObservingArtwork"))
         output.recycle()
+    }
+
+    @Test fun animationRunsOnlyForVisiblePlaybackAndStopsOnDisableOrDetach() {
+        AirPlayPersistence.saveClusterSpeedometerEnabled(context, true)
+        AirPlayPersistence.saveClusterSpeedometerAlbumColor(context, true)
+        val controller = Robolectric.buildActivity(Activity::class.java).setup().visible()
+        val view = ClusterSpeedometerView(controller.get()) { { } }
+        controller.get().setContentView(view)
+        shadowOf(Looper.getMainLooper()).idle()
+        view.layout(0, 0, 1280, 480)
+        view.setSpeedKmh(100)
+        val art = Bitmap.createBitmap(24, 24, Bitmap.Config.ARGB_8888).apply { eraseColor(Color.RED) }
+        val info = com.shilapi.xcertplay.media.CarPlayNowPlaying(title = "Track", playing = true)
+        ClusterMusicState.publish(info, art)
+        shadowOf(Looper.getMainLooper()).idle()
+        val handler = ReflectionHelpers.getField<android.os.Handler>(view, "main")
+        val frame = ReflectionHelpers.getField<Runnable>(view, "animate")
+        val output = Bitmap.createBitmap(1280, 480, Bitmap.Config.ARGB_8888)
+        fun draw() { output.eraseColor(Color.TRANSPARENT); view.draw(Canvas(output)) }
+        draw()
+        assertTrue(handler.hasCallbacks(frame))
+        val before = output.copy(Bitmap.Config.ARGB_8888, false)
+        shadowOf(Looper.getMainLooper()).idleFor(java.time.Duration.ofMillis(500))
+        draw()
+        assertFalse("Artwork background should move", before.sameAs(output))
+        ClusterMusicState.publish(info.copy(playing = false), art)
+        shadowOf(Looper.getMainLooper()).idle()
+        draw()
+        assertFalse(handler.hasCallbacks(frame))
+        ClusterMusicState.publish(info, art)
+        shadowOf(Looper.getMainLooper()).idle()
+        draw()
+        view.visibility = View.GONE
+        assertFalse(handler.hasCallbacks(frame))
+        view.visibility = View.VISIBLE
+        draw()
+        assertTrue(handler.hasCallbacks(frame))
+        AirPlayPersistence.saveClusterSpeedometerAlbumColor(context, false)
+        shadowOf(Looper.getMainLooper()).idle()
+        assertFalse(handler.hasCallbacks(frame))
+        AirPlayPersistence.saveClusterSpeedometerAlbumColor(context, true)
+        shadowOf(Looper.getMainLooper()).idle()
+        draw()
+        controller.pause().stop().destroy()
+        assertFalse(handler.hasCallbacks(frame))
+        before.recycle(); output.recycle(); art.recycle()
     }
 
     @Test fun squareSpeedCardFitsThreeDigitsAtEverySize() {

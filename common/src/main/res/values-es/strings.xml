@@ -952,6 +952,6 @@
     <string name="cluster_projection_shape_half">Pantalla partida</string>
     <string name="cluster_projection_shape_full">Pantalla completa</string>
     <string name="cluster_projection_shape_description">La pantalla partida mantiene junto al mapa la velocidad y el estado que el panel muestra normalmente; la pantalla completa deja que el mapa ocupe todo el panel. DiPlay fija la forma cada vez que aparece el mapa de CarPlay, que de lo contrario anula la forma elegida en el coche. Requiere ADB por red en la unidad principal.</string>
-    <string name="settings_cluster_speedometer_album_color">Usar el color del álbum en el fondo del velocímetro</string>
-    <string name="settings_cluster_speedometer_album_color_description">Iguala el color del borde del álbum con transiciones suaves. Conserva la opacidad elegida.</string>
+    <string name="settings_cluster_speedometer_album_color">Usar el fondo animado del reproductor</string>
+    <string name="settings_cluster_speedometer_album_color_description">Usa los colores animados del álbum del reproductor. Conserva la opacidad elegida; desactívalo para usar fondo negro.</string>
 </resources>

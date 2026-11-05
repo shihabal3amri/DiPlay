@@ -1054,6 +1054,6 @@
     <string name="cluster_projection_shape_half">小画面（小画面ナビ）</string>
     <string name="cluster_projection_shape_full">全画面（全画面ナビ）</string>
     <string name="cluster_projection_shape_description">小画面ではメーター本来の車速や状態表示が地図の横に残ります。全画面では地図がメーター全体を覆います。CarPlayの地図が表示されるとDiPlayがこの形態を設定するため、クルマ側で選んだナビモードは上書きされます。車載機のネットワークADBが必要です。</string>
-    <string name="settings_cluster_speedometer_album_color">速度計の背景にアルバムの色を使用</string>
-    <string name="settings_cluster_speedometer_album_color_description">アルバムの枠の色に滑らかに切り替わります。選択した不透明度は維持されます。</string>
+    <string name="settings_cluster_speedometer_album_color">プレーヤーのアニメーション背景を使用</string>
+    <string name="settings_cluster_speedometer_album_color_description">プレーヤーと同じアルバム色のアニメーションを使用します。選択した不透明度を維持します。オフにすると黒い背景になります。</string>
 </resources>

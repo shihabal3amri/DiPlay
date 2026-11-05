@@ -1022,8 +1022,8 @@
     <string name="cluster_projection_shape_half">화면 절반</string>
     <string name="cluster_projection_shape_full">전체 화면</string>
     <string name="cluster_projection_shape_description">화면 절반은 계기판에서 지도 옆에 평소 표시되는 속도와 상태 정보를 유지합니다. 전체 화면에서는 지도가 계기판을 가득 채웁니다. CarPlay 지도가 나타날 때마다 DiPlay가 모양을 설정하며, 그렇지 않으면 차량에서 선택한 모양을 덮어씁니다. 헤드 유닛의 네트워크 ADB가 필요합니다.</string>
-    <string name="settings_cluster_speedometer_album_color">앨범 색상을 속도계 배경에 사용</string>
-    <string name="settings_cluster_speedometer_album_color_description">부드러운 전환으로 앨범 테두리 색상과 맞춥니다. 선택한 불투명도를 유지합니다.</string>
+    <string name="settings_cluster_speedometer_album_color">플레이어의 움직이는 배경 사용</string>
+    <string name="settings_cluster_speedometer_album_color_description">플레이어의 앨범 색상 애니메이션을 사용합니다. 선택한 불투명도는 유지됩니다. 끄면 검은 배경을 사용합니다.</string>
     <string name="iphone_sent_no_picture">CarPlay가 시작된 이후 iPhone에서 영상이 전송되지 않았습니다. iPhone을 껐다가 다시 켠 뒤 연결하세요.</string>
     <string name="vpn_authorization_adb_unusable">이 헤드 유닛은 VPN 권한 허용 화면을 열 수 없으며, DiPlay가 네트워크 ADB를 사용할 수 없어 VPN 권한을 직접 허용할 수도 없습니다.</string>
     <string name="vpn_authorization_adb_not_approved">이 헤드 유닛은 VPN 권한 허용 화면을 열 수 없으며, ADB에서 DiPlay를 승인하지 않아 DiPlay가 VPN 권한을 직접 허용할 수도 없습니다.</string>

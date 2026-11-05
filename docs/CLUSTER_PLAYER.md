@@ -23,3 +23,7 @@ The optional fitted layout keeps foreground content between the native strips (1
 On DiLink 3 the player requests FULL_PROJECTION (16), independently of the saved map shape. Returning to Map restores its projection policy. This does not guarantee physical edge-to-edge output: native strips and clipping depend on firmware. No native drawing priorities, firmware resources or speed geometry are modified.
 
 An independent opt-in shows gear, traction-battery percentage and electric range via existing authorized ADB getters. Gear is sampled once per second; battery and range once per ten seconds. Invalid or stale readings show unknown values, and polling stops when the page is hidden or the option disabled. No CAN writes are issued.
+
+## Shared speedometer background
+
+The map speedometer's existing album-color switch now selects the same animated artwork background as the player. Both views share one renderer with identical palette extraction, gradients, brightness and motion. The player's appearance is unchanged. The speedometer clips the result to its existing rounded card and applies its selected background opacity once to the composed layers; position, size and border settings are retained. Turning the option off, or losing artwork, uses the original dark background. Animation requests stop when playback pauses, the view is hidden, the option is disabled or the view detaches. Existing saved album-color preferences select this replacement automatically.

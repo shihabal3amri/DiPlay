@@ -1042,6 +1042,6 @@
     <string name="cluster_projection_shape_half">Mezza schermata</string>
     <string name="cluster_projection_shape_full">Schermo intero</string>
     <string name="cluster_projection_shape_description">Mezza schermata mantiene accanto alla mappa la velocità e lo stato che il quadro strumenti mostra normalmente; schermo intero lascia che la mappa occupi tutto il quadro. DiPlay imposta questa forma ogni volta che appare la mappa di CarPlay, che altrimenti annulla la forma scelta nell’auto. Richiede ADB in rete sull’unità principale.</string>
-    <string name="settings_cluster_speedometer_album_color">Usa il colore dell’album per lo sfondo del tachimetro</string>
-    <string name="settings_cluster_speedometer_album_color_description">Abbina il colore della cornice dell’album con transizioni fluide. Mantiene l’opacità selezionata.</string>
+    <string name="settings_cluster_speedometer_album_color">Usa lo sfondo animato del lettore</string>
+    <string name="settings_cluster_speedometer_album_color_description">Usa i colori animati dell’album del lettore. Mantiene l’opacità selezionata; disattiva per uno sfondo nero.</string>
 </resources>
