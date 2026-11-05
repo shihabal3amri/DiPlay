@@ -174,7 +174,7 @@ The microphone already follows the iPhone's stream type: a call records with `VO
 BYD plays a third-party call as media, so the car's own echo canceller never sees it and the amplifier's bass applies to the voice. Two experimental call settings, off by default and applied at the next connection, can compensate inside DiPlay:
 
 - **Call echo cancellation** runs SpeexDSP's echo canceller (250 ms tail, BSD licensed, `shared/src/main/jni/speexdsp`) on the call microphone, using what DiPlay itself just played as the reference. It needs mono capture at the downlink sample rate; otherwise the call continues with the platform effects only (`microphone echo canceller enabled=false` in the log).
-- **Clearer call voices** removes the lows below 200 Hz from the caller's voice (4th-order high-pass) before playback.
+- **Clearer call voices** removes the lows below 200 Hz from the caller's voice (4th-order high-pass) and lowers the call by 18 dB before playback. On a DiLink 3 Han the call plays on the car's voice-call path (`DIRECT|VOIP_RX`, through the "Volume listener for voice call" effect), about 13 dB louder than music at the same volume step, and a real caller reaches it at a median of about -18 dBFS (90th percentile -10 dBFS, measured with the `Signal power history` that `dumpsys media.audio_flinger` prints for that stream). A listening comparison put the call path level with music at about 17-19 dB lower.
 
 With **CarPlay calls on the dashboard** on, DiPlay arms the call watcher when a CarPlay session starts, so the first call's caller name reaches the cluster and HUD without waiting for the watcher to launch. An armed watcher makes no vehicle writes; it is cancelled when the session ends or the setting is turned off.
 

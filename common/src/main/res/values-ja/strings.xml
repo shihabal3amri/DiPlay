@@ -791,7 +791,7 @@
     <string name="call_echo_cancellation">通話のエコーキャンセル（実験的機能）</string>
     <string name="call_echo_cancellation_description">CarPlay通話時に相手へ届くスピーカーの反響音を軽減します。効果は車載端末によって異なります。次回接続から有効です。</string>
     <string name="call_voice_filter">通話音声を聞き取りやすくする（実験的機能）</string>
-    <string name="call_voice_filter_description">CarPlayの通話音声の低音を抑えます。声の聞こえ方が変わる場合があります。次回接続から有効です。</string>
+    <string name="call_voice_filter_description">CarPlayの通話音声の低音を抑え、相手の声の音量を18 dB下げます。BYD DiLink 3のようなヘッドユニットは、通話を音楽よりずっと大きな音で再生するためです。声の聞こえ方が変わる場合があります。次回接続から有効です。</string>
     <string name="phone_audio_route">CarPlay通話を車の電話音声で出力（実験的機能）</string>
     <string name="phone_audio_route_description">CarPlay通話中にTelecom通話を維持し、車を電話音声モードに切り替えて車側のエコーキャンセルを使います。この通話ではDiPlay側のエコーキャンセルを使いません。声が大きくなったり、ひずんだりする場合があります。初期状態ではオフです。次の通話から反映されます。</string>
     <string name="phone_audio_route_apps">他アプリのVoIP通話を車の電話音声で出力（実験的機能）</string>

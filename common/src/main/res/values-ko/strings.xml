@@ -785,7 +785,7 @@
     <string name="call_echo_cancellation">통화 에코 제거 (실험 기능)</string>
     <string name="call_echo_cancellation_description">CarPlay 통화 중 상대방에게 전달되는 스피커 에코를 줄입니다. 결과는 헤드 유닛에 따라 다릅니다. 다음 CarPlay 연결부터 적용됩니다.</string>
     <string name="call_voice_filter">더 선명한 통화 음성 (실험 기능)</string>
-    <string name="call_voice_filter_description">CarPlay 통화 오디오에서 저음을 줄입니다. 음성의 느낌이 달라질 수 있습니다. 다음 CarPlay 연결부터 적용됩니다.</string>
+    <string name="call_voice_filter_description">CarPlay 통화 오디오에서 저음을 줄이고 상대방 음성 볼륨을 18 dB 낮춥니다. BYD DiLink 3 같은 헤드 유닛은 통화를 음악보다 훨씬 크게 재생하기 때문입니다. 음성의 느낌이 달라질 수 있습니다. 다음 CarPlay 연결부터 적용됩니다.</string>
     <string name="phone_audio_route">CarPlay 통화에 차량 전화 오디오 사용 (실험 기능)</string>
     <string name="phone_audio_route_description">CarPlay 통화 중 Telecom 통화를 유지하여 차량이 전화 오디오 상태로 전환되고 자체 에코 제거 기능을 사용하도록 합니다. 이 통화에는 DiPlay의 에코 제거가 적용되지 않습니다. 내 목소리가 더 크게 들리거나 왜곡될 수 있습니다. 기본값은 꺼짐이며 다음 통화부터 적용됩니다.</string>
     <string name="phone_audio_route_apps">다른 앱의 VoIP 통화에 차량 전화 오디오 사용 (실험 기능)</string>

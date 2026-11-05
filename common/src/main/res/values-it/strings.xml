@@ -768,7 +768,7 @@
     <string name="call_echo_cancellation">Cancellazione dell’eco nelle chiamate (sperimentale)</string>
     <string name="call_echo_cancellation_description">Cerca di ridurre l’eco dell’altoparlante inviato all’interlocutore durante le chiamate CarPlay. I risultati dipendono dalla head unit. Si applica alla prossima connessione CarPlay.</string>
     <string name="call_voice_filter">Voci più chiare nelle chiamate (sperimentale)</string>
-    <string name="call_voice_filter_description">Taglia i bassi dall’audio delle chiamate CarPlay. Questo può cambiare il suono delle voci. Si applica alla prossima connessione CarPlay.</string>
+    <string name="call_voice_filter_description">Taglia i bassi dall’audio delle chiamate CarPlay e abbassa di 18 dB il volume di chi chiama, perché unità come il BYD DiLink 3 riproducono le chiamate molto più forte della musica. Questo può cambiare il suono delle voci. Si applica alla prossima connessione CarPlay.</string>
     <string name="phone_audio_route">Audio telefono dell’auto per le chiamate CarPlay (sperimentale)</string>
     <string name="phone_audio_route_description">Mantiene una chiamata Telecom durante le chiamate CarPlay, così l’auto passa al suo stato audio telefono e la sua cancellazione dell’eco funziona. Il cancellatore d’eco di DiPlay resta fuori da queste chiamate. La tua voce può uscire più forte o distorta. Disattivato per impostazione predefinita; si applica alla prossima chiamata.</string>
     <string name="phone_audio_route_apps">Audio telefono dell’auto per chiamate VoIP in altre app (sperimentale)</string>

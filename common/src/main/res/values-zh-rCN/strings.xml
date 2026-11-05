@@ -751,7 +751,7 @@
     <string name="call_echo_cancellation">通话回声消除（实验性）</string>
     <string name="call_echo_cancellation_description">尝试减少 CarPlay 通话中发送给对方的扬声器回声。效果取决于车载主机。下次连接 CarPlay 时生效。</string>
     <string name="call_voice_filter">更清晰的通话人声（实验性）</string>
-    <string name="call_voice_filter_description">削减 CarPlay 通话音频的低音。这可能改变人声的音色。下次连接 CarPlay 时生效。</string>
+    <string name="call_voice_filter_description">削减 CarPlay 通话音频的低音，并将对方的声音降低 18 dB，因为 BYD DiLink 3 等车机播放通话比音乐响得多。这可能改变人声的音色。下次连接 CarPlay 时生效。</string>
     <string name="phone_audio_route">CarPlay 通话使用车机电话音频（实验性）</string>
     <string name="phone_audio_route_description">CarPlay 通话期间保持一个 Telecom 通话，使车机切换到电话音频状态并启用自带的回声消除。这些通话中 DiPlay 自己的回声消除不会工作。你的声音可能变大或失真。默认关闭，下一次通话生效。</string>
     <string name="phone_audio_route_apps">其他应用的 VoIP 通话使用车机电话音频（实验性）</string>

@@ -1776,6 +1776,7 @@ private class AudioRenderer(
 
     private val pcmChannels = if (format.channels >= 2) 2 else 1
     private val voiceFilter = if (voiceFilter && format.sampleRate > 0) VoiceFilter(format.sampleRate, pcmChannels) else null
+    private val callLevelTrim = if (this.voiceFilter != null) CallLevelTrim() else null
 
     private var trackAttributes: AudioAttributes? = null
     private var mappedChannel: AudioChannel? = null
@@ -2405,6 +2406,7 @@ private class AudioRenderer(
             )
         }
         voiceFilter?.process(data, offset, length)
+        callLevelTrim?.process(data, offset, length)
         applyNavigationAttenuation()
         attenuateNavigation(data, offset, length)
         if (!fadeApplied) {

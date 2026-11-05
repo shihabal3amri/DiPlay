@@ -691,7 +691,7 @@
     <string name="call_echo_cancellation">إلغاء صدى المكالمات (تجريبي)</string>
     <string name="call_echo_cancellation_description">يحاول تقليل صدى السماعات المرسل إلى الطرف الآخر أثناء مكالمات CarPlay. تعتمد النتيجة على وحدة السيارة. يُطبَّق عند الاتصال التالي بـ CarPlay.</string>
     <string name="call_voice_filter">أصوات مكالمات أوضح (تجريبي)</string>
-    <string name="call_voice_filter_description">يخفض الجهير في صوت مكالمات CarPlay. قد يغيّر صوت المتحدثين. يُطبَّق عند الاتصال التالي بـ CarPlay.</string>
+    <string name="call_voice_filter_description">يخفض الجهير في صوت مكالمات CarPlay ويخفض مستوى صوت المتصل بمقدار 18 ديسيبل، لأن وحدات الرأس مثل BYD DiLink 3 تشغّل المكالمات بصوت أعلى بكثير من الموسيقى. قد يغيّر صوت المتحدثين. يُطبَّق عند الاتصال التالي بـ CarPlay.</string>
     <string name="phone_audio_route">صوت الهاتف في السيارة لمكالمات CarPlay (تجريبي)</string>
     <string name="phone_audio_route_description">يُبقي مكالمة Telecom مفتوحة أثناء مكالمات CarPlay ليتحول صوت السيارة إلى وضع الهاتف وتعمل خاصية إلغاء الصدى الخاصة بها. لا يعمل مُلغي الصدى في DiPlay في هذه المكالمات. قد يخرج صوتك أعلى أو مشوّهاً. متوقف افتراضياً، ويُطبَّق في المكالمة التالية.</string>
     <string name="phone_audio_route_apps">صوت الهاتف في السيارة لمكالمات VoIP في التطبيقات الأخرى (تجريبي)</string>

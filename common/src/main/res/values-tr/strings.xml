@@ -754,7 +754,7 @@
     <string name="call_echo_cancellation">Arama yankı engelleme (deneysel)</string>
     <string name="call_echo_cancellation_description">CarPlay aramaları sırasında karşı tarafa gönderilen hoparlör yankısını azaltmaya çalışır. Sonuçlar ana üniteye bağlıdır. Bir sonraki CarPlay bağlantısında geçerli olur.</string>
     <string name="call_voice_filter">Daha net arama sesleri (deneysel)</string>
-    <string name="call_voice_filter_description">CarPlay arama sesindeki basları keser. Bu, seslerin tonunu değiştirebilir. Sonraki CarPlay bağlantısında geçerli olur.</string>
+    <string name="call_voice_filter_description">CarPlay arama sesindeki basları keser ve arayanın sesini 18 dB azaltır; çünkü BYD DiLink 3 gibi ana üniteler aramaları müzikten çok daha yüksek sesle çalar. Bu, seslerin tonunu değiştirebilir. Sonraki CarPlay bağlantısında geçerli olur.</string>
     <string name="phone_audio_route">CarPlay aramaları için araç telefon sesi (deneysel)</string>
     <string name="phone_audio_route_description">CarPlay aramaları sırasında bir Telekom aramasını tutar, böylece araç telefon sesi durumuna geçer ve kendi yankı engellemesi çalışır. DiPlay\'in yankı engelleyicisi bu aramalardan uzak durur. Sesiniz daha yüksek veya bozuk çıkabilir. Varsayılan olarak kapalıdır; sonraki aramada geçerli olur.</string>
     <string name="phone_audio_route_apps">Diğer uygulamalardaki VoIP aramaları için araç telefon sesi (deneysel)</string>
