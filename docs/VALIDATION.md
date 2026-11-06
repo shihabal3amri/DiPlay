@@ -1,4 +1,4 @@
-# DiPlay 0.2.22 — 2026-10-28
+a0913f2d1b19453db445e47cacbf1dd1d109fbb2# DiPlay 0.2.22 — 2026-10-28
 
 - The reviewed application baseline, main `5861fb9f` (tree `a0913f2d1b19453db445e47cacbf1dd1d109fbb2`, after #999), passed the full source workflow: **3,538 unit cases, 3,537 passed and one expected macOS wildcard-bind assumption skip**, zero failures/errors. Counts: 1,798 shared, 1,729 common and 11 Home. Mobile/Home/map-host debug lint reported zero errors, and all three identity-free debug APK builds passed.
 - Release preparation changes mobile metadata to `0.2.22` / `41`, documentation and the eight website editions. Minimum SDK stays 24 (Android 7.0) and target SDK 37. No native source changed. Final release checks repeat the complete repository workflow on the frozen release source; measured artifact details accompany the GitHub release.
