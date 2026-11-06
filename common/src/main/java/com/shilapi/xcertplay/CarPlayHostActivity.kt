@@ -55,6 +55,7 @@ import android.view.ViewTreeObserver
 import android.view.KeyEvent
 import android.view.View
 import android.view.ViewGroup
+import android.view.WindowManager
 import android.widget.Button
 import android.widget.EditText
 import android.widget.FrameLayout
@@ -93,6 +94,7 @@ import com.shilapi.xcertplay.airplay.AirPlaySession
 import com.shilapi.xcertplay.airplay.AirPlaySessionListener
 import com.shilapi.xcertplay.airplay.CarPlayMediaEngine
 import com.shilapi.xcertplay.airplay.SafeAreaRect
+import com.shilapi.xcertplay.airplay.ScreenShapeSafeArea
 import com.shilapi.xcertplay.host.R
 import com.shilapi.xcertplay.location.AndroidCarPlayLocationProvider
 import com.shilapi.xcertplay.media.AndroidMediaSink
@@ -4996,9 +4998,15 @@ open class CarPlayHostActivity : ComponentActivity() {
         appendLog("CarPlay size=${CarPlayUiScale.label(uiScalePercent)} canvas=${scaledDisplay.widthPixels}x${scaledDisplay.heightPixels}")
         val nativeMasks = blackCornerRadiusDp == CarPlayBlackCornerOverlay.IPHONE_MASK
         val disableSafeArea = mainDisplayDisableSafeArea || nativeMasks
+        val savedSafeArea = AirPlayPersistence.loadSafeAreaRect(this, size.width, size.height)
+        val fittedSafeArea = if (savedSafeArea == null && !disableSafeArea) fittedSafeArea(size) else null
+        if (fittedSafeArea != null) {
+            appendLog("Safe area fitted to the notch and rounded corners: ${fittedSafeArea.width}x${fittedSafeArea.height} " +
+                "at (${fittedSafeArea.left}, ${fittedSafeArea.top}) in ${size.width}x${size.height}")
+        }
         val display = scaledDisplay.copy(
             safeArea = if (disableSafeArea) null else AirPlaySafeArea.toInsets(
-                mapping = AirPlayPersistence.loadSafeAreaRect(this, size.width, size.height),
+                mapping = savedSafeArea ?: fittedSafeArea,
                 activityWidthPixels = size.width,
                 activityHeightPixels = size.height,
                 displayWidthPixels = scaledDisplay.widthPixels,
@@ -5200,7 +5208,13 @@ open class CarPlayHostActivity : ComponentActivity() {
         }
         val size = currentActivitySize() ?: return getString(R.string.safe_area_waiting_for_activity_size)
         val mapping = AirPlayPersistence.loadSafeAreaRect(this, size.width, size.height)
-        return if (mapping == null) {
+        val fitted = if (mapping == null) fittedSafeArea(size) else null
+        return if (fitted != null) {
+            getString(
+                R.string.settings_safe_area_fitted_summary,
+                fitted.width, fitted.height, fitted.left, fitted.top, size.width, size.height,
+            )
+        } else if (mapping == null) {
             "${getString(R.string.safe_area_full_screen_at)}${size.width} x ${size.height}"
         } else {
             getString(
@@ -5208,6 +5222,20 @@ open class CarPlayHostActivity : ComponentActivity() {
                 mapping.width, mapping.height, mapping.left, mapping.top, size.width, size.height,
             )
         }
+    }
+
+    /**
+     * With Settings → Display → Fit around notch and rounded corners on, the safe area of the video view
+     * at [size] clear of them; null when it is off, the iPhone corner mask omits the safe area, the view has
+     * another size or nothing is in the way.
+     */
+    private fun fittedSafeArea(size: DisplaySize): SafeAreaRect? {
+        if (!AirPlayPersistence.loadFitScreenShape(this)) return null
+        if (blackCornerRadiusDp == CarPlayBlackCornerOverlay.IPHONE_MASK) return null
+        val view = videoView ?: return null
+        if (view.width != size.width || view.height != size.height) return null
+        val shape = AndroidScreenShape.over(view) ?: return null
+        return ScreenShapeSafeArea.fit(shape, size.width, size.height)
     }
 
     private fun updateSafeAreaSummary() {
@@ -5222,6 +5250,7 @@ open class CarPlayHostActivity : ComponentActivity() {
         }
         val editorView = safeAreaEditorView ?: return
         val initial = AirPlayPersistence.loadSafeAreaRect(this, size.width, size.height)
+            ?: fittedSafeArea(size)
             ?: AirPlaySafeArea.default(size.width, size.height)
         safeAreaEditSize = size
         safeAreaEditorActive = true
@@ -6861,6 +6890,7 @@ open class CarPlayHostActivity : ComponentActivity() {
         }
         val hideTop = hideTopBar && !multiWindow
         val hideBottom = hideBottomBar && !multiWindow
+        applyCutoutMode(hideTop && hideBottom)
         WindowCompat.setDecorFitsSystemWindows(window, !(hideTop && hideBottom))
         val controller = WindowInsetsControllerCompat(window, window.decorView)
         val peek = temporarySystemBarsVisible && !multiWindow && !harmanFullscreenEnabled
@@ -6876,6 +6906,22 @@ open class CarPlayHostActivity : ComponentActivity() {
         }
         controller.systemBarsBehavior =
             WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+    }
+
+    /**
+     * Android 9 to 14 keep a full-screen window out of the notch strip, which stays black (#1224). With the fit
+     * on, the safe area already keeps CarPlay's controls clear of the notch, so the picture may fill the strip.
+     */
+    private fun applyCutoutMode(fullScreen: Boolean) {
+        if (Build.VERSION.SDK_INT < 28) return
+        val mode = if (fullScreen && AirPlayPersistence.loadFitScreenShape(this)) {
+            WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
+        } else {
+            WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_DEFAULT
+        }
+        if (window.attributes.layoutInDisplayCutoutMode != mode) {
+            window.attributes = window.attributes.apply { layoutInDisplayCutoutMode = mode }
+        }
     }
 
     /** Temporary reveal without persisting bar visibility or changing AirPlay's negotiated size. */
