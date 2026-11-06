@@ -304,6 +304,38 @@ class ClusterPlayerTest {
         capture(player,600,720,"player-v4-fit-compact-large-font")
         activity.pause().stop().destroy()
     }
+    @Test fun artworkCrossfadesWhilePausedAndReleasesPreviousCover() {
+        AirPlayPersistence.saveClusterMapEnabled(context, true)
+        ClusterPlayerSettings.save(context, true)
+        val activity = Robolectric.buildActivity(Activity::class.java).setup().visible()
+        val player = ClusterPlayerView(activity.get(), observeSpeed = { {} })
+        activity.get().setContentView(player)
+        val red = Bitmap.createBitmap(64,64,Bitmap.Config.ARGB_8888).apply { eraseColor(Color.RED) }
+        val blue = Bitmap.createBitmap(64,64,Bitmap.Config.ARGB_8888).apply { eraseColor(Color.BLUE) }
+        val song = CarPlayNowPlaying(title = "First", playing = false)
+        ClusterMusicState.publish(song,red); idle()
+        fun pixel(): Int {
+            player.measure(View.MeasureSpec.makeMeasureSpec(1280,View.MeasureSpec.EXACTLY),View.MeasureSpec.makeMeasureSpec(480,View.MeasureSpec.EXACTLY))
+            player.layout(0,0,1280,480)
+            val bitmap = Bitmap.createBitmap(1280,480,Bitmap.Config.ARGB_8888)
+            player.draw(Canvas(bitmap))
+            val color = bitmap.getPixel(200,200); bitmap.recycle(); return color
+        }
+        assertEquals(Color.RED,pixel())
+        ClusterMusicState.publish(song.copy(title = "Next"),blue); idle()
+        val start = pixel() // The UI loop may already have advanced one animation frame.
+        assertTrue(Color.red(start) > 235 && Color.blue(start) < 20)
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(200))
+        val middle = pixel()
+        assertTrue(Color.red(middle) in 100..155 && Color.blue(middle) in 100..155)
+        capture(player,1280,480,"player-v12-cover-transition")
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(200))
+        assertEquals(Color.BLUE,pixel())
+        assertNull(ReflectionHelpers.getField<Bitmap?>(player,"previousCover"))
+        capture(player,1280,480,"player-v12-settled")
+        activity.pause().stop().destroy(); red.recycle(); blue.recycle()
+    }
+
     @Test fun longTitlesDoNotPaintOverThreeDigitSpeed() {
         RuntimeEnvironment.setQualifiers("es-w1280dp-h480dp-mdpi")
         AirPlayPersistence.saveClusterMapEnabled(context,true)

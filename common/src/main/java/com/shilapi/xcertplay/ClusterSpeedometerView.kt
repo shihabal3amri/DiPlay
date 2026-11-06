@@ -224,9 +224,9 @@ internal class ClusterSpeedometerView(
             backgroundClip.addRoundRect(rect, radius, radius, android.graphics.Path.Direction.CW)
             canvas.clipPath(backgroundClip)
             canvas.translate(rect.left, rect.top)
-            artworkBackground.draw(canvas, w, h, now)
+            artworkBackground.drawWideCrop(canvas, w, h, now)
             canvas.restoreToCount(layer)
-            if (playing && isShown && windowVisibility == VISIBLE) {
+            if ((playing || artworkBackground.isTransitioning(now)) && isShown && windowVisibility == VISIBLE) {
                 main.removeCallbacks(animate)
                 main.postDelayed(animate, 50)
             }

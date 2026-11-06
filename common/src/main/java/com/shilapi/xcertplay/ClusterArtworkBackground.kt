@@ -6,15 +6,53 @@ import kotlin.math.sin
 /** Shared artwork rendering; coordinates and opacity are owned by each host view. */
 internal class ClusterArtworkBackground {
     private var colors = palette(null)
+    private var fromColors = colors.copyOf()
+    private var targetColors = colors.copyOf()
+    private var changedAt = 0L
+    private var hasArtwork = false
+    private val evaluator = android.animation.ArgbEvaluator()
     private var shaders = emptyList<RadialGradient>()
     private var width = 0f
     private var height = 0f
     private val matrix = Matrix()
     private val paint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG)
 
-    fun setArtwork(art: Bitmap?) {
-        colors = palette(art)
+    fun setArtwork(art: Bitmap?, now: Long = android.os.SystemClock.elapsedRealtime()) {
+        updateColors(now)
+        val next = palette(art)
+        val valid = art != null && !art.isRecycled
+        if (!hasArtwork || !valid) {
+            colors = next; fromColors = next.copyOf(); targetColors = next.copyOf()
+        } else {
+            fromColors = colors.copyOf()
+            targetColors = next
+        }
+        changedAt = now
+        hasArtwork = valid
         rebuild()
+    }
+
+    fun isTransitioning(now: Long): Boolean =
+        now - changedAt < ClusterMusicView.FADE_MILLIS && !fromColors.contentEquals(targetColors)
+
+    private fun updateColors(now: Long) {
+        val progress = ClusterMusicView.progress(now, changedAt)
+        var changed = false
+        for (index in colors.indices) {
+            val color = evaluator.evaluate(progress, fromColors[index], targetColors[index]) as Int
+            if (colors[index] != color) { colors[index] = color; changed = true }
+        }
+        if (changed) rebuild()
+    }
+
+    /** Sample a central window of the player's wide composition, rather than shrink it to a square. */
+    fun drawWideCrop(canvas: Canvas, w: Float, h: Float, now: Long) {
+        val wide = maxOf(w, h * (1280f / 480f))
+        val save = canvas.save()
+        canvas.clipRect(0f, 0f, w, h)
+        canvas.translate((w - wide) / 2f, 0f)
+        draw(canvas, wide, h, now)
+        canvas.restoreToCount(save)
     }
 
     private fun rebuild() {
@@ -26,6 +64,7 @@ internal class ClusterArtworkBackground {
         if (w != width || h != height || shaders.isEmpty()) {
             width = w; height = h; rebuild()
         }
+        updateColors(now)
         val phase = now / 5_000.0
         canvas.drawColor(Color.rgb(16, 19, 27))
         shaders.forEachIndexed { index, shader ->
@@ -42,7 +81,7 @@ internal class ClusterArtworkBackground {
 
     companion object {
         fun palette(art: Bitmap?): IntArray {
-            if (art == null || art.isRecycled) return intArrayOf(Color.rgb(36,45,65), Color.rgb(78,45,84), Color.rgb(26,62,74))
+            if (art == null || art.isRecycled) return IntArray(3) { Color.rgb(36, 36, 36) }
             // Count visible area, not saturation: a small vivid detail must not replace the sleeve.
             val hsv = FloatArray(3)
             val buckets = Array(27) { LongArray(4) }
@@ -61,9 +100,13 @@ internal class ClusterArtworkBackground {
             }
             val ranked = buckets.filter { it[3] > 0 }.sortedByDescending { it[3] }
             if (ranked.isEmpty()) return intArrayOf(Color.DKGRAY, Color.DKGRAY, Color.DKGRAY)
+            // Tiny contrasting details must not receive a whole animated layer.
+            val visiblePixels = ranked.sumOf { it[3] }
+            val minimumArea = maxOf(visiblePixels * .10, ranked.first()[3] * .25)
+            val significant = ranked.filterIndexed { index, bucket -> index == 0 || bucket[3] >= minimumArea }
             val selected = mutableListOf<LongArray>()
             val selectedTones = mutableListOf<FloatArray>()
-            for (bucket in ranked) {
+            for (bucket in significant) {
                 val tone = FloatArray(3)
                 Color.colorToHSV(Color.rgb((bucket[0]/bucket[3]).toInt(),
                     (bucket[1]/bucket[3]).toInt(), (bucket[2]/bucket[3]).toInt()), tone)
@@ -83,9 +126,9 @@ internal class ClusterArtworkBackground {
                 val color = Color.rgb((bucket[0]/bucket[3]).toInt(),
                     (bucket[1]/bucket[3]).toInt(), (bucket[2]/bucket[3]).toInt())
                 Color.colorToHSV(color, hsv)
-                // Restore the three tonal layers of preview 4, slightly brighter.
-                // Keep sampled hue/saturation, including neutral sleeves.
-                hsv[2] = floatArrayOf(.80f, .49f, .67f)[index]
+                // Keep source hue and saturation; do not lift tiny dark colored details
+                // to the same brightness as large light regions of the artwork.
+                hsv[2] = minOf(hsv[2] * 1.08f + .04f, floatArrayOf(.80f, .49f, .67f)[index])
                 Color.HSVToColor(hsv)
             }.toIntArray()
         }

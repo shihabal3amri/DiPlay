@@ -36,6 +36,8 @@ internal class ClusterPlayerView(
     private var speedKmh: Int? = null
     private var snapshot = ClusterMusicState.Snapshot()
     private var cover: Bitmap? = null
+    private var previousCover: Bitmap? = null
+    private var coverChangedAt = 0L
     private val background = ClusterArtworkBackground()
     private val paint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG)
     private val text = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
@@ -53,8 +55,12 @@ internal class ClusterPlayerView(
         stopState = ClusterMusicState.observe {
             snapshot = it
             if (cover !== it.artwork) {
+                val now = SystemClock.elapsedRealtime()
+                previousCover = cover?.takeUnless { bitmap -> bitmap.isRecycled }
                 cover = it.artwork?.takeUnless { bitmap -> bitmap.isRecycled }
-                background.setArtwork(cover)
+                if (cover == null) previousCover = null
+                coverChangedAt = if (previousCover == null) now - ClusterMusicView.FADE_MILLIS else now
+                background.setArtwork(cover, now)
             }
             invalidate()
         }
@@ -116,6 +122,7 @@ internal class ClusterPlayerView(
         main.removeCallbacksAndMessages(null)
         speedKmh = null
         cover = null
+        previousCover = null
         snapshot = ClusterMusicState.Snapshot()
         super.onDetachedFromWindow()
     }
@@ -154,12 +161,20 @@ internal class ClusterPlayerView(
         clip.reset(); clip.addRoundRect(rect, side * .045f, side * .045f, Path.Direction.CW)
         val saved = canvas.save(); canvas.clipPath(clip)
         val artwork = cover?.takeUnless { it.isRecycled }
+        val coverProgress = ClusterMusicView.progress(now, coverChangedAt)
         if (artwork != null) {
-            val crop = minOf(artwork.width, artwork.height)
-            val source = Rect((artwork.width - crop) / 2, (artwork.height - crop) / 2,
-                (artwork.width + crop) / 2, (artwork.height + crop) / 2)
-            paint.color = Color.WHITE
-            canvas.drawBitmap(artwork, source, rect, paint)
+            fun drawCover(bitmap: Bitmap, alpha: Int) {
+                val crop = minOf(bitmap.width, bitmap.height)
+                val source = Rect((bitmap.width - crop) / 2, (bitmap.height - crop) / 2,
+                    (bitmap.width + crop) / 2, (bitmap.height + crop) / 2)
+                paint.color = Color.WHITE; paint.alpha = alpha
+                canvas.drawBitmap(bitmap, source, rect, paint)
+            }
+            val old = previousCover?.takeUnless { it.isRecycled }
+            if (old != null && coverProgress < 1f) drawCover(old, 255)
+            drawCover(artwork, if (old != null) (coverProgress * 255).toInt() else 255)
+            paint.alpha = 255
+            if (coverProgress >= 1f) previousCover = null
         } else {
             paint.color = Color.argb(35, 255, 255, 255); canvas.drawRect(rect, paint)
             text.textAlign = Paint.Align.CENTER; text.textSize = side * .40f; text.color = Color.WHITE
@@ -244,7 +259,7 @@ internal class ClusterPlayerView(
         canvas.restoreToCount(foreground)
         main.removeCallbacks(frame)
         // 20 fps for slow gradients, no animation or progress polling while paused/hidden.
-        if (snapshot.info.playing && isShown && windowVisibility == VISIBLE) main.postDelayed(frame, 50)
+        if ((snapshot.info.playing || coverProgress < 1f || background.isTransitioning(now)) && isShown && windowVisibility == VISIBLE) main.postDelayed(frame, 50)
     }
 
     private fun line(canvas: Canvas, value: String, x: Float, y: Float, available: Float, size: Float, alpha: Int) {
