@@ -228,6 +228,7 @@ open class CarPlayHostActivity : ComponentActivity() {
         manualHotspotInterface = manualHotspotInterface,
         existingWifiSsid = existingWifiSsid,
         existingWifiPassphrase = existingWifiPassphrase,
+        existingWifiInterface = existingWifiInterface.trim().takeIf { it.isNotEmpty() },
         locationReportingEnabled = locationReportingEnabled,
         availableCurrentMilliAmps = AirPlayPersistence.loadUsbChargingCurrent(this).milliAmps,
     )
@@ -573,6 +574,7 @@ open class CarPlayHostActivity : ComponentActivity() {
     private var manualHotspotSsid = ""
     private var existingWifiSsid = ""
     private var existingWifiPassphrase = ""
+    private var existingWifiInterface = ""
     private var manualHotspotPassphrase = ""
     private var manualHotspotBand = ManualHotspotBand.AUTO
     private var manualHotspotChannel = 0
@@ -991,6 +993,7 @@ open class CarPlayHostActivity : ComponentActivity() {
         wirelessHotspotMode = AirPlayPersistence.loadWirelessHotspotMode(this)
         existingWifiSsid = AirPlayPersistence.loadExistingWifiSsid(this)
         existingWifiPassphrase = AirPlayPersistence.loadExistingWifiPassphrase(this)
+        existingWifiInterface = AirPlayPersistence.loadExistingWifiInterface(this)
         manualHotspotSsid = AirPlayPersistence.loadManualHotspotSsid(this)
         manualHotspotPassphrase = AirPlayPersistence.loadManualHotspotPassphrase(this)
         manualHotspotBand = AirPlayPersistence.loadManualHotspotBand(this)
@@ -3525,6 +3528,7 @@ open class CarPlayHostActivity : ComponentActivity() {
         AirPlayPersistence.saveRemoteMfiToken(this, remoteMfiToken)
         AirPlayPersistence.saveWirelessHotspotMode(this, wirelessHotspotMode)
         AirPlayPersistence.saveExistingWifiCredentials(this, existingWifiSsid, existingWifiPassphrase)
+        AirPlayPersistence.saveExistingWifiInterface(this, existingWifiInterface)
         AirPlayPersistence.saveManualHotspotSsid(this, manualHotspotSsid)
         AirPlayPersistence.saveManualHotspotPassphrase(this, manualHotspotPassphrase)
         AirPlayPersistence.saveManualHotspotBand(this, manualHotspotBand)
@@ -3560,7 +3564,8 @@ open class CarPlayHostActivity : ComponentActivity() {
      * [menuSettingsSignature]. Switching to wireless puts the hotspot to use, so it is checked again.
      */
     private fun wirelessNetworkSignature(): Int = listOf(
-        wirelessEnabled, wirelessHotspotMode, existingWifiSsid, existingWifiPassphrase, manualHotspotSsid,
+        wirelessEnabled, wirelessHotspotMode, existingWifiSsid, existingWifiPassphrase, existingWifiInterface,
+        manualHotspotSsid,
         manualHotspotPassphrase, manualHotspotBand, manualHotspotChannel, manualHotspotSecurity,
     ).joinToString("|").hashCode()
 
@@ -3579,7 +3584,8 @@ open class CarPlayHostActivity : ComponentActivity() {
     /** Mirrors [persistMenuSettings]: a field staged there belongs here too. */
     private fun menuSettingsSignature(): Int = listOf(
         gestureFingerCount, wirelessEnabled, mfiTarget, mfiI2cPath, remoteMfiServer, remoteMfiToken,
-        wirelessHotspotMode, existingWifiSsid, existingWifiPassphrase, manualHotspotSsid,
+        wirelessHotspotMode, existingWifiSsid, existingWifiPassphrase, existingWifiInterface,
+        manualHotspotSsid,
         manualHotspotPassphrase, manualHotspotBand, manualHotspotChannel, manualHotspotSecurity,
         locationReportingEnabled, autoStartOnBoot, advancedAudioChannelMapping, displayScaleTenths,
         displayScalePercent, fps, widthPhysicalMm, physicalSizeBasis, hevcEnabled,
@@ -4648,6 +4654,11 @@ open class CarPlayHostActivity : ComponentActivity() {
                 existingWifiPassphrase = it
                 existingWifiErrorView?.visibility = View.GONE
             })
+            addView(settingsInputRow(getString(R.string.settings_existing_wifi_interface), existingWifiInterface) {
+                existingWifiInterface = it
+                existingWifiErrorView?.visibility = View.GONE
+            })
+            addView(menuText(getString(R.string.settings_existing_wifi_interface_description), 14f, MENU_SECONDARY))
         }
         existingWifiErrorView = menuText("", 14f, MENU_DANGER).apply { visibility = View.GONE }
         existingFields.addView(existingWifiErrorView)
@@ -5439,6 +5450,8 @@ open class CarPlayHostActivity : ComponentActivity() {
                     reconnectAfterLoss("CarPlay transport error: $message")
                 }
             }
+
+            override val wantsTrace: Boolean get() = false
 
             override fun onDebugLog(message: String) {
                 if (DiagnosticRedactor.redact(message) == null) return
@@ -6789,10 +6802,7 @@ open class CarPlayHostActivity : ComponentActivity() {
         else -> getString(R.string.getting_carplay_ready)
     }
 
-    private fun appendLog(message: String) {
-        val safe = DiagnosticRedactor.redact(message) ?: return
-        sessionLog?.append(formattedLogLine(safe, System.currentTimeMillis()))
-    }
+    private fun appendLog(message: String) = appendFileLog(message)
 
     private fun appendFileLog(message: String) {
         sessionLog?.append(formattedLogLine(message, System.currentTimeMillis()))
