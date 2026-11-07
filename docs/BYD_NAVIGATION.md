@@ -216,7 +216,30 @@ DiPlay cannot register for the event, because `BYDAutoInstrumentDevice` checks a
 
 Not established: whether a head unit other than the Han reports the same event, and the effect of the request while driving beyond the observations above. The log was read on the car while driving; frames were sent only while parked.
 
-The cluster's own app (`libBydCluster.so`, QML in `cluster_theme1.rcc`) shows the small tile for `adasInterfaceDisplay` 2 and the large scene for 1, with the large scene at the highest centre priority. No frame is known that moves or resizes the small tile.
+The cluster's own app (`libBydCluster.so`, QML in `cluster_theme1.rcc`) shows the small tile for `adasInterfaceDisplay` 2 and the large scene for 1, with the large scene at the highest centre priority. No frame is known that moves or resizes the small tile. The next section moves the large scene instead.
+
+### Cluster ADAS scene beside the map (experimental)
+
+Settings → Advanced also has **ADAS scene beside the map (experimental)** on BYD DiLink 3.0 head units, with **Move the large ADAS scene beside the map**, off by default. It is the other way to deal with the large ADAS scene described above: DiPlay moves it instead of asking the cluster to close it. While the CarPlay map is on the cluster, BYD draws that scene in the middle, over the map, and leaves its own navigation-window box on the right of the cluster empty. With the setting on, the scene is scaled to 95 % and centred in that box. Nothing is hidden or closed and nothing is sent to the car's bus: the scene and its warnings stay in view.
+
+It works by adding one file to the cluster's theme. DiPlay builds that file on the head unit from the car's own theme files, so nothing of BYD's ships with DiPlay and the file always matches the car's software. Installing and removing it reload the cluster once.
+
+- It needs the car's network ADB and the 12.3-inch cluster (1920x720). On another cluster, or when the car's files lack what DiPlay's change refers to, the card says why and installs nothing.
+- **Install** and **Remove** ask first and work only while the car is in P; DiPlay does nothing when it cannot read the gear. Keep the power on while the cluster reloads. It shows BYD's "Multi-language instrument version updating" message meanwhile.
+- The cluster uses one replacement theme file at a time. DiPlay does not replace another app's (DashArc's, for example) and says so. If the cluster does not confirm DiPlay's file after it is selected, DiPlay selects BYD's own again and deletes its file. **Remove from the cluster** does the same and deletes only DiPlay's files.
+- The file's name carries a digest of the car's `cluster.qml` and `Center.qml` it was built from. After a car software update the card says so and offers **Reinstall on the cluster**.
+- The scene moves only while the setting is on, DiPlay's map is on the cluster and the file is installed. DiPlay renews a lease every 5 s; when DiPlay stops, crashes or loses the link, the lease ends within about 20 s and the cluster is back to BYD's layout 3 s later.
+- Log tag `DiPlay-AdasPlacement`.
+
+How it works on a BYD Han (DiLink 3.0, `eng.build.20260204.025317`). The cluster is a Qt 5.15 app (`libBydCluster.so`) that loads its interface from `/system/lib64/cluster_theme1.rcc` and its languages from `/system/lib64/commonTranslate.rcc`. A resource file named `Di3F_DynastyOceanTranslate_V0001_Translate_<token>.rcc` in `/sdcard/.cluster/translate/` replaces the languages and overrides single files of the theme by path; the cluster accepts only names of that form. DiPlay's file holds the car's language entries unchanged and the car's `/qml/cluster.qml` with one block of QML added before the root item's closing brace. The block refers to the two ADAS scenes of `Center.qml` (`adasUi`, `adas3r1vUi`) and to BYD's navigation-window box (`adas2dNaviWindowBg`), and DiPlay refuses to build when one of them is missing.
+
+DiPlay runs a helper as the shell user through the car's network ADB (`app_process` with DiPlay's own APK on the class path). It reads the car's two files, writes the new file under a temporary name, reads it back and renames it, selects it through the cluster's `AutoContainer` service (`sendInfo2` with the language-resource message, as DashArc does) and asks for the reload with `sendInfo(1000, 30, "")`, 30 being the 12.3-inch interface. Selecting BYD's own file again is the removal.
+
+The block does nothing until a heartbeat shows. The heartbeat is the size of one tiny image, `diplay-adas.png`, in the translate folder: its width says what to do and its height changes every second. A loop on the head unit alternates two fixed images for as long as DiPlay keeps a lease file fresh, and the cluster treats a missing, unreadable or three-second-old image as BYD's layout. While the heartbeat is fresh and BYD's navigation-window box is visible, which it is during full-screen projection, the block scales and moves the two scenes into the box. It adds no signal and writes nothing. It reads only the size of three images: `diplay-adas.png`, and the optional `diplay-adas-p.png` and `diplay-adas-s.png` that override the position and the scale, which DiPlay does not write.
+
+Tested on the Han: the block, packed with Qt's own `rcc` before the helper existed, was selected on the cluster and the cluster reloaded. Screen captures of the cluster (`fission_screencap`) with the CarPlay map shown have the large scene centred in the box, and the car's owner saw an earlier, not yet centred version in the box in person. DiPlay's own build was also checked offline: it ran on the car's own 132 MB `cluster_theme1.rcc` with the language entries of the pack tested on the car, and Qt's `QResource` loaded the result with every entry equal to that pack's, `cluster.qml` included.
+
+Not established: the helper and the app's install flow, which have not run on a car yet; other head units and clusters (the 10.25-inch theme, `qml10_25`, is not supported); and whether a car software update makes the cluster's own version check refuse the file, which is why a file built for other software is shown as out of date and never selected silently.
 
 ## ADB vehicle-data settings and firmware scope
 

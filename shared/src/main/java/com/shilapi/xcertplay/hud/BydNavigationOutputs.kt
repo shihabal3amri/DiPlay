@@ -78,6 +78,7 @@ object BydNavigationOutputs {
         if (FceClusterBridge.available()) fceCluster.start { FceClusterBridge.initialize(app) }
         BydClusterMapPause.initialize(app)
         BydClusterAdasTile.initialize(app)
+        BydClusterAdasPlacement.initialize(app)
         BydClusterSong.attach(app)
         BydCarPlayCall.attach(app)
     }

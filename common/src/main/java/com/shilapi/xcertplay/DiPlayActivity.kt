@@ -58,6 +58,8 @@ import com.shilapi.xcertplay.backup.SettingsBackupServer
 import com.shilapi.xcertplay.backup.SettingsQrCode
 import com.shilapi.xcertplay.compat.closeCompat
 import com.shilapi.xcertplay.hud.BydAdbAccess
+import com.shilapi.xcertplay.hud.BydClusterAdasPlacement
+import com.shilapi.xcertplay.hud.BydClusterAdasPlacementControl
 import com.shilapi.xcertplay.hud.BydClusterAdasTile
 import com.shilapi.xcertplay.hud.BydNavigationOutputs
 import com.shilapi.xcertplay.hud.BydFieldSource
@@ -130,6 +132,7 @@ internal enum class SettingsSection {
     LOCATION,
     CLUSTER_MAP,
     CLUSTER_ADAS_TILE,
+    CLUSTER_ADAS_SCENE,
     LAUNCHER_BUBBLE,
     BYD_NAVIGATION,
     PERMISSIONS_AND_HELP,
@@ -160,6 +163,7 @@ internal object SettingsInformationArchitecture {
         SettingsCategory.ADVANCED to setOf(
             SettingsSection.CLUSTER_MAP,
             SettingsSection.CLUSTER_ADAS_TILE,
+            SettingsSection.CLUSTER_ADAS_SCENE,
             SettingsSection.LAUNCHER_BUBBLE,
             SettingsSection.EXPERIMENTAL_DISPLAY,
             SettingsSection.ADVANCED_MEDIA,
@@ -168,6 +172,15 @@ internal object SettingsInformationArchitecture {
         ),
     )
 }
+
+/** The states in which DiPlay's file can be installed or switched on, and in which there is something to remove. */
+private val ADAS_SCENE_USABLE = setOf(
+    BydClusterAdasPlacement.State.UNKNOWN,
+    BydClusterAdasPlacement.State.NOT_INSTALLED,
+    BydClusterAdasPlacement.State.CURRENT,
+    BydClusterAdasPlacement.State.STALE,
+)
+private val ADAS_SCENE_INSTALLED = setOf(BydClusterAdasPlacement.State.CURRENT, BydClusterAdasPlacement.State.STALE)
 
 /** DiAuto's visual language, with a connection flow for an independent CarPlay receiver. */
 class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
@@ -246,6 +259,11 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
     private var vehicleProbeOutcome: BydVehicleProbeOutcome? = null
     private var adbCheckGeneration = 0
     private var adbStatus: TextView? = null
+    private var adasSceneStatus: TextView? = null
+    private var adasSceneSwitch: Switch? = null
+    private var adasSceneReinstall: Button? = null
+    private var adasSceneRemove: Button? = null
+    private var adasSceneRepaint: (() -> Unit)? = null
     private var availableUpdate: UpdateRelease? = null
     private var updateSavedPath: String? = null
     private var updateSavedUri: Uri? = null
@@ -570,6 +588,8 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
 
     override fun onDestroy() {
         settingsSearchPopup?.dismiss()
+        if (adasPlacement.onChange === adasSceneRepaint) adasPlacement.onChange = null
+        adasSceneRepaint = null
         appearanceObserverRemoval?.invoke()
         appearanceObserverRemoval = null
         handler.removeCallbacks(appearancePoll)
@@ -695,6 +715,10 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
         bydAdbControls = null
         adbSwitches.clear()
         adbStatus = null
+        adasSceneStatus = null
+        adasSceneSwitch = null
+        adasSceneReinstall = null
+        adasSceneRemove = null
         val compact = isCompactLayout && when (page) {
             "settings" -> !SettingsLayoutPreferences.isActive(this)
             else -> true
@@ -2162,6 +2186,11 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
         if (BydOutputSettings.available(this)) filteredSection(content, SettingsSection.CLUSTER_ADAS_TILE,
             getString(R.string.settings_adas_tile_title), R.drawable.ic_dp_dashboard) { card ->
             clusterAdasTileControls(card)
+        }
+        // The large ADAS scene, moved beside the CarPlay map by a file DiPlay installs in the cluster's theme.
+        if (BydOutputSettings.projectionShapeAvailable(this)) filteredSection(content, SettingsSection.CLUSTER_ADAS_SCENE,
+            getString(R.string.settings_adas_scene_title), R.drawable.ic_dp_dashboard) { card ->
+            clusterAdasSceneControls(card)
         }
         // Cluster video does not require a BYD navigation broadcast receiver.
         filteredSection(content, SettingsSection.CLUSTER_MAP,
@@ -6142,6 +6171,122 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
                 else R.string.settings_adas_tile_send_failed,
             ))
         }.apply { isEnabled = available }, matchButton(10, 60))
+    }
+
+    // The large ADAS scene beside the CarPlay map. DiPlay builds a file from the car's own cluster files and installs it
+    // in the cluster's theme, which reloads the cluster once; see BydClusterAdasPlacement. Nothing is hidden or sent.
+    internal var adasPlacement: BydClusterAdasPlacementControl = BydClusterAdasPlacement
+
+    /** Whether the cluster display DiPlay sees is the 12.3 inch panel of 1920x720 the file was tested on. */
+    internal var adasScenePanel: (Context) -> Boolean = { context -> clusterPanelIs12Point3(context) }
+
+    private fun clusterPanelIs12Point3(context: Context): Boolean {
+        val display = ClusterMapPresentation.findDisplay(context) ?: return false
+        val size = ClusterMapPresentation.sizeOf(display)
+        return DiLink4ClusterDisplay.matches(display.name, size.x, size.y)
+    }
+
+    private fun clusterAdasSceneControls(card: LinearLayout) {
+        adasSceneSwitch = toggle(card, getString(R.string.settings_adas_scene_toggle),
+            getString(R.string.settings_adas_scene_description), BydOutputSettings.adasSceneBesideMap(this)) { on ->
+            onAdasSceneToggled(on)
+        }
+        adasSceneStatus = label("", 14, MUTED).also { card.addView(it) }
+        adasSceneReinstall = button(getString(R.string.settings_adas_scene_reinstall), false) {
+            confirmAdasScene(install = true, enable = BydOutputSettings.adasSceneBesideMap(this))
+        }.also { card.addView(it, matchButton(10, 60)) }
+        adasSceneRemove = button(getString(R.string.settings_adas_scene_remove), false) {
+            confirmAdasScene(install = false, enable = false)
+        }.also { card.addView(it, matchButton(10, 60)) }
+        val repaint = { runOnUiThread { paintAdasScene() } }
+        adasSceneRepaint = repaint
+        adasPlacement.onChange = repaint
+        paintAdasScene()
+        adasPlacement.refreshIfStale(applicationContext)
+    }
+
+    private fun paintAdasScene() {
+        val placement = adasPlacement
+        val state = placement.status.state
+        val panel = adasScenePanel(applicationContext)
+        val working = placement.busy
+        adasSceneStatus?.text = when {
+            working -> getString(R.string.settings_adas_scene_busy)
+            !panel -> getString(R.string.settings_adas_scene_status_wrong_panel)
+            else -> when (state) {
+                BydClusterAdasPlacement.State.UNKNOWN -> getString(R.string.settings_adas_scene_status_checking)
+                BydClusterAdasPlacement.State.NOT_INSTALLED -> getString(R.string.settings_adas_scene_status_not_installed)
+                BydClusterAdasPlacement.State.CURRENT -> getString(R.string.settings_adas_scene_status_installed)
+                BydClusterAdasPlacement.State.STALE -> getString(R.string.settings_adas_scene_status_stale)
+                BydClusterAdasPlacement.State.OTHER -> getString(R.string.settings_adas_scene_status_other)
+                BydClusterAdasPlacement.State.UNSUPPORTED ->
+                    getString(R.string.settings_adas_scene_status_unsupported, placement.status.code ?: "?")
+                BydClusterAdasPlacement.State.NO_ADB -> getString(R.string.settings_adas_scene_status_no_adb)
+                BydClusterAdasPlacement.State.NO_CLUSTER -> getString(R.string.settings_adas_scene_status_no_cluster)
+            }
+        }
+        val usable = panel && !working && state in ADAS_SCENE_USABLE
+        // Turning it off needs nothing from the cluster, so a saved "on" can always be switched off.
+        adasSceneSwitch?.isEnabled = !working && (usable || BydOutputSettings.adasSceneBesideMap(this))
+        adasSceneReinstall?.apply {
+            visibility = if (state == BydClusterAdasPlacement.State.STALE) View.VISIBLE else View.GONE
+            isEnabled = usable
+        }
+        adasSceneRemove?.apply {
+            visibility = if (state in ADAS_SCENE_INSTALLED) View.VISIBLE else View.GONE
+            isEnabled = !working
+        }
+    }
+
+    private fun onAdasSceneToggled(on: Boolean) {
+        if (!on || adasPlacement.status.state == BydClusterAdasPlacement.State.CURRENT) {
+            BydOutputSettings.setAdasSceneBesideMap(this, on)
+            adasPlacement.settingChanged(applicationContext)
+        } else {
+            confirmAdasScene(install = true, enable = true)
+        }
+    }
+
+    // Installing and removing reload the cluster, so the driver confirms first; the helper also refuses unless parked.
+    private fun confirmAdasScene(install: Boolean, enable: Boolean) {
+        appDialogBuilder()
+            .setTitle(R.string.settings_adas_scene_title)
+            .setMessage(if (install) R.string.settings_adas_scene_confirm_install else R.string.settings_adas_scene_confirm_remove)
+            .setPositiveButton(if (install) R.string.settings_adas_scene_install_action else R.string.settings_adas_scene_remove_action) { _, _ ->
+                changeAdasScene(install, enable)
+            }
+            .setNegativeButton(R.string.cancel) { _, _ -> render() }
+            .setOnCancelListener { render() }
+            .show()
+    }
+
+    private fun changeAdasScene(install: Boolean, enable: Boolean) {
+        val done: (BydClusterAdasPlacement.Outcome) -> Unit = { outcome ->
+            runOnUiThread {
+                toast(getString(adasSceneMessage(outcome)))
+                val installed = outcome == BydClusterAdasPlacement.Outcome.INSTALLED ||
+                    outcome == BydClusterAdasPlacement.Outcome.ALREADY
+                if (install && installed && enable) BydOutputSettings.setAdasSceneBesideMap(this, true)
+                if (!install && outcome == BydClusterAdasPlacement.Outcome.REMOVED) BydOutputSettings.setAdasSceneBesideMap(this, false)
+                adasPlacement.settingChanged(applicationContext)
+                render()
+            }
+        }
+        if (install) adasPlacement.install(applicationContext, done) else adasPlacement.remove(applicationContext, done)
+    }
+
+    private fun adasSceneMessage(outcome: BydClusterAdasPlacement.Outcome): Int = when (outcome) {
+        BydClusterAdasPlacement.Outcome.INSTALLED -> R.string.settings_adas_scene_installed
+        BydClusterAdasPlacement.Outcome.ALREADY -> R.string.settings_adas_scene_already
+        BydClusterAdasPlacement.Outcome.REMOVED -> R.string.settings_adas_scene_removed
+        BydClusterAdasPlacement.Outcome.NOT_PARKED -> R.string.settings_adas_scene_not_parked
+        BydClusterAdasPlacement.Outcome.GEAR_UNKNOWN -> R.string.settings_adas_scene_gear_unknown
+        BydClusterAdasPlacement.Outcome.OTHER_ACTIVE -> R.string.settings_adas_scene_other_active
+        BydClusterAdasPlacement.Outcome.UNSUPPORTED -> R.string.settings_adas_scene_unsupported
+        BydClusterAdasPlacement.Outcome.NO_ADB -> R.string.settings_adas_scene_status_no_adb
+        BydClusterAdasPlacement.Outcome.NO_CLUSTER -> R.string.settings_adas_scene_no_cluster
+        BydClusterAdasPlacement.Outcome.BUSY -> R.string.settings_adas_scene_busy
+        BydClusterAdasPlacement.Outcome.FAILED -> R.string.settings_adas_scene_failed
     }
 
     private fun toast(message: String) { Toast.makeText(this, message, Toast.LENGTH_LONG).show() }

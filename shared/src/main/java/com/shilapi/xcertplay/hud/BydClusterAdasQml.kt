@@ -1,0 +1,174 @@
+package com.shilapi.xcertplay.hud
+
+import java.nio.ByteBuffer
+import java.nio.charset.CharacterCodingException
+import java.nio.charset.CodingErrorAction
+import java.security.MessageDigest
+
+/**
+ * The QML DiPlay adds to the car's own `cluster.qml`, and the checks that decide whether it fits that file.
+ *
+ * While DiPlay's CarPlay map is on the cluster, BYD draws the large ADAS scene in the middle of the screen, over the
+ * map, and leaves its own "navigation window" box on the right empty. The block moves the scene into that box, scaled
+ * and centred, and only while that box is visible and DiPlay's heartbeat is fresh; otherwise nothing changes and the
+ * layout is BYD's. It reads nothing from the car except the size of three small images in the cluster's translate
+ * folder, and it adds no signal, frame or setting.
+ */
+internal object BydClusterAdasQml {
+    /** The id of the item the block adds; a file that already has it is not patched again. */
+    const val MARKER = "diplayAdasId"
+
+    /** Ids of `cluster.qml` that the block refers to. */
+    private val CLUSTER_IDS = listOf("adas2dNaviWindowBg", "centerContainerId")
+
+    /** Properties of the item `Center.qml` defines for the two ADAS scenes. */
+    private val CENTER_PROPERTIES = listOf("adasUi", "adas3r1vUi")
+
+    sealed class Result {
+        class Patched(val qml: ByteArray) : Result()
+
+        /** [code] is a short, stable token for the helper's protocol line. */
+        class Refused(val code: String) : Result()
+    }
+
+    /**
+     * Inserts the block as the last child of the root item of [cluster], the car's `/qml/cluster.qml`. [center] is the
+     * car's `/qml/Center.qml`, which must define the properties the block uses. The file keeps its byte order mark and
+     * line endings.
+     */
+    fun patch(cluster: ByteArray, center: ByteArray): Result {
+        val text = decode(cluster) ?: return Result.Refused("cluster-not-text")
+        val centerText = decode(center) ?: return Result.Refused("center-not-text")
+        if (MARKER in text) return Result.Refused("already-patched")
+        for (id in CLUSTER_IDS) {
+            if (!Regex("""\bid\s*:\s*$id\b""").containsMatchIn(text)) return Result.Refused("missing-$id")
+        }
+        for (property in CENTER_PROPERTIES) {
+            if (!Regex("""\bproperty\s+\w+\s+$property\b""").containsMatchIn(centerText)) return Result.Refused("missing-$property")
+        }
+        val end = text.trimEnd().length
+        if (end == 0 || text[end - 1] != '}') return Result.Refused("no-root-item")
+        val crlf = "\r\n" in text
+        val block = BLOCK.let { if (crlf) it.replace("\n", "\r\n") else it }
+        val separator = if (crlf) "\r\n" else "\n"
+        // The root item's closing brace is the last one in the file; the block goes in front of it.
+        val patched = text.substring(0, end - 1).trimEnd(' ', '\t').let { head ->
+            val gap = if (head.endsWith("\n")) "" else separator
+            head + gap + separator + block + text.substring(end - 1)
+        }
+        return Result.Patched(patched.toByteArray(Charsets.UTF_8))
+    }
+
+    /** Lower-case SHA-256 of [bytes], used to tell whether the car's own file changed since DiPlay built from it. */
+    fun digest(bytes: ByteArray): String =
+        MessageDigest.getInstance("SHA-256").digest(bytes).joinToString("") { "%02x".format(it) }
+
+    private fun decode(bytes: ByteArray): String? = try {
+        Charsets.UTF_8.newDecoder()
+            .onMalformedInput(CodingErrorAction.REPORT)
+            .onUnmappableCharacter(CodingErrorAction.REPORT)
+            .decode(ByteBuffer.wrap(bytes)).toString()
+    } catch (_: CharacterCodingException) {
+        null
+    }
+
+    /** The block, with `\n` line endings; the patch converts them to the file's. */
+    internal val BLOCK = """
+    //DiPlay ADAS placement. During map projection BYD draws the big ADAS scene in the middle of the screen, on top of the map,
+    //while its own "navi window" box (adas2dNaviWindowBg, x=1256 y=225, 563x353) on the right stays empty. While that box is
+    //visible (projection + big ADAS view) and DiPlay's heartbeat is alive, the scene is scaled and moved to sit centred in it.
+    //Channel: 1-row PNGs in .cluster/translate/ (only the image size is read).
+    //diplay-adas.png: width = mode (1 stock, 2 move into the box), height = heartbeat that changes every second.
+    //diplay-adas-p.png (optional): width/height = scene left/top px (both +1), overrides the centred default.
+    //diplay-adas-s.png (optional): width = scale in percent (20-100), default 95.
+    //Missing, unreadable or stale (3 s) = stock BYD layout.
+    Item {
+        id: diplayAdasId
+        visible: false
+        width: 0
+        height: 0
+        property bool projecting: adas2dNaviWindowBg.visible
+        property int tick: 0
+        property int mode: 1
+        property int beat: -1
+        property double beatAt: 0
+        property bool alive: false
+        property bool havePos: false
+        property real filePx: 0
+        property real filePy: 0
+        property bool haveSize: false
+        property real filePct: 95
+        property real pct: haveSize ? filePct : 95
+        //the scene paints around (960, 409) of its own 608x290 item; that point is put on the box centre
+        property real defPx: adas2dNaviWindowBg.x + adas2dNaviWindowBg.width / 2 - 960 * pct / 100
+        property real defPy: adas2dNaviWindowBg.y + adas2dNaviWindowBg.height / 2 - 409 * pct / 100
+        property real px: havePos ? filePx : defPx
+        property real py: havePos ? filePy : defPy
+        property bool compact: projecting && alive && mode === 2
+        property var adasUi: centerContainerId.adasUi
+        property var adas3r1vUi: centerContainerId.adas3r1vUi
+        property real sc: compact ? Math.max(20, Math.min(100, pct)) / 100 : 1
+        property real tx: compact ? px : 0
+        property real ty: compact ? py : 0
+        Scale { id: diplayScale1; origin.x: 0; origin.y: 0; xScale: diplayAdasId.sc; yScale: diplayAdasId.sc }
+        Translate { id: diplayMove1; x: diplayAdasId.tx; y: diplayAdasId.ty }
+        Scale { id: diplayScale2; origin.x: 0; origin.y: 0; xScale: diplayAdasId.sc; yScale: diplayAdasId.sc }
+        Translate { id: diplayMove2; x: diplayAdasId.tx; y: diplayAdasId.ty }
+        function apply() {
+            try { if (adasUi) adasUi.transform = [diplayScale1, diplayMove1] } catch (e) {}
+            try { if (adas3r1vUi) adas3r1vUi.transform = [diplayScale2, diplayMove2] } catch (e) {}
+        }
+        onAdasUiChanged: apply()
+        onAdas3r1vUiChanged: apply()
+        Component.onCompleted: apply()
+        Image {
+            id: diplayModeImgId
+            visible: false
+            cache: false
+            asynchronous: false
+            source: "file:///data/cells/cell2-rw/data/media/0/.cluster/translate/diplay-adas.png?t=" + diplayAdasId.tick
+        }
+        Image {
+            id: diplayPosImgId
+            visible: false
+            cache: false
+            asynchronous: false
+            source: "file:///data/cells/cell2-rw/data/media/0/.cluster/translate/diplay-adas-p.png?t=" + diplayAdasId.tick
+        }
+        Image {
+            id: diplaySizeImgId
+            visible: false
+            cache: false
+            asynchronous: false
+            source: "file:///data/cells/cell2-rw/data/media/0/.cluster/translate/diplay-adas-s.png?t=" + diplayAdasId.tick
+        }
+        Timer {
+            interval: 250
+            running: true
+            repeat: true
+            onTriggered: {
+                diplayAdasId.tick++
+                var now = Date.now()
+                if (diplayModeImgId.status === Image.Ready && diplayModeImgId.implicitWidth > 0) {
+                    diplayAdasId.mode = diplayModeImgId.implicitWidth
+                    var h = diplayModeImgId.implicitHeight
+                    if (h !== diplayAdasId.beat) {
+                        if (diplayAdasId.beat !== -1) diplayAdasId.beatAt = now
+                        diplayAdasId.beat = h
+                    }
+                }
+                var okPos = diplayPosImgId.status === Image.Ready && diplayPosImgId.implicitWidth > 0
+                diplayAdasId.havePos = okPos
+                if (okPos) {
+                    diplayAdasId.filePx = diplayPosImgId.implicitWidth - 1
+                    diplayAdasId.filePy = diplayPosImgId.implicitHeight - 1
+                }
+                var okSize = diplaySizeImgId.status === Image.Ready && diplaySizeImgId.implicitWidth > 0
+                diplayAdasId.haveSize = okSize
+                if (okSize) diplayAdasId.filePct = Math.max(20, Math.min(100, diplaySizeImgId.implicitWidth))
+                diplayAdasId.alive = diplayAdasId.beatAt > 0 && (now - diplayAdasId.beatAt) < 3000
+            }
+        }
+    }
+""".trimStart('\n')
+}
