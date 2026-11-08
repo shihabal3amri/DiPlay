@@ -6173,6 +6173,7 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
         }
         adasSceneStatus = label("", 14, MUTED).also { card.addView(it) }
         val colors = column()
+        searchIndexSink?.add(getString(R.string.settings_adas_scene_color_title))
         colors.addView(label(getString(R.string.settings_adas_scene_color_title), 16, ACCENT, bold = true))
         colors.addView(label(getString(R.string.settings_adas_scene_color_description), 13, MUTED))
         val saved = BydOutputSettings.adasCarColor(this)

@@ -537,6 +537,14 @@ class ClusterAdasSceneSettingsTest {
         assertTrue(screen.getString(R.string.settings_adas_scene_color_selected, custom(screen)) in texts(screen))
     }
 
+    @Test fun searchFindsTheCarColorInAdvanced() {
+        installDiLink3Adapter()
+        val screen = advancedSettings(State.CURRENT)
+        val index = ReflectionHelpers.callInstanceMethod<List<DiPlayActivity.SettingsSearchResult>>(screen, "buildSettingsSearchIndex")
+        val found = index.filter { it.title == screen.getString(R.string.settings_adas_scene_color_title) }
+        assertEquals(listOf(SettingsCategory.ADVANCED), found.map { it.category })
+    }
+
     @Test fun theCustomDialogStartsFromTheColorInUseAndCancellingChangesNothing() {
         installDiLink3Adapter()
         BydOutputSettings.setAdasCarColor(context, AdasCarColor(40, 70, 90))
