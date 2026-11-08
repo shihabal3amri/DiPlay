@@ -28,6 +28,17 @@ class AudioFocusRequestCompatTest {
         Handler(Looper.getMainLooper()),
     )
 
+    /** Mirrors the opt-in NavigationPromptFocus request: navigation guidance with a duckable transient gain. */
+    private fun navigationRequest() = AudioFocusRequestCompat(
+        AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK,
+        AudioAttributes.Builder()
+            .setUsage(AudioAttributes.USAGE_ASSISTANCE_NAVIGATION_GUIDANCE)
+            .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
+            .build(),
+        { change -> changes += change },
+        Handler(Looper.getMainLooper()),
+    )
+
     @Config(sdk = [25])
     @Test fun android7UsesStreamFocusAndDeliversCallbacksToTheListener() {
         shadowOf(manager).setNextFocusRequestResponse(AudioManager.AUDIOFOCUS_REQUEST_GRANTED)
@@ -56,15 +67,49 @@ class AudioFocusRequestCompatTest {
         assertSame(sent, shadowOf(manager).lastAbandonedAudioFocusRequest)
     }
 
+    @Config(sdk = [25])
+    @Test fun android7NavigationGuidanceUsesTheNotificationStream() {
+        shadowOf(manager).setNextFocusRequestResponse(AudioManager.AUDIOFOCUS_REQUEST_GRANTED)
+
+        assertEquals(AudioManager.AUDIOFOCUS_REQUEST_GRANTED, navigationRequest().request(manager))
+        val sent = shadowOf(manager).lastAudioFocusRequest
+        assertEquals(AudioManager.STREAM_NOTIFICATION, sent.streamType)
+        assertEquals(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK, sent.durationHint)
+    }
+
+    @Config(sdk = [28])
+    @Test fun android8AndNewerNavigationGuidanceStillUsesAudioFocusRequest() {
+        shadowOf(manager).setNextFocusRequestResponse(AudioManager.AUDIOFOCUS_REQUEST_GRANTED)
+
+        assertEquals(AudioManager.AUDIOFOCUS_REQUEST_GRANTED, navigationRequest().request(manager))
+        val sent = shadowOf(manager).lastAudioFocusRequest.audioFocusRequest
+        assertNotNull(sent)
+        assertEquals(AudioAttributes.USAGE_ASSISTANCE_NAVIGATION_GUIDANCE, sent.audioAttributes.usage)
+        assertEquals(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK, sent.focusGain)
+    }
+
     @Test fun legacyStreamFollowsTheUsage() {
         assertEquals(AudioManager.STREAM_MUSIC, AudioFocusRequestCompat.legacyStreamType(AudioAttributes.USAGE_MEDIA))
         assertEquals(
-            AudioManager.STREAM_MUSIC,
+            AudioManager.STREAM_NOTIFICATION,
             AudioFocusRequestCompat.legacyStreamType(AudioAttributes.USAGE_ASSISTANCE_NAVIGATION_GUIDANCE),
         )
         assertEquals(
             AudioManager.STREAM_VOICE_CALL,
             AudioFocusRequestCompat.legacyStreamType(AudioAttributes.USAGE_VOICE_COMMUNICATION),
+        )
+        assertEquals(AudioManager.STREAM_ALARM, AudioFocusRequestCompat.legacyStreamType(AudioAttributes.USAGE_ALARM))
+        assertEquals(
+            AudioManager.STREAM_RING,
+            AudioFocusRequestCompat.legacyStreamType(AudioAttributes.USAGE_NOTIFICATION_RINGTONE),
+        )
+        assertEquals(
+            AudioManager.STREAM_NOTIFICATION,
+            AudioFocusRequestCompat.legacyStreamType(AudioAttributes.USAGE_NOTIFICATION),
+        )
+        assertEquals(
+            AudioManager.STREAM_MUSIC,
+            AudioFocusRequestCompat.legacyStreamType(AudioAttributes.USAGE_UNKNOWN),
         )
     }
 }

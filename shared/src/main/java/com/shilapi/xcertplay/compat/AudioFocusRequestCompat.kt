@@ -55,6 +55,7 @@ class AudioFocusRequestCompat(
             AudioAttributes.USAGE_ALARM -> AudioManager.STREAM_ALARM
             AudioAttributes.USAGE_NOTIFICATION_RINGTONE -> AudioManager.STREAM_RING
             AudioAttributes.USAGE_NOTIFICATION -> AudioManager.STREAM_NOTIFICATION
+            AudioAttributes.USAGE_ASSISTANCE_NAVIGATION_GUIDANCE -> AudioManager.STREAM_NOTIFICATION
             else -> AudioManager.STREAM_MUSIC
         }
     }
