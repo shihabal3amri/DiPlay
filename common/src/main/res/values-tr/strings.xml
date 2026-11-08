@@ -1042,13 +1042,6 @@
     <string name="wifi_direct_channel_unavailable">Wi-Fi Direct tercih edilen kanalı kullanamıyor</string>
     <string name="settings_existing_wifi_interface">Ağ arayüzü (isteğe bağlı)</string>
     <string name="settings_existing_wifi_interface_description">Yalnızca yerel ağ (LAN) bağlantısı Android\'in Wi-Fi olarak bildirmediği bir arayüzde (örneğin eth1 üzerindeki bir USB ağ kartı) çalışan üniteler içindir. Otomatik seçilmesi için boş bırakın.</string>
-    <string name="settings_adas_tile_title">Gösterge panelindeki ADAS kutusu (deneysel)</string>
-    <string name="settings_adas_tile_keep_small">ADAS kutusunu küçük tut</string>
-    <string name="settings_adas_tile_keep_small_description">CarPlay haritası gösterge panelindeyken araç, büyük ADAS sahnesini haritanın üzerinde açabilir. Bu açıkken DiPlay bunu fark eder ve direksiyondaki menü düğmesinin yaptığı gibi gösterge panelinden küçük kutuyu yeniden ister. Hiçbir şey gizlenmez: küçük kutu ve uyarıları kalır. Aracın ağ ADB\'sini gerektirir. BYD\'nin gösterge paneli test alıcısı üzerinden bir çerçeve gönderir; gösterge paneli bunu onaylamaz. BYD Han üzerinde denendi.</string>
-    <string name="settings_adas_tile_show_small">Küçük kutuyu şimdi göster</string>
-    <string name="settings_adas_tile_sent">İstek gönderildi. Gösterge paneli bunu onaylamaz.</string>
-    <string name="settings_adas_tile_send_failed">İstek gönderilemedi.</string>
-    <string name="settings_adas_tile_unavailable">Bu ana ünitede gösterge paneli test alıcısı (com.byd.clusterdebug) yok, bu yüzden ADAS kutusu kontrol edilemez.</string>
     <string name="settings_adas_scene_title">Haritanın yanında ADAS sahnesi (deneysel)</string>
     <string name="settings_adas_scene_toggle">Büyük ADAS sahnesini haritanın yanına taşı</string>
     <string name="settings_adas_scene_description">CarPlay haritası gösterge panelindeyken araç, büyük ADAS sahnesini ortada haritanın üzerinde açabilir. Bu açıkken DiPlay sahneyi, BYD\'nin gösterge panelinin sağında boş bıraktığı kutuya sığacak şekilde küçülterek taşır. Hiçbir şey gizlenmez, kapatılmaz veya araca gönderilmez: sahne ve uyarıları görünür kalır. DiPlay bunu, aracın kendi dosyalarından ana ünitede oluşturduğu kendi dosyasını gösterge panelinin temasına ekleyerek yapar. Dosya kurulurken veya kaldırılırken gösterge paneli bir kez yeniden yüklenir ve DiPlay çalışmıyorken BYD\'nin kendi düzenini gösterir. Aracın ağ ADB\'sini gerektirir. 12,3 inç gösterge panelli bir BYD Han üzerinde denendi.</string>

@@ -1012,12 +1012,6 @@
     <string name="iphone_corner_mask_mode">Maschera iPhone (sperimentale)</string>
     <string name="settings_launcher_bubble">Bolla nella schermata Home (sperimentale)</string>
     <string name="settings_launcher_bubble_description">Mostra l’icona di DiPlay in una bolla sopra la schermata Home della head unit: toccala per tornare a CarPlay e trascinala dove vuoi. Scompare quando è aperta una schermata di DiPlay e riappare quando la lasci. Tienila premuta per bloccarne la posizione e premila di nuovo a lungo per sbloccarla. Richiede il permesso “Mostra sopra altre app”.</string>
-    <string name="settings_adas_tile_title">Riquadro ADAS del quadro (sperimentale)</string>
-    <string name="settings_adas_tile_keep_small">Mantieni piccolo il riquadro ADAS</string>
-    <string name="settings_adas_tile_keep_small_description">Mentre la mappa CarPlay è sul quadro, l\'auto può aprire sopra la sua grande scena ADAS. Con questa opzione, DiPlay se ne accorge e chiede di nuovo al quadro il riquadro piccolo, come il pulsante menu del volante. Non viene nascosto nulla: il riquadro piccolo e i suoi avvisi restano. Richiede l\'ADB di rete dell\'auto. Invia un frame al ricevitore di test del quadro BYD, che il quadro non conferma. Provato su una BYD Han.</string>
-    <string name="settings_adas_tile_show_small">Mostra ora il riquadro piccolo</string>
-    <string name="settings_adas_tile_sent">Richiesta inviata. Il quadro non la conferma.</string>
-    <string name="settings_adas_tile_send_failed">Impossibile inviare la richiesta.</string>
     <string name="settings_adas_scene_title">Scena ADAS accanto alla mappa (sperimentale)</string>
     <string name="settings_adas_scene_toggle">Sposta la grande scena ADAS accanto alla mappa</string>
     <string name="settings_adas_scene_description">Mentre la mappa CarPlay è sul quadro strumenti, l\'auto può aprire la sua grande scena ADAS al centro, sopra la mappa. Con questa opzione attiva, DiPlay sposta la scena nel riquadro vuoto che BYD tiene a destra del quadro, ridimensionata per adattarla. Nulla viene nascosto, chiuso o inviato all\'auto: la scena e i suoi avvisi restano visibili. DiPlay lo fa aggiungendo un proprio file al tema del quadro, creato sull\'unità dai file dell\'auto stessa. Il quadro si ricarica una volta quando il file viene installato o rimosso e mostra il layout originale BYD ogni volta che DiPlay non è in esecuzione. Richiede l\'ADB di rete dell\'auto. Provato su una BYD Han con quadro da 12,3 pollici.</string>
@@ -1046,7 +1040,6 @@
     <string name="settings_adas_scene_unsupported">Non eseguito: i file di questo quadro non corrispondono a quelli che DiPlay si aspetta. Non è stato modificato nulla.</string>
     <string name="settings_adas_scene_no_cluster">Non eseguito: il quadro non ha risposto. Non è stato modificato nulla.</string>
     <string name="settings_adas_scene_failed">Non è stato possibile eseguirlo. Non è stato modificato nulla.</string>
-    <string name="settings_adas_tile_unavailable">Questa unità non ha il ricevitore di test del quadro (com.byd.clusterdebug), quindi il riquadro ADAS non può essere controllato.</string>
     <string name="settings_launcher_bubble_size">Dimensione della bolla</string>
     <string name="settings_launcher_bubble_locked">Posizione bloccata</string>
     <string name="settings_launcher_bubble_unlocked">Posizione sbloccata</string>

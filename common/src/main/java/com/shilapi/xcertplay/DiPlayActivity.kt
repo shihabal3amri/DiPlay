@@ -60,7 +60,6 @@ import com.shilapi.xcertplay.compat.closeCompat
 import com.shilapi.xcertplay.hud.BydAdbAccess
 import com.shilapi.xcertplay.hud.BydClusterAdasPlacement
 import com.shilapi.xcertplay.hud.BydClusterAdasPlacementControl
-import com.shilapi.xcertplay.hud.BydClusterAdasTile
 import com.shilapi.xcertplay.hud.BydNavigationOutputs
 import com.shilapi.xcertplay.hud.BydFieldSource
 import com.shilapi.xcertplay.hud.BydOutputSettings
@@ -131,7 +130,6 @@ internal enum class SettingsSection {
     NAVIGATION_WHEEL,
     LOCATION,
     CLUSTER_MAP,
-    CLUSTER_ADAS_TILE,
     CLUSTER_ADAS_SCENE,
     LAUNCHER_BUBBLE,
     BYD_NAVIGATION,
@@ -162,7 +160,6 @@ internal object SettingsInformationArchitecture {
         SettingsCategory.DIAGNOSTICS to setOf(SettingsSection.DIAGNOSTICS),
         SettingsCategory.ADVANCED to setOf(
             SettingsSection.CLUSTER_MAP,
-            SettingsSection.CLUSTER_ADAS_TILE,
             SettingsSection.CLUSTER_ADAS_SCENE,
             SettingsSection.LAUNCHER_BUBBLE,
             SettingsSection.EXPERIMENTAL_DISPLAY,
@@ -2181,11 +2178,6 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
                 card.addView(label(if (overlay) getString(R.string.center_map_overlay_allowed)
                     else getString(R.string.center_map_overlay_missing, packageName), 14, if (overlay) MUTED else WARNING))
             }
-        }
-        // BYD's cluster ADAS tile: asks the cluster for the small tile when the car opens the large scene over the map.
-        if (BydOutputSettings.available(this)) filteredSection(content, SettingsSection.CLUSTER_ADAS_TILE,
-            getString(R.string.settings_adas_tile_title), R.drawable.ic_dp_dashboard) { card ->
-            clusterAdasTileControls(card)
         }
         // The large ADAS scene, moved beside the CarPlay map by a file DiPlay installs in the cluster's theme.
         if (BydOutputSettings.projectionShapeAvailable(this)) filteredSection(content, SettingsSection.CLUSTER_ADAS_SCENE,
@@ -6152,27 +6144,6 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
         }.setNegativeButton(getString(R.string.later), null).show()
     }
     private fun openSystem(intent: Intent) { runCatching { startActivity(intent) }.onFailure { toast(getString(R.string.open_this_setting_from_your_car_s_settings_app)) } }
-    // The cluster's ADAS tile. The car sometimes opens a large ADAS scene over the CarPlay map; with the setting on,
-    // DiPlay asks for the small tile again while the map is on the cluster. Nothing is hidden.
-    internal var adasTileAvailable: (Context) -> Boolean = BydClusterAdasTile::available
-    internal var adasTileShowSmall: (Context) -> Boolean = BydClusterAdasTile::showSmall
-
-    private fun clusterAdasTileControls(card: LinearLayout) {
-        val available = adasTileAvailable(applicationContext)
-        if (!available) card.addView(label(getString(R.string.settings_adas_tile_unavailable), 14, WARNING))
-        toggle(card, getString(R.string.settings_adas_tile_keep_small),
-            getString(R.string.settings_adas_tile_keep_small_description),
-            BydOutputSettings.keepAdasTileSmall(this), enabled = available) {
-            BydOutputSettings.setKeepAdasTileSmall(this, it)
-        }
-        card.addView(button(getString(R.string.settings_adas_tile_show_small), false) {
-            toast(getString(
-                if (adasTileShowSmall(applicationContext)) R.string.settings_adas_tile_sent
-                else R.string.settings_adas_tile_send_failed,
-            ))
-        }.apply { isEnabled = available }, matchButton(10, 60))
-    }
-
     // The large ADAS scene beside the CarPlay map. DiPlay builds a file from the car's own cluster files and installs it
     // in the cluster's theme, which reloads the cluster once; see BydClusterAdasPlacement. Nothing is hidden or sent.
     internal var adasPlacement: BydClusterAdasPlacementControl = BydClusterAdasPlacement

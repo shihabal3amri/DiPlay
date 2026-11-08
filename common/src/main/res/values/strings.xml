@@ -1041,13 +1041,6 @@
     <string name="iphone_corner_mask_mode">iPhone mask (experimental)</string>
     <string name="settings_launcher_bubble">Home-screen bubble (experimental)</string>
     <string name="settings_launcher_bubble_description">Shows the DiPlay icon as a bubble over the head unit\'s home screen: tap it to come back to CarPlay and drag it anywhere. It hides as soon as a DiPlay screen is open and comes back when you leave. Hold it to lock its place, hold it again to unlock. Needs \"display over other apps\".</string>
-    <string name="settings_adas_tile_title">ADAS tile on the cluster (experimental)</string>
-    <string name="settings_adas_tile_keep_small">Keep the ADAS tile small</string>
-    <string name="settings_adas_tile_keep_small_description">While the CarPlay map is on the cluster, the car can open its large ADAS scene over it. With this on, DiPlay notices and asks the cluster for the small tile again, as the steering wheel\'s menu button does. Nothing is hidden: the small tile and its warnings stay. Needs the car\'s network ADB. Sends a frame through BYD\'s cluster test receiver, which the cluster does not confirm. Tested on a BYD Han.</string>
-    <string name="settings_adas_tile_show_small">Show the small tile now</string>
-    <string name="settings_adas_tile_sent">Request sent. The cluster does not confirm it.</string>
-    <string name="settings_adas_tile_send_failed">The request could not be sent.</string>
-    <string name="settings_adas_tile_unavailable">This head unit has no cluster test receiver (com.byd.clusterdebug), so the ADAS tile cannot be controlled.</string>
     <string name="settings_adas_scene_title">ADAS scene beside the map (experimental)</string>
     <string name="settings_adas_scene_toggle">Move the large ADAS scene beside the map</string>
     <string name="settings_adas_scene_description">While the CarPlay map is on the cluster, the car can open its large ADAS scene in the middle, over the map. With this on, DiPlay moves the scene into the empty box BYD keeps on the right of the cluster, scaled to fit it. Nothing is hidden, closed or sent to the car: the scene and its warnings stay in view. DiPlay does this by adding its own file to the cluster\'s theme, built on the head unit from the car\'s own files. The cluster reloads once when the file is installed or removed, and shows BYD\'s own layout whenever DiPlay is not running. Needs the car\'s network ADB. Tested on a BYD Han with a 12.3-inch cluster.</string>

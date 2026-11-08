@@ -998,12 +998,6 @@
     <string name="iphone_corner_mask_mode">iPhone 遮罩（实验性）</string>
     <string name="settings_launcher_bubble">桌面悬浮球（实验性）</string>
     <string name="settings_launcher_bubble_description">在车机桌面显示一个 DiPlay 悬浮球：点它直接回到 CarPlay，可拖动位置；打开 DiPlay 时自动隐藏，离开后重新出现。长按锁定位置，再次长按解锁。需要“显示在其他应用上层”权限。</string>
-    <string name="settings_adas_tile_title">仪表 ADAS 小窗（实验性）</string>
-    <string name="settings_adas_tile_keep_small">保持 ADAS 小窗为小尺寸</string>
-    <string name="settings_adas_tile_keep_small_description">CarPlay 地图显示在仪表上时，车辆可能会在其上打开大的 ADAS 场景。开启后，DiPlay 会发现这一情况，并像方向盘上的菜单键一样，请求仪表重新显示小窗。不会隐藏任何内容：小窗及其警告都会保留。需要车辆的网络 ADB。向 BYD 的仪表测试接收器发送一个帧，仪表不会确认。已在 BYD 汉上测试。</string>
-    <string name="settings_adas_tile_show_small">立即显示小窗</string>
-    <string name="settings_adas_tile_sent">已发送请求。仪表不会确认。</string>
-    <string name="settings_adas_tile_send_failed">无法发送请求。</string>
     <string name="settings_adas_scene_title">地图旁的 ADAS 画面（实验性）</string>
     <string name="settings_adas_scene_toggle">将大 ADAS 画面移到地图旁</string>
     <string name="settings_adas_scene_description">CarPlay 地图显示在仪表上时，车辆可能在中央、地图之上打开大 ADAS 画面。开启后，DiPlay 会把该画面缩放并移入 BYD 在仪表右侧预留的空白框中。不会隐藏、关闭任何内容，也不会向车辆发送任何内容：画面及其警告始终可见。DiPlay 的做法是在仪表主题中加入自己的文件，该文件由车机根据车辆自身的文件生成。安装或移除该文件时仪表会重新加载一次；DiPlay 未运行时，仪表显示 BYD 原有布局。需要车辆的网络 ADB。已在配备 12.3 英寸仪表的 BYD 汉上测试。</string>
@@ -1032,7 +1026,6 @@
     <string name="settings_adas_scene_unsupported">未执行：此仪表的文件与 DiPlay 预期的不符。未做任何更改。</string>
     <string name="settings_adas_scene_no_cluster">未执行：仪表没有响应。未做任何更改。</string>
     <string name="settings_adas_scene_failed">无法执行。未做任何更改。</string>
-    <string name="settings_adas_tile_unavailable">此车机没有仪表测试接收器（com.byd.clusterdebug），因此无法控制 ADAS 小窗。</string>
     <string name="settings_launcher_bubble_size">悬浮球大小</string>
     <string name="settings_launcher_bubble_locked">位置已锁定</string>
     <string name="settings_launcher_bubble_unlocked">位置已解锁</string>
