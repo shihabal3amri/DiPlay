@@ -35,7 +35,7 @@ internal class BydClusterAdasTheme(
     private val nowMillis: () -> Long = System::currentTimeMillis,
     private val pause: (Long) -> Unit = { Thread.sleep(it) },
 ) {
-    enum class Status { READY, UNSUPPORTED, INSTALLED, ALREADY, REMOVED, OTHER_ACTIVE, NO_CLUSTER, FAILED }
+    enum class Status { READY, UNSUPPORTED, INSTALLED, ALREADY, REMOVED, COLORED, OTHER_ACTIVE, NO_CLUSTER, FAILED }
 
     /** One line of the helper's protocol: a status and `key=value` fields without `|`. */
     class Result(val status: Status, val fields: Map<String, String> = emptyMap()) {
@@ -196,8 +196,10 @@ internal class BydClusterAdasTheme(
     private fun ownPacks(): List<File> =
         translateDir.listFiles().orEmpty().filter { OWN_PACK.matches(it.name) }.sortedBy { it.name }
 
-    private fun channelFiles(): List<File> =
-        translateDir.listFiles().orEmpty().filter { it.name.startsWith(CHANNEL_PREFIX) && it.name.endsWith(".png") }
+    private fun channelFiles(): List<File> = translateDir.listFiles().orEmpty().filter {
+        (it.name.startsWith(CHANNEL_PREFIX) && it.name.endsWith(".png")) ||
+            (it.name.startsWith(".$CHANNEL_PREFIX") && it.name.endsWith(".tmp"))
+    }
 
     private fun ownName(path: String): String? = path.substringAfterLast('/').takeIf { OWN_PACK.matches(it) }
 
@@ -218,7 +220,7 @@ internal class BydClusterAdasTheme(
         const val REFRESH_12_3 = 30
 
         /** Raise when the block changes so a resource built earlier is replaced. */
-        const val PATCH_REVISION = 1
+        const val PATCH_REVISION = 2
 
         const val CLUSTER_QML = "/qml/cluster.qml"
         const val CENTER_QML = "/qml/Center.qml"

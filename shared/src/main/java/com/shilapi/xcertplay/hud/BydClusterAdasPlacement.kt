@@ -18,9 +18,12 @@ interface BydClusterAdasPlacementControl {
     /** Asks the head unit what is installed, unless that was asked a short while ago. */
     fun refreshIfStale(app: Context)
 
-    fun install(app: Context, done: (BydClusterAdasPlacement.Outcome) -> Unit)
+    fun install(app: Context, color: AdasCarColor?, done: (BydClusterAdasPlacement.Outcome) -> Unit)
 
     fun remove(app: Context, done: (BydClusterAdasPlacement.Outcome) -> Unit)
+
+    /** Colors the car in the scene, or gives BYD's own car back for null. Needs DiPlay's file on the cluster. */
+    fun applyColor(app: Context, color: AdasCarColor?, done: (BydClusterAdasPlacement.Outcome) -> Unit)
 
     /** Applies the setting now rather than at the next tick: a switch turned off stops the heartbeat at once. */
     fun settingChanged(app: Context)
@@ -52,7 +55,7 @@ object BydClusterAdasPlacement : BydClusterAdasPlacementControl {
     class Status(val state: State, val code: String? = null)
 
     enum class Outcome {
-        INSTALLED, ALREADY, REMOVED, NOT_PARKED, GEAR_UNKNOWN, OTHER_ACTIVE, UNSUPPORTED, NO_ADB, NO_CLUSTER, FAILED, BUSY,
+        INSTALLED, ALREADY, REMOVED, COLORED, NOT_PARKED, GEAR_UNKNOWN, OTHER_ACTIVE, UNSUPPORTED, NO_ADB, NO_CLUSTER, FAILED, BUSY,
     }
 
     @Volatile override var status: Status = Status(State.UNKNOWN)
@@ -100,16 +103,24 @@ object BydClusterAdasPlacement : BydClusterAdasPlacementControl {
         if (status.state == State.UNKNOWN || nowMillis() - probedAtMillis >= STALE_MILLIS) probe(app.applicationContext)
     }
 
-    /** Installs the file and reloads the cluster. Only while the car is known to be parked. */
-    override fun install(app: Context, done: (Outcome) -> Unit) = submit {
+    /**
+     * Installs the file and reloads the cluster. Only while the car is known to be parked. Afterwards the car color
+     * on the cluster is made to match [color], so a file that was removed and installed again gets the saved color.
+     */
+    override fun install(app: Context, color: AdasCarColor?, done: (Outcome) -> Unit) = submit {
         val appContext = app.applicationContext
-        done(change(appContext, BydClusterAdasThemeMain.INSTALL))
+        done(change(appContext, BydClusterAdasThemeMain.INSTALL, color))
     }
 
     /** Gives the cluster its own theme back, reloads it and deletes DiPlay's files. Only while parked. */
     override fun remove(app: Context, done: (Outcome) -> Unit) = submit {
         val appContext = app.applicationContext
-        done(change(appContext, BydClusterAdasThemeMain.REMOVE))
+        done(change(appContext, BydClusterAdasThemeMain.REMOVE, null))
+    }
+
+    /** Colors the car. It only writes files, so it needs no parked car and no reload. */
+    override fun applyColor(app: Context, color: AdasCarColor?, done: (Outcome) -> Unit) = submit {
+        done(paint(app.applicationContext, color))
     }
 
     override fun settingChanged(app: Context) {
@@ -135,10 +146,20 @@ object BydClusterAdasPlacement : BydClusterAdasPlacementControl {
         else -> Status(State.UNKNOWN)
     }
 
-    private fun execute(app: Context, action: String): BydClusterAdasTheme.Result? {
+    private fun execute(app: Context, action: String): BydClusterAdasTheme.Result? =
+        runHelper(app) { apk -> BydClusterAdasThemeMain.command(apk, action) }
+
+    private fun runHelper(app: Context, command: (apk: String) -> String): BydClusterAdasTheme.Result? {
         val apk: String? = app.applicationInfo?.sourceDir
         if (apk == null) return null
-        return BydClusterAdasThemeMain.parse(run(app, BydClusterAdasThemeMain.command(apk, action)))
+        return BydClusterAdasThemeMain.parse(run(app, command(apk)))
+    }
+
+    private fun paint(app: Context, color: AdasCarColor?): Outcome {
+        val result = runHelper(app) { apk -> BydClusterAdasThemeMain.colorCommand(apk, color) }
+        val outcome = outcomeOf(result)
+        Log.i(TAG, "car color ${color?.toPreference() ?: "off"}: ${result?.status ?: "no answer"} -> $outcome")
+        return outcome
     }
 
     private fun probe(app: Context) {
@@ -147,7 +168,7 @@ object BydClusterAdasPlacement : BydClusterAdasPlacementControl {
         publish(statusOf(result, access()))
     }
 
-    private fun change(app: Context, action: String): Outcome {
+    private fun change(app: Context, action: String, color: AdasCarColor?): Outcome {
         if (busy) return Outcome.BUSY
         val gear = parked(app) ?: return Outcome.GEAR_UNKNOWN
         if (!gear) return Outcome.NOT_PARKED
@@ -165,6 +186,7 @@ object BydClusterAdasPlacement : BydClusterAdasPlacementControl {
                 Outcome.UNSUPPORTED -> publish(Status(State.UNSUPPORTED, result?.get("code")))
                 else -> probe(app)
             }
+            if (action == BydClusterAdasThemeMain.INSTALL && (outcome == Outcome.INSTALLED || outcome == Outcome.ALREADY)) paint(app, color)
             return outcome
         } finally {
             busy = false
@@ -177,6 +199,7 @@ object BydClusterAdasPlacement : BydClusterAdasPlacementControl {
         BydClusterAdasTheme.Status.INSTALLED -> Outcome.INSTALLED
         BydClusterAdasTheme.Status.ALREADY -> Outcome.ALREADY
         BydClusterAdasTheme.Status.REMOVED -> Outcome.REMOVED
+        BydClusterAdasTheme.Status.COLORED -> Outcome.COLORED
         BydClusterAdasTheme.Status.OTHER_ACTIVE -> Outcome.OTHER_ACTIVE
         BydClusterAdasTheme.Status.UNSUPPORTED -> Outcome.UNSUPPORTED
         BydClusterAdasTheme.Status.NO_CLUSTER -> Outcome.NO_CLUSTER

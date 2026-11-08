@@ -57,6 +57,7 @@ import com.shilapi.xcertplay.backup.SettingsBackupEndpoint
 import com.shilapi.xcertplay.backup.SettingsBackupServer
 import com.shilapi.xcertplay.backup.SettingsQrCode
 import com.shilapi.xcertplay.compat.closeCompat
+import com.shilapi.xcertplay.hud.AdasCarColor
 import com.shilapi.xcertplay.hud.BydAdbAccess
 import com.shilapi.xcertplay.hud.BydClusterAdasPlacement
 import com.shilapi.xcertplay.hud.BydClusterAdasPlacementControl
@@ -179,6 +180,9 @@ private val ADAS_SCENE_USABLE = setOf(
 )
 private val ADAS_SCENE_INSTALLED = setOf(BydClusterAdasPlacement.State.CURRENT, BydClusterAdasPlacement.State.STALE)
 
+/** The states in which the car color can be chosen: applied at once when the file is installed, or after installing it. */
+private val ADAS_SCENE_COLORABLE = setOf(BydClusterAdasPlacement.State.NOT_INSTALLED, BydClusterAdasPlacement.State.CURRENT)
+
 /** DiAuto's visual language, with a connection flow for an independent CarPlay receiver. */
 class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
     private val handler = Handler(Looper.getMainLooper())
@@ -261,6 +265,9 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
     private var adasSceneReinstall: Button? = null
     private var adasSceneRemove: Button? = null
     private var adasSceneRepaint: (() -> Unit)? = null
+    private var adasCarColorGrid: CarColorSwatchGrid? = null
+    private var adasCarColorName: TextView? = null
+    private var adasColorApplying = false
     private var availableUpdate: UpdateRelease? = null
     private var updateSavedPath: String? = null
     private var updateSavedUri: Uri? = null
@@ -716,6 +723,8 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
         adasSceneSwitch = null
         adasSceneReinstall = null
         adasSceneRemove = null
+        adasCarColorGrid = null
+        adasCarColorName = null
         val compact = isCompactLayout && when (page) {
             "settings" -> !SettingsLayoutPreferences.isActive(this)
             else -> true
@@ -6163,6 +6172,14 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
             onAdasSceneToggled(on)
         }
         adasSceneStatus = label("", 14, MUTED).also { card.addView(it) }
+        val colors = column()
+        colors.addView(label(getString(R.string.settings_adas_scene_color_title), 16, ACCENT, bold = true))
+        colors.addView(label(getString(R.string.settings_adas_scene_color_description), 13, MUTED))
+        val saved = BydOutputSettings.adasCarColor(this)
+        adasCarColorGrid = CarColorSwatchGrid(this, ACCENT, saved, onPicked = { chooseAdasCarColor(it) }, onCustom = { showAdasCustomColor() })
+            .also { colors.addView(it) }
+        adasCarColorName = label(adasCarColorSummary(saved), 14, TEXT).also { colors.addView(it) }
+        card.addView(colors)
         adasSceneReinstall = button(getString(R.string.settings_adas_scene_reinstall), false) {
             confirmAdasScene(install = true, enable = BydOutputSettings.adasSceneBesideMap(this))
         }.also { card.addView(it, matchButton(10, 60)) }
@@ -6199,6 +6216,7 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
         val usable = panel && !working && state in ADAS_SCENE_USABLE
         // Turning it off needs nothing from the cluster, so a saved "on" can always be switched off.
         adasSceneSwitch?.isEnabled = !working && (usable || BydOutputSettings.adasSceneBesideMap(this))
+        adasCarColorGrid?.setInteractive(panel && !working && !adasColorApplying && state in ADAS_SCENE_COLORABLE)
         adasSceneReinstall?.apply {
             visibility = if (state == BydClusterAdasPlacement.State.STALE) View.VISIBLE else View.GONE
             isEnabled = usable
@@ -6218,38 +6236,110 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
         }
     }
 
+    private fun adasCarColorSummary(color: AdasCarColor?) =
+        getString(R.string.settings_adas_scene_color_selected, AdasCarColorLabels.of(this, color))
+
+    // The color is written to the cluster at once when DiPlay's file is there. Before that, choosing one asks to install
+    // the file, with the color; "Original" has nothing to undo then, so it only forgets the saved choice.
+    private fun chooseAdasCarColor(color: AdasCarColor?) {
+        adasCarColorName?.text = adasCarColorSummary(color)
+        when {
+            adasPlacement.status.state == BydClusterAdasPlacement.State.CURRENT -> paintAdasCarColor(color)
+            color != null -> confirmAdasScene(install = true, enable = false, color = color)
+            else -> BydOutputSettings.setAdasCarColor(this, null)
+        }
+    }
+
+    private fun paintAdasCarColor(color: AdasCarColor?) {
+        adasColorApplying = true
+        paintAdasScene()
+        val app = applicationContext
+        adasPlacement.applyColor(app, color) { outcome ->
+            if (outcome == BydClusterAdasPlacement.Outcome.COLORED) BydOutputSettings.setAdasCarColor(app, color)
+            runOnUiThread {
+                adasColorApplying = false
+                val saved = BydOutputSettings.adasCarColor(app)
+                adasCarColorGrid?.setSelection(saved)
+                adasCarColorName?.text = adasCarColorSummary(saved)
+                toast(getString(when (outcome) {
+                    BydClusterAdasPlacement.Outcome.COLORED ->
+                        if (color == null) R.string.settings_adas_scene_color_original_restored else R.string.settings_adas_scene_color_applied
+                    BydClusterAdasPlacement.Outcome.NO_ADB -> R.string.settings_adas_scene_status_no_adb
+                    else -> R.string.settings_adas_scene_color_failed
+                }))
+                paintAdasScene()
+            }
+        }
+    }
+
+    // Hue, saturation and brightness sliders with a preview; "Set" hands the color to the picker like a tap on a swatch.
+    private fun showAdasCustomColor() {
+        val start = adasCarColorGrid?.selection ?: AdasCarColor.PRESETS.first { it.key == "blue" }.color
+        var hue = start.hue
+        var saturation = start.saturation
+        var brightness = start.brightness
+        val preview = View(this)
+        fun showPreview() {
+            preview.background = GradientDrawable().apply {
+                shape = GradientDrawable.OVAL
+                setColor(AdasCarColorLabels.swatchRgb(AdasCarColor(hue, saturation, brightness)))
+                setStroke(dp(2), BORDER)
+            }
+        }
+        showPreview()
+        val body = column().apply { setPadding(dp(24), dp(12), dp(24), dp(12)) }
+        body.addView(preview, LinearLayout.LayoutParams(dp(56), dp(56)).apply { gravity = Gravity.CENTER_HORIZONTAL })
+        body.addView(overlaySliderRow(getString(R.string.settings_adas_scene_color_hue), (0..359).toList(), hue) { "$it°" }
+            .also { row -> row.onSave = { hue = it; showPreview() } })
+        body.addView(overlaySliderRow(getString(R.string.settings_adas_scene_color_saturation), (0..100).toList(), saturation) {
+            getString(R.string.percent_value, it)
+        }.also { row -> row.onSave = { saturation = it; showPreview() } })
+        body.addView(overlaySliderRow(getString(R.string.settings_adas_scene_color_brightness),
+            (AdasCarColor.BRIGHTNESS_MIN..AdasCarColor.BRIGHTNESS_MAX).toList(), brightness) {
+            getString(R.string.percent_value, it)
+        }.also { row -> row.onSave = { brightness = it; showPreview() } })
+        appDialogBuilder().setTitle(R.string.settings_adas_scene_color_custom_title)
+            .setView(ScrollView(appDialogContext()).apply { addView(body) })
+            .setPositiveButton(R.string.set) { _, _ -> adasCarColorGrid?.choose(AdasCarColor(hue, saturation, brightness)) }
+            .setNegativeButton(R.string.cancel, null)
+            .show()
+    }
+
     // Installing and removing reload the cluster, so the driver confirms first; the helper also refuses unless parked.
-    private fun confirmAdasScene(install: Boolean, enable: Boolean) {
+    // [color] is what the cluster is given once the file is installed, so that a reinstall keeps the saved color.
+    private fun confirmAdasScene(install: Boolean, enable: Boolean, color: AdasCarColor? = BydOutputSettings.adasCarColor(this)) {
         appDialogBuilder()
             .setTitle(R.string.settings_adas_scene_title)
             .setMessage(if (install) R.string.settings_adas_scene_confirm_install else R.string.settings_adas_scene_confirm_remove)
             .setPositiveButton(if (install) R.string.settings_adas_scene_install_action else R.string.settings_adas_scene_remove_action) { _, _ ->
-                changeAdasScene(install, enable)
+                changeAdasScene(install, enable, color)
             }
             .setNegativeButton(R.string.cancel) { _, _ -> render() }
             .setOnCancelListener { render() }
             .show()
     }
 
-    private fun changeAdasScene(install: Boolean, enable: Boolean) {
+    private fun changeAdasScene(install: Boolean, enable: Boolean, color: AdasCarColor?) {
         val done: (BydClusterAdasPlacement.Outcome) -> Unit = { outcome ->
             runOnUiThread {
                 toast(getString(adasSceneMessage(outcome)))
                 val installed = outcome == BydClusterAdasPlacement.Outcome.INSTALLED ||
                     outcome == BydClusterAdasPlacement.Outcome.ALREADY
                 if (install && installed && enable) BydOutputSettings.setAdasSceneBesideMap(this, true)
+                if (install && installed) BydOutputSettings.setAdasCarColor(this, color)
                 if (!install && outcome == BydClusterAdasPlacement.Outcome.REMOVED) BydOutputSettings.setAdasSceneBesideMap(this, false)
                 adasPlacement.settingChanged(applicationContext)
                 render()
             }
         }
-        if (install) adasPlacement.install(applicationContext, done) else adasPlacement.remove(applicationContext, done)
+        if (install) adasPlacement.install(applicationContext, color, done) else adasPlacement.remove(applicationContext, done)
     }
 
     private fun adasSceneMessage(outcome: BydClusterAdasPlacement.Outcome): Int = when (outcome) {
         BydClusterAdasPlacement.Outcome.INSTALLED -> R.string.settings_adas_scene_installed
         BydClusterAdasPlacement.Outcome.ALREADY -> R.string.settings_adas_scene_already
         BydClusterAdasPlacement.Outcome.REMOVED -> R.string.settings_adas_scene_removed
+        BydClusterAdasPlacement.Outcome.COLORED -> R.string.settings_adas_scene_color_applied
         BydClusterAdasPlacement.Outcome.NOT_PARKED -> R.string.settings_adas_scene_not_parked
         BydClusterAdasPlacement.Outcome.GEAR_UNKNOWN -> R.string.settings_adas_scene_gear_unknown
         BydClusterAdasPlacement.Outcome.OTHER_ACTIVE -> R.string.settings_adas_scene_other_active

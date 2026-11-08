@@ -90,19 +90,88 @@ class BydClusterAdasQmlTest {
 
     @Test fun theBlockUsesTheChannelFilesAndOnlyBydsOwnItems() {
         val block = BydClusterAdasQml.BLOCK
-        for (name in listOf("diplay-adas.png", "diplay-adas-p.png", "diplay-adas-s.png")) assertTrue(name, name in block)
+        for (name in listOf("diplay-adas.png", "diplay-adas-p.png", "diplay-adas-s.png") + BydClusterAdasColorFiles.ALL) {
+            assertTrue(name, name in block)
+        }
         assertTrue("adas2dNaviWindowBg" in block && "centerContainerId.adasUi" in block)
         assertTrue(block.endsWith("}\n"))
         assertFalse('\r' in block)
+        assertFalse('$' in block)
     }
 
-    @Test fun anOptionalCheckAgainstThePatchedFileThatWasTestedOnTheCar() {
-        // DIPLAY_QML_STOCK is a car's own cluster.qml and DIPLAY_QML_EXPECTED the same file with the block added; CI
-        // leaves them unset because the car's file is BYD's and is not kept in this repository.
+    @Test fun theBlockReadsTheColorTheWayTheHelperWritesIt() {
+        val block = BydClusterAdasQml.BLOCK
+        // hue and saturation carry one more than the value, so a value of 0 is still a readable image
+        assertTrue("diplayHueImgId.implicitWidth - 1" in block && "Math.min(359, diplayHueImgId" in block)
+        assertTrue("diplaySatImgId.implicitWidth - 1" in block && "Math.min(100, diplaySatImgId" in block)
+        assertTrue(
+            "Math.max(${AdasCarColor.BRIGHTNESS_MIN}, Math.min(${AdasCarColor.BRIGHTNESS_MAX}, diplayBriImgId.implicitWidth))" in block,
+        )
+        for ((name, id) in mapOf(
+            BydClusterAdasColorFiles.HUE to "diplayHueImgId",
+            BydClusterAdasColorFiles.SATURATION to "diplaySatImgId",
+            BydClusterAdasColorFiles.BRIGHTNESS to "diplayBriImgId",
+        )) {
+            val image = block.substringAfter("id: $id").substringBefore("Image {").substringBefore("}")
+            assertTrue("$id reads $name", "/.cluster/translate/$name?t=" in image)
+        }
+    }
+
+    @Test fun theColorOnlyAppliesWhileTheShaderWorksAndEveryFileIsThere() {
+        val block = BydClusterAdasQml.BLOCK
+        assertTrue("try { tinted[i].layer.enabled = colored && !tintBroken } catch (e) {}" in block)
+        assertTrue("onStatusChanged: if (status === ShaderEffect.Error) diplayAdasId.tintBroken = true" in block)
+        assertTrue("diplayAdasId.colored = okHue && okSat && okBri" in block)
+        // the layer is switched off by the timer or a scene change and never from a handler that runs inside the effect
+        assertFalse("onTintBrokenChanged" in block || "onColoredChanged" in block || "onTintOnChanged" in block)
+        // the color looks at its files less often while there is none, to keep the cluster's log quiet
+        assertTrue("diplayAdasId.tick % (diplayAdasId.colored ? 4 : 8) === 0" in block)
+    }
+
+    @Test fun theColorFindsTheCarsOfBothScenesAndFollowsTheirComingAndGoing() {
+        val block = BydClusterAdasQml.BLOCK
+        assertTrue("indexOf(\"self_car\")" in block)
+        assertTrue("onAdasUiChanged: { apply(); tintCars() }" in block)
+        assertTrue("onAdas3r1vUiChanged: { apply(); tintCars() }" in block)
+        assertTrue("if (diplayAdasId.colored && (!wasColored || diplayAdasId.tick % 4 === 0)) diplayAdasId.tintCars()" in block)
+        assertTrue("else diplayAdasId.setTint()" in block)
+    }
+
+    @Test fun theShaderStatesAPrecisionForEverythingGlslEs100Needs() {
+        val shader = shader()
+        val declaration = Regex("""^\s*(float|int|vec[234]|ivec[234]|mat[234]|sampler2D)\b""")
+        for (line in shader.lines().filter { it.isNotBlank() }) {
+            if (line.trimStart().startsWith("uniform") || line.trimStart().startsWith("varying")) {
+                assertTrue(line, Regex("""\b(lowp|mediump|highp)\b""").containsMatchIn(line))
+            }
+            assertFalse("no default precision in fragment shaders: $line", declaration.containsMatchIn(line))
+        }
+        assertTrue("gl_FragColor" in shader && "texture2D" in shader && "qt_Opacity" in shader)
+        assertFalse("#version" in shader)
+    }
+
+    @Test fun theShaderIsTheOneThatWasCheckedOnTheGpuPathAndWithAGlslCompiler() {
+        // Edit the shader only together with a new run of the offline checks (see docs/BYD_NAVIGATION.md), then update this.
+        assertEquals("dadb14c4dde3f32359905caa1f299fcfccbcecd14ea25f73df0e5d49e89e4df6", BydClusterAdasQml.digest(shader().toByteArray()))
+    }
+
+    @Test fun anOptionalDumpOfThePatchedFileForTheOfflineQtChecks() {
+        // DIPLAY_QML_STOCK is a car's own cluster.qml and DIPLAY_QML_PATCHED_OUT is where it is written with the block
+        // added, so the offline Qt checks can load the result. CI leaves both unset: the car's file is BYD's and is not
+        // kept in this repository.
         val stock = System.getenv("DIPLAY_QML_STOCK") ?: return
-        val expected = System.getenv("DIPLAY_QML_EXPECTED") ?: return
+        val out = System.getenv("DIPLAY_QML_PATCHED_OUT") ?: return
         val result = BydClusterAdasQml.patch(File(stock).readBytes(), center.toByteArray()) as BydClusterAdasQml.Result.Patched
-        assertArrayEquals(File(expected).readBytes(), result.qml)
+        File(out).writeBytes(result.qml)
+    }
+
+    /** The GLSL ES 1.00 source the block hands to the shader effect, rebuilt from its string literals. */
+    private fun shader(): String {
+        val start = BydClusterAdasQml.BLOCK.indexOf("property string tintShader:")
+        val literals = Regex("\"((?:[^\"\\\\]|\\\\.)*)\"").findAll(
+            BydClusterAdasQml.BLOCK.substring(start).lineSequence().drop(1).takeWhile { it.trimStart().startsWith("\"") }.joinToString("\n"),
+        )
+        return literals.joinToString("") { it.groupValues[1].replace("\\n", "\n").replace("\\\"", "\"").replace("\\\\", "\\") }
     }
 
     private companion object {

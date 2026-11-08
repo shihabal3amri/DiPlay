@@ -1050,7 +1050,7 @@
     <string name="connection_help_hotspot_interface_not_found">연결 설정에서 저장된 핫스팟 편집을 누르고 핫스팟 인터페이스(선택 사항)를 비운 뒤 다시 시도하세요.</string>
     <string name="connection_help_car_hotspot_off">차량 설정에서 차량 핫스팟을 켠 뒤 다시 시도하세요.</string>
     <string name="last_connection_attempt">마지막 연결 시도(%1$s): %2$s</string>
-    <string name="settings_adas_scene_title">지도 옆 ADAS 화면 (실험 기능)</string>
+    <string name="settings_adas_scene_title">계기판의 ADAS 화면 (실험 기능)</string>
     <string name="settings_adas_scene_toggle">큰 ADAS 화면을 지도 옆으로 이동</string>
     <string name="settings_adas_scene_description">CarPlay 지도가 계기판에 표시되는 동안 차량이 큰 ADAS 화면을 가운데 지도 위에 열 수 있습니다. 이 옵션을 켜면 DiPlay가 BYD가 계기판 오른쪽에 비워 둔 상자에 맞게 화면을 줄여 옮깁니다. 숨기거나 닫거나 차량에 보내는 것은 없으며 화면과 경고는 계속 보입니다. DiPlay는 차량 자체 파일을 바탕으로 헤드 유닛에서 만든 전용 파일을 계기판 테마에 추가하는 방식으로 이를 수행합니다. 파일을 설치하거나 제거할 때 계기판이 한 번 다시 로드되며, DiPlay가 실행 중이 아닐 때는 BYD 기본 레이아웃을 표시합니다. 차량의 네트워크 ADB가 필요합니다. 12.3인치 계기판의 BYD Han에서 테스트했습니다.</string>
     <string name="settings_adas_scene_status_checking">계기판 확인 중…</string>
@@ -1078,4 +1078,27 @@
     <string name="settings_adas_scene_unsupported">실행하지 않음: 이 계기판의 파일이 DiPlay가 예상하는 것과 일치하지 않습니다. 변경된 것은 없습니다.</string>
     <string name="settings_adas_scene_no_cluster">실행하지 않음: 계기판이 응답하지 않았습니다. 변경된 것은 없습니다.</string>
     <string name="settings_adas_scene_failed">실행할 수 없었습니다. 변경된 것은 없습니다.</string>
+    <string name="settings_adas_scene_color_title">차량 색상</string>
+    <string name="settings_adas_scene_color_description">계기판의 2D ADAS 화면에 나오는 차량에 색을 입힙니다. 화면을 지도 옆으로 옮겼는지와 관계없이 사용할 수 있습니다. 유리, 타이어, 라이트는 BYD 기본 모습을 유지하며 3D 차량은 바뀌지 않습니다. 계기판에 DiPlay 파일이 설치되어 있어야 합니다. 차량이 이상하게 보이면 ‘원본’을 선택하세요.</string>
+    <string name="settings_adas_scene_color_selected">색상: %1$s</string>
+    <string name="settings_adas_scene_color_original">원본</string>
+    <string name="settings_adas_scene_color_custom">사용자 지정</string>
+    <string name="settings_adas_scene_color_white">흰색</string>
+    <string name="settings_adas_scene_color_black">검은색</string>
+    <string name="settings_adas_scene_color_gray">회색</string>
+    <string name="settings_adas_scene_color_red">빨간색</string>
+    <string name="settings_adas_scene_color_orange">주황색</string>
+    <string name="settings_adas_scene_color_gold">금색</string>
+    <string name="settings_adas_scene_color_green">초록색</string>
+    <string name="settings_adas_scene_color_teal">청록색</string>
+    <string name="settings_adas_scene_color_blue">파란색</string>
+    <string name="settings_adas_scene_color_purple">보라색</string>
+    <string name="settings_adas_scene_color_pink">분홍색</string>
+    <string name="settings_adas_scene_color_custom_title">사용자 지정 차량 색상</string>
+    <string name="settings_adas_scene_color_hue">색조</string>
+    <string name="settings_adas_scene_color_saturation">채도</string>
+    <string name="settings_adas_scene_color_brightness">밝기</string>
+    <string name="settings_adas_scene_color_applied">색상을 적용했습니다. 계기판의 ADAS 화면에 표시됩니다.</string>
+    <string name="settings_adas_scene_color_original_restored">BYD 원래의 차량 색상으로 돌아왔습니다.</string>
+    <string name="settings_adas_scene_color_failed">색상을 적용할 수 없었습니다. 변경된 것은 없습니다.</string>
 </resources>

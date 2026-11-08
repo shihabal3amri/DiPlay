@@ -12,6 +12,7 @@ object BydOutputSettings {
     private const val KEY_ENABLED = "navigation_enabled"
     private const val KEY_CLUSTER_STREAM_PAUSE = "cluster_stream_pause"
     private const val KEY_ADAS_SCENE_BESIDE_MAP = "adas_scene_beside_map"
+    private const val KEY_ADAS_CAR_COLOR = "adas_car_color"
     private const val KEY_CLUSTER_PROJECTION_SHAPE = "cluster_projection_shape"
     private const val KEY_BATTERY_TO_IPHONE = "battery_to_iphone"
     private const val KEY_LOW_CHARGE_PERCENT = "low_charge_percent"
@@ -50,6 +51,16 @@ object BydOutputSettings {
 
     fun setAdasSceneBesideMap(context: Context, enabled: Boolean) =
         prefs(context).edit().putBoolean(KEY_ADAS_SCENE_BESIDE_MAP, enabled).apply()
+
+    /** The color of the car in the cluster's ADAS scene; null is BYD's own. It reaches the cluster through [BydClusterAdasPlacement]. */
+    fun adasCarColor(context: Context): AdasCarColor? =
+        AdasCarColor.fromPreference(prefs(context).getString(KEY_ADAS_CAR_COLOR, null))
+
+    fun setAdasCarColor(context: Context, color: AdasCarColor?) {
+        val editor = prefs(context).edit()
+        if (color == null) editor.remove(KEY_ADAS_CAR_COLOR) else editor.putString(KEY_ADAS_CAR_COLOR, color.toPreference())
+        editor.apply()
+    }
 
     /**
      * How the CarPlay map is projected on the cluster: half screen (default) keeps the cluster's own

@@ -1042,7 +1042,7 @@
     <string name="wifi_direct_channel_unavailable">Wi-Fi Direct tercih edilen kanalı kullanamıyor</string>
     <string name="settings_existing_wifi_interface">Ağ arayüzü (isteğe bağlı)</string>
     <string name="settings_existing_wifi_interface_description">Yalnızca yerel ağ (LAN) bağlantısı Android\'in Wi-Fi olarak bildirmediği bir arayüzde (örneğin eth1 üzerindeki bir USB ağ kartı) çalışan üniteler içindir. Otomatik seçilmesi için boş bırakın.</string>
-    <string name="settings_adas_scene_title">Haritanın yanında ADAS sahnesi (deneysel)</string>
+    <string name="settings_adas_scene_title">Gösterge panelinde ADAS sahnesi (deneysel)</string>
     <string name="settings_adas_scene_toggle">Büyük ADAS sahnesini haritanın yanına taşı</string>
     <string name="settings_adas_scene_description">CarPlay haritası gösterge panelindeyken araç, büyük ADAS sahnesini ortada haritanın üzerinde açabilir. Bu açıkken DiPlay sahneyi, BYD\'nin gösterge panelinin sağında boş bıraktığı kutuya sığacak şekilde küçülterek taşır. Hiçbir şey gizlenmez, kapatılmaz veya araca gönderilmez: sahne ve uyarıları görünür kalır. DiPlay bunu, aracın kendi dosyalarından ana ünitede oluşturduğu kendi dosyasını gösterge panelinin temasına ekleyerek yapar. Dosya kurulurken veya kaldırılırken gösterge paneli bir kez yeniden yüklenir ve DiPlay çalışmıyorken BYD\'nin kendi düzenini gösterir. Aracın ağ ADB\'sini gerektirir. 12,3 inç gösterge panelli bir BYD Han üzerinde denendi.</string>
     <string name="settings_adas_scene_status_checking">Gösterge paneli kontrol ediliyor…</string>
@@ -1070,4 +1070,27 @@
     <string name="settings_adas_scene_unsupported">Yapılmadı: bu gösterge panelinin dosyaları DiPlay\'in beklediğiyle eşleşmiyor. Hiçbir şey değiştirilmedi.</string>
     <string name="settings_adas_scene_no_cluster">Yapılmadı: gösterge paneli yanıt vermedi. Hiçbir şey değiştirilmedi.</string>
     <string name="settings_adas_scene_failed">Yapılamadı. Hiçbir şey değiştirilmedi.</string>
+    <string name="settings_adas_scene_color_title">Araç rengi</string>
+    <string name="settings_adas_scene_color_description">Gösterge panelinin 2D ADAS sahnesindeki aracı renklendirir; sahnenin haritanın yanına taşınıp taşınmamasından bağımsızdır. Camlar, lastikler ve farlar BYD görünümünü korur, 3D araç değişmez. Gösterge panelinde DiPlay dosyasının kurulu olması gerekir. Araç yanlış görünürse Orijinal\'i seçin.</string>
+    <string name="settings_adas_scene_color_selected">Renk: %1$s</string>
+    <string name="settings_adas_scene_color_original">Orijinal</string>
+    <string name="settings_adas_scene_color_custom">Özel</string>
+    <string name="settings_adas_scene_color_white">Beyaz</string>
+    <string name="settings_adas_scene_color_black">Siyah</string>
+    <string name="settings_adas_scene_color_gray">Gri</string>
+    <string name="settings_adas_scene_color_red">Kırmızı</string>
+    <string name="settings_adas_scene_color_orange">Turuncu</string>
+    <string name="settings_adas_scene_color_gold">Altın</string>
+    <string name="settings_adas_scene_color_green">Yeşil</string>
+    <string name="settings_adas_scene_color_teal">Camgöbeği</string>
+    <string name="settings_adas_scene_color_blue">Mavi</string>
+    <string name="settings_adas_scene_color_purple">Mor</string>
+    <string name="settings_adas_scene_color_pink">Pembe</string>
+    <string name="settings_adas_scene_color_custom_title">Özel araç rengi</string>
+    <string name="settings_adas_scene_color_hue">Renk tonu</string>
+    <string name="settings_adas_scene_color_saturation">Doygunluk</string>
+    <string name="settings_adas_scene_color_brightness">Parlaklık</string>
+    <string name="settings_adas_scene_color_applied">Renk uygulandı. Gösterge panelindeki ADAS sahnesinde görünür.</string>
+    <string name="settings_adas_scene_color_original_restored">BYD\'nin kendi araç rengi geri geldi.</string>
+    <string name="settings_adas_scene_color_failed">Renk uygulanamadı. Hiçbir şey değiştirilmedi.</string>
 </resources>

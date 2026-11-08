@@ -9,9 +9,11 @@ import android.os.Looper
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
+import android.widget.SeekBar
 import android.widget.Switch
 import android.widget.TextView
 import com.shilapi.xcertplay.host.R
+import com.shilapi.xcertplay.hud.AdasCarColor
 import com.shilapi.xcertplay.hud.BydClusterAdasPlacement
 import com.shilapi.xcertplay.hud.BydClusterAdasPlacement.Outcome
 import com.shilapi.xcertplay.hud.BydClusterAdasPlacement.State
@@ -47,18 +49,28 @@ class ClusterAdasSceneSettingsTest {
         override var busy = false
         override var onChange: (() -> Unit)? = null
         var outcome = Outcome.INSTALLED
+        var colorOutcome = Outcome.COLORED
         val calls = mutableListOf<String>()
+        val installColors = mutableListOf<AdasCarColor?>()
+        val paintedColors = mutableListOf<AdasCarColor?>()
 
         override fun refreshIfStale(app: Context) { calls += "refresh" }
 
-        override fun install(app: Context, done: (Outcome) -> Unit) {
+        override fun install(app: Context, color: AdasCarColor?, done: (Outcome) -> Unit) {
             calls += "install"
+            installColors += color
             done(outcome)
         }
 
         override fun remove(app: Context, done: (Outcome) -> Unit) {
             calls += "remove"
             done(outcome)
+        }
+
+        override fun applyColor(app: Context, color: AdasCarColor?, done: (Outcome) -> Unit) {
+            calls += "color"
+            paintedColors += color
+            done(colorOutcome)
         }
 
         override fun settingChanged(app: Context) { calls += "changed" }
@@ -68,6 +80,7 @@ class ClusterAdasSceneSettingsTest {
         opened.forEach { it.finish() }
         AppAppearanceRuntime.resetForTest()
         BydOutputSettings.setAdasSceneBesideMap(context, false)
+        BydOutputSettings.setAdasCarColor(context, null)
     }
 
     private fun installDiLink3Adapter() {
@@ -114,6 +127,29 @@ class ClusterAdasSceneSettingsTest {
     private fun press(dialog: AlertDialog, which: Int) {
         dialog.getButton(which).performClick()
         shadowOf(Looper.getMainLooper()).idle()
+    }
+
+    private fun grid(screen: DiPlayActivity): CarColorSwatchGrid =
+        descendants(screen.window.decorView).filterIsInstance<CarColorSwatchGrid>().single()
+
+    private fun swatches(screen: DiPlayActivity): List<View> = grid(screen).let { grid -> (0 until grid.childCount).map(grid::getChildAt) }
+
+    private fun swatch(screen: DiPlayActivity, name: String): View = swatches(screen).first { it.contentDescription == name }
+
+    private fun original(screen: DiPlayActivity) = screen.getString(R.string.settings_adas_scene_color_original)
+
+    private fun custom(screen: DiPlayActivity) = screen.getString(R.string.settings_adas_scene_color_custom)
+
+    private fun preset(key: String): AdasCarColor = AdasCarColor.PRESETS.first { it.key == key }.color
+
+    private fun presetName(screen: DiPlayActivity, key: String): String =
+        AdasCarColorLabels.preset(screen, AdasCarColor.PRESETS.first { it.key == key })
+
+    private fun drag(slider: SeekBar, progress: Int) {
+        val listener = SeekBar::class.java.getDeclaredField("mOnSeekBarChangeListener")
+            .apply { isAccessible = true }.get(slider) as SeekBar.OnSeekBarChangeListener
+        slider.progress = progress
+        listener.onProgressChanged(slider, progress, true)
     }
 
     @Test fun aHeadUnitWithoutTheDiLink3AdapterIsNotOfferedTheCard() {
@@ -314,5 +350,205 @@ class ClusterAdasSceneSettingsTest {
         assertNotNull(placement.onChange)
         controller.destroy()
         assertNull(placement.onChange)
+    }
+
+    @Test fun theCardOffersTheOriginalCarTheReadyMadeColorsAndACustomOne() {
+        installDiLink3Adapter()
+        val screen = advancedSettings(State.CURRENT)
+        val expected = listOf(original(screen)) + AdasCarColor.PRESETS.map { AdasCarColorLabels.preset(screen, it) } + custom(screen)
+        assertEquals(expected, swatches(screen).map { it.contentDescription.toString() })
+        assertEquals(expected.size, expected.toSet().size)
+        assertTrue(screen.getString(R.string.settings_adas_scene_color_title) in texts(screen))
+        assertTrue(screen.getString(R.string.settings_adas_scene_color_description) in texts(screen))
+        assertEquals(listOf(original(screen)), swatches(screen).filter { it.isSelected }.map { it.contentDescription.toString() })
+        assertTrue(screen.getString(R.string.settings_adas_scene_color_selected, original(screen)) in texts(screen))
+    }
+
+    @Test fun everyReadyMadeColorHasItsOwnName() {
+        val names = AdasCarColor.PRESETS.map { AdasCarColorLabels.preset(context, it) }
+        assertEquals(names.toString(), names.size, names.toSet().size)
+        assertTrue(names.none { it.isBlank() })
+    }
+
+    @Test fun aColorChosenWhileTheFileIsInstalledIsAppliedAtOnceAndSaved() {
+        installDiLink3Adapter()
+        val screen = advancedSettings(State.CURRENT)
+        swatch(screen, presetName(screen, "blue")).performClick()
+        assertEquals(listOf<AdasCarColor?>(preset("blue")), placement.paintedColors)
+        assertEquals(preset("blue"), BydOutputSettings.adasCarColor(context))
+        assertEquals(screen.getString(R.string.settings_adas_scene_color_applied), ShadowToast.getTextOfLatestToast())
+        assertTrue(swatch(screen, presetName(screen, "blue")).isSelected)
+        assertFalse(swatch(screen, original(screen)).isSelected)
+        assertTrue(screen.getString(R.string.settings_adas_scene_color_selected, presetName(screen, "blue")) in texts(screen))
+        assertNull(ShadowAlertDialog.getLatestAlertDialog())
+        assertEquals(0, placement.calls.count { it == "install" })
+        assertTrue(grid(screen).isEnabled)
+    }
+
+    @Test fun choosingOriginalGivesBackBydsOwnCar() {
+        installDiLink3Adapter()
+        BydOutputSettings.setAdasCarColor(context, preset("red"))
+        val screen = advancedSettings(State.CURRENT)
+        assertTrue(swatch(screen, presetName(screen, "red")).isSelected)
+        swatch(screen, original(screen)).performClick()
+        assertEquals(listOf<AdasCarColor?>(null), placement.paintedColors)
+        assertNull(BydOutputSettings.adasCarColor(context))
+        assertEquals(screen.getString(R.string.settings_adas_scene_color_original_restored), ShadowToast.getTextOfLatestToast())
+        assertTrue(swatch(screen, original(screen)).isSelected)
+    }
+
+    @Test fun aColorThatCouldNotBeAppliedIsNotSavedAndTheSelectionGoesBack() {
+        installDiLink3Adapter()
+        BydOutputSettings.setAdasCarColor(context, preset("red"))
+        val screen = advancedSettings(State.CURRENT)
+        placement.colorOutcome = Outcome.FAILED
+        swatch(screen, presetName(screen, "blue")).performClick()
+        assertEquals(screen.getString(R.string.settings_adas_scene_color_failed), ShadowToast.getTextOfLatestToast())
+        assertEquals(preset("red"), BydOutputSettings.adasCarColor(context))
+        assertTrue(swatch(screen, presetName(screen, "red")).isSelected)
+        assertFalse(swatch(screen, presetName(screen, "blue")).isSelected)
+        assertTrue(screen.getString(R.string.settings_adas_scene_color_selected, presetName(screen, "red")) in texts(screen))
+        assertTrue(grid(screen).isEnabled)
+        placement.colorOutcome = Outcome.NO_ADB
+        swatch(screen, presetName(screen, "green")).performClick()
+        assertEquals(screen.getString(R.string.settings_adas_scene_status_no_adb), ShadowToast.getTextOfLatestToast())
+        assertEquals(preset("red"), BydOutputSettings.adasCarColor(context))
+    }
+
+    @Test fun withoutTheFileAColorAsksToInstallItFirstAndLeavesTheSceneWhereItWas() {
+        installDiLink3Adapter()
+        val screen = advancedSettings(State.NOT_INSTALLED)
+        swatch(screen, presetName(screen, "blue")).performClick()
+        val asked = dialog()
+        assertTrue(message(asked), screen.getString(R.string.settings_adas_scene_confirm_install) in message(asked))
+        assertEquals(emptyList<String>(), placement.calls.filter { it == "install" || it == "color" })
+        assertNull(BydOutputSettings.adasCarColor(context))
+        press(asked, AlertDialog.BUTTON_POSITIVE)
+        assertEquals(listOf<AdasCarColor?>(preset("blue")), placement.installColors)
+        assertEquals(preset("blue"), BydOutputSettings.adasCarColor(context))
+        assertFalse(BydOutputSettings.adasSceneBesideMap(context))
+        assertEquals(0, placement.calls.count { it == "color" })
+    }
+
+    @Test fun cancellingThatInstallSavesNothingAndTheSwatchGoesBack() {
+        installDiLink3Adapter()
+        val screen = advancedSettings(State.NOT_INSTALLED)
+        swatch(screen, presetName(screen, "blue")).performClick()
+        press(dialog(), AlertDialog.BUTTON_NEGATIVE)
+        assertEquals(0, placement.calls.count { it == "install" })
+        assertNull(BydOutputSettings.adasCarColor(context))
+        assertEquals(listOf(original(screen)), swatches(screen).filter { it.isSelected }.map { it.contentDescription.toString() })
+    }
+
+    @Test fun anInstallThatIsRefusedDoesNotSaveTheColor() {
+        installDiLink3Adapter()
+        val screen = advancedSettings(State.NOT_INSTALLED)
+        placement.outcome = Outcome.NOT_PARKED
+        swatch(screen, presetName(screen, "blue")).performClick()
+        press(dialog(), AlertDialog.BUTTON_POSITIVE)
+        assertEquals(screen.getString(R.string.settings_adas_scene_not_parked), ShadowToast.getTextOfLatestToast())
+        assertNull(BydOutputSettings.adasCarColor(context))
+    }
+
+    @Test fun originalBeforeTheFileIsInstalledOnlyForgetsTheSavedChoice() {
+        installDiLink3Adapter()
+        BydOutputSettings.setAdasCarColor(context, preset("blue"))
+        val screen = advancedSettings(State.NOT_INSTALLED)
+        assertTrue(swatch(screen, presetName(screen, "blue")).isSelected)
+        swatch(screen, original(screen)).performClick()
+        assertNull(BydOutputSettings.adasCarColor(context))
+        assertNull(ShadowAlertDialog.getLatestAlertDialog())
+        assertEquals(emptyList<String>(), placement.calls.filter { it == "install" || it == "color" })
+    }
+
+    @Test fun theSavedColorIsShownAndEveryInstallCarriesIt() {
+        installDiLink3Adapter()
+        BydOutputSettings.setAdasCarColor(context, preset("red"))
+        val screen = advancedSettings(State.NOT_INSTALLED)
+        assertTrue(swatch(screen, presetName(screen, "red")).isSelected)
+        toggle(screen).performClick()
+        press(dialog(), AlertDialog.BUTTON_POSITIVE)
+        assertEquals(listOf<AdasCarColor?>(preset("red")), placement.installColors)
+        assertEquals(preset("red"), BydOutputSettings.adasCarColor(context))
+        assertTrue(BydOutputSettings.adasSceneBesideMap(context))
+        val stale = advancedSettings(State.STALE)
+        button(stale, R.string.settings_adas_scene_reinstall).performClick()
+        press(dialog(), AlertDialog.BUTTON_POSITIVE)
+        assertEquals(listOf<AdasCarColor?>(preset("red"), preset("red")), placement.installColors)
+    }
+
+    @Test fun removingTheFileKeepsTheSavedColor() {
+        installDiLink3Adapter()
+        BydOutputSettings.setAdasCarColor(context, preset("red"))
+        val screen = advancedSettings(State.CURRENT)
+        placement.outcome = Outcome.REMOVED
+        button(screen, R.string.settings_adas_scene_remove).performClick()
+        press(dialog(), AlertDialog.BUTTON_POSITIVE)
+        assertEquals(1, placement.calls.count { it == "remove" })
+        assertEquals(preset("red"), BydOutputSettings.adasCarColor(context))
+    }
+
+    @Test fun theColorCanOnlyBeChosenWhereItCanBeAppliedOrInstalled() {
+        installDiLink3Adapter()
+        for (state in listOf(State.NOT_INSTALLED, State.CURRENT)) assertTrue(state.name, grid(advancedSettings(state)).isEnabled)
+        for (state in listOf(State.UNKNOWN, State.STALE, State.OTHER, State.UNSUPPORTED, State.NO_ADB, State.NO_CLUSTER)) {
+            assertFalse(state.name, grid(advancedSettings(state)).isEnabled)
+        }
+        assertFalse(grid(advancedSettings(State.CURRENT, panel = false)).isEnabled)
+        val screen = advancedSettings(State.CURRENT)
+        placement.busy = true
+        placement.onChange?.invoke()
+        assertFalse(grid(screen).isEnabled)
+        placement.busy = false
+        placement.onChange?.invoke()
+        assertTrue(grid(screen).isEnabled)
+    }
+
+    @Test fun aTapOnADisabledPickerDoesNothing() {
+        installDiLink3Adapter()
+        val screen = advancedSettings(State.OTHER)
+        swatch(screen, presetName(screen, "blue")).performClick()
+        swatch(screen, custom(screen)).performClick()
+        assertEquals(emptyList<String>(), placement.calls.filter { it == "install" || it == "color" })
+        assertNull(ShadowAlertDialog.getLatestAlertDialog())
+        assertNull(BydOutputSettings.adasCarColor(context))
+        assertTrue(swatch(screen, original(screen)).isSelected)
+    }
+
+    @Test fun aCustomColorIsChosenWithSlidersAndHandledLikeAnyOther() {
+        installDiLink3Adapter()
+        val screen = advancedSettings(State.CURRENT)
+        swatch(screen, custom(screen)).performClick()
+        val asked = dialog()
+        val sliders = descendants(asked.window!!.decorView).filterIsInstance<SeekBar>().toList()
+        assertEquals(listOf(360, 101, AdasCarColor.BRIGHTNESS_MAX - AdasCarColor.BRIGHTNESS_MIN + 1), sliders.map { it.max + 1 })
+        for (title in listOf(R.string.settings_adas_scene_color_hue, R.string.settings_adas_scene_color_saturation, R.string.settings_adas_scene_color_brightness)) {
+            assertTrue(screen.getString(title), screen.getString(title) in descendants(asked.window!!.decorView).filterIsInstance<TextView>().map { it.text.toString() })
+        }
+        drag(sliders[0], 100)
+        drag(sliders[1], 50)
+        drag(sliders[2], 80 - AdasCarColor.BRIGHTNESS_MIN)
+        assertEquals(emptyList<String>(), placement.calls.filter { it == "color" })
+        press(asked, AlertDialog.BUTTON_POSITIVE)
+        val chosen = AdasCarColor(100, 50, 80)
+        assertEquals(listOf<AdasCarColor?>(chosen), placement.paintedColors)
+        assertEquals(chosen, BydOutputSettings.adasCarColor(context))
+        assertEquals(listOf(custom(screen)), swatches(screen).filter { it.isSelected }.map { it.contentDescription.toString() })
+        assertTrue(screen.getString(R.string.settings_adas_scene_color_selected, custom(screen)) in texts(screen))
+    }
+
+    @Test fun theCustomDialogStartsFromTheColorInUseAndCancellingChangesNothing() {
+        installDiLink3Adapter()
+        BydOutputSettings.setAdasCarColor(context, AdasCarColor(40, 70, 90))
+        val screen = advancedSettings(State.CURRENT)
+        assertTrue(swatch(screen, custom(screen)).isSelected)
+        swatch(screen, custom(screen)).performClick()
+        val asked = dialog()
+        val sliders = descendants(asked.window!!.decorView).filterIsInstance<SeekBar>().toList()
+        assertEquals(listOf(40, 70, 90 - AdasCarColor.BRIGHTNESS_MIN), sliders.map { it.progress })
+        drag(sliders[0], 300)
+        press(asked, AlertDialog.BUTTON_NEGATIVE)
+        assertEquals(emptyList<String>(), placement.calls.filter { it == "color" })
+        assertEquals(AdasCarColor(40, 70, 90), BydOutputSettings.adasCarColor(context))
     }
 }
