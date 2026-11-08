@@ -5,6 +5,8 @@ import android.os.Handler
 import android.os.Looper
 import android.view.MotionEvent
 import android.view.Surface
+import android.view.SurfaceHolder
+import android.view.SurfaceView
 import android.view.TextureView
 import android.view.View
 import android.view.ViewGroup
@@ -142,6 +144,40 @@ class CarPlayHostDisplaySizeTest {
         assertEquals(1, getField("restartGeneration"))
         assertTrue(getField("handshakeResetInProgress") as Boolean)
         assertNull(getField("sessionDisplay"))
+    }
+
+    // Issue #1176: with smooth video / direct output the video is a SurfaceView. Restoring a split window
+    // to fullscreen on a head unit that never dispatches onConfigurationChanged leaves surfaceChanged as
+    // the only resize signal, so it must renegotiate the CarPlay canvas exactly like the TextureView path.
+    @Test fun aSurfaceViewSurfaceChangeRenegotiatesTheCarPlayCanvas() {
+        startSession(windowWidth = 700)
+        val holder = surfaceViewFallback()
+        setField("videoView", View(activity).apply { layout(0, 0, 1920, 990) })
+
+        fireSurfaceChanged(holder, 1920, 990)
+
+        assertEquals(size(1920, 990), getField("pendingDisplaySize"))
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(600))
+        assertEquals(size(1920, 990), getField("activeDisplaySize"))
+        assertEquals(1, getField("restartGeneration"))
+        assertNull(getField("sessionDisplay"))
+    }
+
+    // A SurfaceHolder reports the letterboxed/fitted video; the host window (videoView) is the CarPlay
+    // canvas. Even when the two disagree, renegotiation must use the window, never the holder dims.
+    @Test fun aSurfaceViewResizeUsesTheWindowSizeNotTheFittedHolderSize() {
+        startSession(windowWidth = 700)
+        val holder = surfaceViewFallback()
+        setField("videoView", View(activity).apply { layout(0, 0, 1920, 990) })
+
+        // Holder dims are 700x990 (equal to the current active size), so a holder-based schedule would
+        // be a silent no-op. The scheduled size must be the 1920x990 host window instead.
+        fireSurfaceChanged(holder, 700, 990)
+
+        assertEquals(size(1920, 990), getField("pendingDisplaySize"))
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(600))
+        assertEquals(size(1920, 990), getField("activeDisplaySize"))
+        assertEquals(1, getField("restartGeneration"))
     }
 
     @Test fun connectingInAReducedHeightWindowRebuildsWhenTheCameraCloses() {
@@ -651,6 +687,19 @@ class CarPlayHostDisplaySizeTest {
     private fun scheduleSize(width: Int, height: Int) {
         activity.javaClass.getDeclaredMethod("scheduleDisplaySize", Int::class.javaPrimitiveType, Int::class.javaPrimitiveType)
             .apply { isAccessible = true }.invoke(activity, width, height)
+    }
+
+    private fun surfaceViewFallback(): SurfaceHolder {
+        val surfaceView = SurfaceView(activity)
+        setField("fallbackVideoView", surfaceView)
+        // Robolectric's getHolder() returns one stable holder per SurfaceView, so passing it back to
+        // surfaceChanged satisfies the holder !== fallbackVideoView?.holder identity check.
+        return surfaceView.holder
+    }
+
+    private fun fireSurfaceChanged(holder: SurfaceHolder, width: Int, height: Int) {
+        (getField("fallbackSurfaceCallback") as SurfaceHolder.Callback)
+            .surfaceChanged(holder, 0, width, height)
     }
 
     private fun touch(view: View, action: Int, x: Float, y: Float) {
