@@ -11,10 +11,8 @@ import java.security.MessageDigest
  * While DiPlay's CarPlay map is on the cluster, BYD draws the large ADAS scene in the middle of the screen, over the
  * map, and leaves its own "navigation window" box on the right empty. The block moves the scene into that box, scaled
  * and centred, and only while that box is visible and DiPlay's heartbeat is fresh; otherwise nothing changes and the
- * layout is BYD's. It can also recolor the car picture of the 2D ADAS scenes with a small shader, from a color that
- * DiPlay writes as three more small images, and it switches that off by itself if the shader does not compile. It reads
- * nothing from the car except the size of six small images in the cluster's translate folder, and it adds no signal,
- * frame or setting.
+ * layout is BYD's. It reads nothing from the car except the size of three small images in the cluster's translate
+ * folder, and it adds no signal, frame or setting.
  */
 internal object BydClusterAdasQml {
     /** The id of the item the block adds; a file that already has it is not patched again. */
@@ -84,14 +82,8 @@ internal object BydClusterAdasQml {
     //diplay-adas-p.png (optional): width/height = scene left/top px (both +1), overrides the centred default.
     //diplay-adas-s.png (optional): width = scale in percent (20-100), default 95.
     //Missing, unreadable or stale (3 s) = stock BYD layout.
-    //Car color, apart from the heartbeat: the car picture of the 2D ADAS scenes (the Image whose source has self_car) is drawn
-    //through a small shader that tints the body paint and leaves glass, tyres and lights alone. 1-row PNGs again:
-    //diplay-adas-ch.png width = hue in degrees + 1, diplay-adas-cs.png width = saturation in percent + 1,
-    //diplay-adas-cv.png width = brightness in percent (30-150). Any of the three missing or unreadable = BYD's own car.
-    //If the shader does not compile on this unit the color switches itself off.
     Item {
         id: diplayAdasId
-        objectName: "diplayAdas"
         visible: false
         width: 0
         height: 0
@@ -115,37 +107,6 @@ internal object BydClusterAdasQml {
         property bool compact: projecting && alive && mode === 2
         property var adasUi: centerContainerId.adasUi
         property var adas3r1vUi: centerContainerId.adas3r1vUi
-        property bool colored: false
-        property real carHue: 0
-        property real carSat: 0
-        property real carBright: 1
-        property int colorTick: 0
-        property bool tintBroken: false
-        property var tinted: []
-        property string tintShader:
-            "varying highp vec2 qt_TexCoord0;\n" +
-            "uniform lowp sampler2D source;\n" +
-            "uniform lowp float qt_Opacity;\n" +
-            "uniform mediump float tintHue;\n" +
-            "uniform mediump float tintSat;\n" +
-            "uniform mediump float tintBright;\n" +
-            "mediump vec3 diplayHsv2Rgb(mediump vec3 c) {\n" +
-            "  mediump vec3 p = abs(fract(c.xxx + vec3(1.0, 0.6666667, 0.3333333)) * 6.0 - 3.0);\n" +
-            "  return c.z * mix(vec3(1.0), clamp(p - 1.0, 0.0, 1.0), c.y);\n" +
-            "}\n" +
-            "mediump vec4 diplayTint(mediump vec4 px, mediump float hue, mediump float sat, mediump float bright) {\n" +
-            "  mediump vec3 rgb = px.a > 0.0 ? px.rgb / px.a : px.rgb;\n" +
-            "  mediump float v = max(max(rgb.r, rgb.g), rgb.b);\n" +
-            "  mediump float s = v > 0.0 ? (v - min(min(rgb.r, rgb.g), rgb.b)) / v : 0.0;\n" +
-            "  mediump float w = smoothstep(0.2, 0.42, v) * (1.0 - smoothstep(0.28, 0.55, s));\n" +
-            "  mediump float ns = sat * (1.0 - 0.55 * smoothstep(0.78, 1.0, v));\n" +
-            "  mediump vec3 tint = diplayHsv2Rgb(vec3(hue, ns, clamp(v * bright, 0.0, 1.0)));\n" +
-            "  return vec4(mix(rgb, tint, w) * px.a, px.a);\n" +
-            "}\n" +
-            "void main() {\n" +
-            "  mediump vec4 px = texture2D(source, qt_TexCoord0);\n" +
-            "  gl_FragColor = diplayTint(px, tintHue, tintSat, tintBright) * qt_Opacity;\n" +
-            "}\n"
         property real sc: compact ? Math.max(20, Math.min(100, pct)) / 100 : 1
         property real tx: compact ? px : 0
         property real ty: compact ? py : 0
@@ -157,53 +118,9 @@ internal object BydClusterAdasQml {
             try { if (adasUi) adasUi.transform = [diplayScale1, diplayMove1] } catch (e) {}
             try { if (adas3r1vUi) adas3r1vUi.transform = [diplayScale2, diplayMove2] } catch (e) {}
         }
-        //the car pictures of the 2D scenes, which BYD makes when it shows the scene and destroys when it hides it
-        function findCars(item, found, depth) {
-            if (!item || depth > 6 || found.length >= 4) return
-            var kids = item.children
-            if (!kids) return
-            for (var i = 0; i < kids.length; i++) {
-                try {
-                    var kid = kids[i]
-                    if (kid.source !== undefined && String(kid.source).indexOf("self_car") >= 0) found.push(kid)
-                    else findCars(kid, found, depth + 1)
-                } catch (e) {}
-            }
-        }
-        function tintCars() {
-            var found = []
-            try { findCars(adasUi, found, 0) } catch (e) {}
-            try { findCars(adas3r1vUi, found, 0) } catch (e) {}
-            tinted = found
-            for (var i = 0; i < found.length; i++) {
-                try {
-                    found[i].layer.effect = diplayTintId
-                    found[i].layer.smooth = true
-                } catch (e) {}
-            }
-            setTint()
-        }
-        //The layers are only switched here, from the timer or a scene change, and never from the shader's own status handler:
-        //that handler runs inside the effect, which must not be deleted from within.
-        function setTint() {
-            for (var i = 0; i < tinted.length; i++) {
-                try { tinted[i].layer.enabled = colored && !tintBroken } catch (e) {}
-            }
-        }
-        onAdasUiChanged: { apply(); tintCars() }
-        onAdas3r1vUiChanged: { apply(); tintCars() }
-        Component.onCompleted: { apply(); tintCars() }
-        Component {
-            id: diplayTintId
-            ShaderEffect {
-                property variant source
-                property real tintHue: diplayAdasId.carHue / 360
-                property real tintSat: diplayAdasId.carSat
-                property real tintBright: diplayAdasId.carBright
-                fragmentShader: diplayAdasId.tintShader
-                onStatusChanged: if (status === ShaderEffect.Error) diplayAdasId.tintBroken = true
-            }
-        }
+        onAdasUiChanged: apply()
+        onAdas3r1vUiChanged: apply()
+        Component.onCompleted: apply()
         Image {
             id: diplayModeImgId
             visible: false
@@ -224,27 +141,6 @@ internal object BydClusterAdasQml {
             cache: false
             asynchronous: false
             source: "file:///data/cells/cell2-rw/data/media/0/.cluster/translate/diplay-adas-s.png?t=" + diplayAdasId.tick
-        }
-        Image {
-            id: diplayHueImgId
-            visible: false
-            cache: false
-            asynchronous: false
-            source: "file:///data/cells/cell2-rw/data/media/0/.cluster/translate/diplay-adas-ch.png?t=" + diplayAdasId.colorTick
-        }
-        Image {
-            id: diplaySatImgId
-            visible: false
-            cache: false
-            asynchronous: false
-            source: "file:///data/cells/cell2-rw/data/media/0/.cluster/translate/diplay-adas-cs.png?t=" + diplayAdasId.colorTick
-        }
-        Image {
-            id: diplayBriImgId
-            visible: false
-            cache: false
-            asynchronous: false
-            source: "file:///data/cells/cell2-rw/data/media/0/.cluster/translate/diplay-adas-cv.png?t=" + diplayAdasId.colorTick
         }
         Timer {
             interval: 250
@@ -271,21 +167,6 @@ internal object BydClusterAdasQml {
                 diplayAdasId.haveSize = okSize
                 if (okSize) diplayAdasId.filePct = Math.max(20, Math.min(100, diplaySizeImgId.implicitWidth))
                 diplayAdasId.alive = diplayAdasId.beatAt > 0 && (now - diplayAdasId.beatAt) < 3000
-                //the color files are looked at every second while there is a color, every two seconds while there is none
-                if (diplayAdasId.tick % (diplayAdasId.colored ? 4 : 8) === 0) diplayAdasId.colorTick++
-                var okHue = diplayHueImgId.status === Image.Ready && diplayHueImgId.implicitWidth > 0
-                var okSat = diplaySatImgId.status === Image.Ready && diplaySatImgId.implicitWidth > 0
-                var okBri = diplayBriImgId.status === Image.Ready && diplayBriImgId.implicitWidth > 0
-                if (okHue && okSat && okBri) {
-                    diplayAdasId.carHue = Math.max(0, Math.min(359, diplayHueImgId.implicitWidth - 1))
-                    diplayAdasId.carSat = Math.max(0, Math.min(100, diplaySatImgId.implicitWidth - 1)) / 100
-                    diplayAdasId.carBright = Math.max(30, Math.min(150, diplayBriImgId.implicitWidth)) / 100
-                }
-                var wasColored = diplayAdasId.colored
-                diplayAdasId.colored = okHue && okSat && okBri
-                //the cars are looked for again every second and when the color comes on, the layers follow the color on every tick
-                if (diplayAdasId.colored && (!wasColored || diplayAdasId.tick % 4 === 0)) diplayAdasId.tintCars()
-                else diplayAdasId.setTint()
             }
         }
     }

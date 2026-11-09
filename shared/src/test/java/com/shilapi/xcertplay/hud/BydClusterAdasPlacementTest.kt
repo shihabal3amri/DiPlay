@@ -49,7 +49,6 @@ class BydClusterAdasPlacementTest {
 
     @After fun tearDown() {
         BydOutputSettings.setAdasSceneBesideMap(context, false)
-        BydOutputSettings.setAdasCarColor(context, null)
         BydClusterAdasPlacement.resetForTest()
     }
 
@@ -96,10 +95,10 @@ class BydClusterAdasPlacementTest {
     @Test fun installingWaitsForAParkedCarAndNeverRunsTheHelperOtherwise() {
         var outcome: Outcome? = null
         BydClusterAdasPlacement.parked = { false }
-        BydClusterAdasPlacement.install(context, null) { outcome = it }
+        BydClusterAdasPlacement.install(context) { outcome = it }
         assertEquals(Outcome.NOT_PARKED, outcome)
         BydClusterAdasPlacement.parked = { null }
-        BydClusterAdasPlacement.install(context, null) { outcome = it }
+        BydClusterAdasPlacement.install(context) { outcome = it }
         assertEquals(Outcome.GEAR_UNKNOWN, outcome)
         BydClusterAdasPlacement.remove(context) { outcome = it }
         assertEquals(Outcome.GEAR_UNKNOWN, outcome)
@@ -111,7 +110,7 @@ class BydClusterAdasPlacementTest {
         var outcome: Outcome? = null
         val changes = mutableListOf<Boolean>()
         BydClusterAdasPlacement.onChange = { changes += BydClusterAdasPlacement.busy }
-        BydClusterAdasPlacement.install(context, null) { outcome = it }
+        BydClusterAdasPlacement.install(context) { outcome = it }
         assertEquals(Outcome.INSTALLED, outcome)
         assertEquals(State.CURRENT, BydClusterAdasPlacement.status.state)
         assertTrue(helperCommands("install").single().endsWith(" install 30"))
@@ -122,19 +121,19 @@ class BydClusterAdasPlacementTest {
     @Test fun anInstallThatIsAlreadyThereChangesNothing() {
         helper = { line(Status.ALREADY, "pack" to "p") }
         var outcome: Outcome? = null
-        BydClusterAdasPlacement.install(context, null) { outcome = it }
+        BydClusterAdasPlacement.install(context) { outcome = it }
         assertEquals(Outcome.ALREADY, outcome)
         assertEquals(State.CURRENT, BydClusterAdasPlacement.status.state)
     }
 
     @Test fun anotherAppsThemeAndUnfitFilesAreReportedWithTheirReason() {
         var outcome: Outcome? = null
-        helper = { line(Status.OTHER_ACTIVE, "path" to "/x/OtherApp.rcc") }
-        BydClusterAdasPlacement.install(context, null) { outcome = it }
+        helper = { line(Status.OTHER_ACTIVE, "path" to "/x/DashArc.rcc") }
+        BydClusterAdasPlacement.install(context) { outcome = it }
         assertEquals(Outcome.OTHER_ACTIVE, outcome)
         assertEquals(State.OTHER, BydClusterAdasPlacement.status.state)
         helper = { line(Status.UNSUPPORTED, "code" to "no-cluster-qml") }
-        BydClusterAdasPlacement.install(context, null) { outcome = it }
+        BydClusterAdasPlacement.install(context) { outcome = it }
         assertEquals(Outcome.UNSUPPORTED, outcome)
         assertEquals("no-cluster-qml", BydClusterAdasPlacement.status.code)
     }
@@ -142,7 +141,7 @@ class BydClusterAdasPlacementTest {
     @Test fun aFailedInstallLooksAgainAtWhatTheCarHas() {
         helper = { command -> if (" install " in command) line(Status.FAILED, "code" to "select") else probeReply("NONE") }
         var outcome: Outcome? = null
-        BydClusterAdasPlacement.install(context, null) { outcome = it }
+        BydClusterAdasPlacement.install(context) { outcome = it }
         assertEquals(Outcome.FAILED, outcome)
         assertEquals(State.NOT_INSTALLED, BydClusterAdasPlacement.status.state)
         assertEquals(1, helperCommands("probe").size)
@@ -151,10 +150,10 @@ class BydClusterAdasPlacementTest {
     @Test fun aHelperThatDoesNotAnswerIsAFailureOrAnAdbProblem() {
         helper = { null }
         var outcome: Outcome? = null
-        BydClusterAdasPlacement.install(context, null) { outcome = it }
+        BydClusterAdasPlacement.install(context) { outcome = it }
         assertEquals(Outcome.FAILED, outcome)
         BydClusterAdasPlacement.access = { LocalAdb.Access.UNREACHABLE }
-        BydClusterAdasPlacement.install(context, null) { outcome = it }
+        BydClusterAdasPlacement.install(context) { outcome = it }
         assertEquals(Outcome.NO_ADB, outcome)
     }
 
@@ -164,7 +163,7 @@ class BydClusterAdasPlacementTest {
             BydClusterAdasPlacement.remove(context) { inner = it }
             line(Status.INSTALLED, "pack" to "p")
         }
-        BydClusterAdasPlacement.install(context, null) {}
+        BydClusterAdasPlacement.install(context) {}
         assertEquals(Outcome.BUSY, inner)
         assertEquals(1, helperCommands("install").size)
         assertEquals(0, helperCommands("remove").size)
@@ -244,72 +243,5 @@ class BydClusterAdasPlacementTest {
         BydOutputSettings.setAdasSceneBesideMap(context, false)
         BydClusterAdasPlacement.settingChanged(context)
         assertEquals(listOf(BydClusterAdasBeat.stop()), commands)
-    }
-
-    @Test fun coloringTheCarWritesFilesWithoutAParkedCarOrAReload() {
-        BydClusterAdasPlacement.parked = { false }
-        helper = { line(Status.COLORED, "color" to "215,80,100") }
-        var outcome: Outcome? = null
-        BydClusterAdasPlacement.applyColor(context, AdasCarColor(215, 80, 100)) { outcome = it }
-        assertEquals(Outcome.COLORED, outcome)
-        assertTrue(helperCommands("color").single().endsWith(" color 215 80 100"))
-        assertEquals(0, helperCommands("install").size + helperCommands("remove").size)
-        assertFalse(BydClusterAdasPlacement.busy)
-    }
-
-    @Test fun givingBydsOwnCarBackIsTheOffCommand() {
-        helper = { line(Status.COLORED, "color" to "off") }
-        var outcome: Outcome? = null
-        BydClusterAdasPlacement.applyColor(context, null) { outcome = it }
-        assertEquals(Outcome.COLORED, outcome)
-        assertTrue(helperCommands("color").single().endsWith(" color off"))
-    }
-
-    @Test fun aColorThatCouldNotBeWrittenIsAFailureOrAnAdbProblem() {
-        var outcome: Outcome? = null
-        helper = { line(Status.FAILED, "code" to "color-write") }
-        BydClusterAdasPlacement.applyColor(context, AdasCarColor(1, 2, 100)) { outcome = it }
-        assertEquals(Outcome.FAILED, outcome)
-        helper = { null }
-        BydClusterAdasPlacement.applyColor(context, AdasCarColor(1, 2, 100)) { outcome = it }
-        assertEquals(Outcome.FAILED, outcome)
-        BydClusterAdasPlacement.access = { LocalAdb.Access.NOT_APPROVED }
-        BydClusterAdasPlacement.applyColor(context, AdasCarColor(1, 2, 100)) { outcome = it }
-        assertEquals(Outcome.NO_ADB, outcome)
-    }
-
-    @Test fun aSuccessfulInstallPutsTheSavedColorOnTheCluster() {
-        helper = { command -> if (" install " in command) line(Status.INSTALLED, "pack" to "p") else line(Status.COLORED, "color" to "x") }
-        var outcome: Outcome? = null
-        BydClusterAdasPlacement.install(context, AdasCarColor(24, 88, 100)) { outcome = it }
-        assertEquals(Outcome.INSTALLED, outcome)
-        val helperRuns = commands.filter { "BydClusterAdasThemeMain" in it }
-        assertEquals(2, helperRuns.size)
-        assertTrue(helperRuns[0].endsWith(" install 30"))
-        assertTrue(helperRuns[1].endsWith(" color 24 88 100"))
-    }
-
-    @Test fun aSuccessfulInstallWithoutAColorClearsAnOldOne() {
-        helper = { command -> if (" install " in command) line(Status.ALREADY, "pack" to "p") else line(Status.COLORED, "color" to "off") }
-        BydClusterAdasPlacement.install(context, null) {}
-        assertTrue(helperCommands("color").single().endsWith(" color off"))
-    }
-
-    @Test fun aFailedInstallAndARemoveLeaveTheColorAlone() {
-        helper = { command -> if (" install " in command) line(Status.FAILED, "code" to "select") else probeReply("NONE") }
-        BydClusterAdasPlacement.install(context, AdasCarColor(24, 88, 100)) {}
-        helper = { line(Status.REMOVED, "reloaded" to "true") }
-        BydClusterAdasPlacement.remove(context) {}
-        assertEquals(0, helperCommands("color").size)
-    }
-
-    @Test fun theSavedColorIsKeptAndDamagedValuesMeanBydsOwnCar() {
-        assertNull(BydOutputSettings.adasCarColor(context))
-        BydOutputSettings.setAdasCarColor(context, AdasCarColor(215, 80, 100))
-        assertEquals(AdasCarColor(215, 80, 100), BydOutputSettings.adasCarColor(context))
-        BydOutputSettings.setAdasCarColor(context, null)
-        assertNull(BydOutputSettings.adasCarColor(context))
-        context.getSharedPreferences("diplay_byd_outputs", Context.MODE_PRIVATE).edit().putString("adas_car_color", "300,200,100").commit()
-        assertNull(BydOutputSettings.adasCarColor(context))
     }
 }
