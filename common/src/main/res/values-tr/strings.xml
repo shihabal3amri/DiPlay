@@ -1042,4 +1042,6 @@
     <string name="wifi_direct_channel_unavailable">Wi-Fi Direct tercih edilen kanalı kullanamıyor</string>
     <string name="settings_existing_wifi_interface">Ağ arayüzü (isteğe bağlı)</string>
     <string name="settings_existing_wifi_interface_description">Yalnızca yerel ağ (LAN) bağlantısı Android\'in Wi-Fi olarak bildirmediği bir arayüzde (örneğin eth1 üzerindeki bir USB ağ kartı) çalışan üniteler içindir. Otomatik seçilmesi için boş bırakın.</string>
+    <string name="wired_teardown_pending">USB temizliği hâlâ sürüyor. iPhone bağlantısını kesin, bekleyin ve Bağlantıyı tekrar dene seçeneğine dokunun.</string>
+    <string name="wired_teardown_failed">USB temizliği başarısız oldu. iPhone bağlantısını kesin ve yeniden bağlamadan önce ana üniteyi yeniden başlatın.</string>
 </resources>

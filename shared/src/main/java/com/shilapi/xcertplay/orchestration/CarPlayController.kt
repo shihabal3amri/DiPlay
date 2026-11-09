@@ -323,6 +323,8 @@ class CarPlayController(
     private var iphoneWaitStartedAt: Long? = null
     private var vpnLatch = CountDownLatch(1)
     private val teardownComplete = CountDownLatch(1)
+    internal var wiredCloseTimeoutMillis = WIRED_EXECUTOR_CLOSE_TIMEOUT_MILLIS
+    @Volatile private var wiredResourcesClosed = false
 
     private val serviceConnection = object : ServiceConnection {
         override fun onServiceConnected(name: ComponentName, binder: IBinder) {
@@ -743,40 +745,40 @@ class CarPlayController(
         unbindVpn()
         Thread(
             {
+                var wiredCleanupSucceeded = true
                 try {
                     if (config.transport == CarPlayTransport.WIRELESS) {
                         closeBestEffort("wireless stack") { closeWirelessStack(service) }
                         closeBestEffort("Wi-Fi scan pause") { wifiScanPause?.close() }
                         wifiScanPause = null
                     } else {
-                        closeBestEffort("CSM") { csm?.close() }
+                        wiredCleanupSucceeded = closeBestEffort("CSM") { csm?.close() } && wiredCleanupSucceeded
                         csm = null
                     }
-                    closeBestEffort("USBMUX") { mux?.close() }
+                    val muxClosed = closeBestEffort("USBMUX") { mux?.close() }
+                    if (isWiredTransport) wiredCleanupSucceeded = muxClosed && wiredCleanupSucceeded
                     mux = null
                     if (config.transport == CarPlayTransport.WIRED) {
-                        closeBestEffort("VPN/NCM") { service?.detach() }
+                        wiredCleanupSucceeded = closeBestEffort("VPN/NCM") { service?.detach() } && wiredCleanupSucceeded
                     }
-                    closeBestEffort("MFi") { mfiSession?.close() }
+                    val mfiClosed = closeBestEffort("MFi") { mfiSession?.close() }
+                    if (isWiredTransport) wiredCleanupSucceeded = mfiClosed && wiredCleanupSucceeded
                     mfiSession = null
                     wirelessRuntimeIdentification = null
                     wirelessAirPlayEndpoint = null
                     closeBestEffort("location provider") { locationProvider?.close() }
                 } finally {
+                    wiredResourcesClosed = wiredCleanupSucceeded
                     executor.shutdownNow()
-                    var executorTerminated = false
-                    var interrupted = false
-                    do {
-                        try {
-                            executorTerminated = executor.awaitTermination(EXECUTOR_CLOSE_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS)
-                        } catch (_: InterruptedException) {
-                            interrupted = true
-                        }
-                        if (!executorTerminated && isWiredTransport) {
-                            connectionDiagnostic("teardown waiting for wired USB worker to finish")
-                        }
-                    } while (!executorTerminated && isWiredTransport)
-                    if (interrupted) Thread.currentThread().interrupt()
+                    val executorTerminated = try {
+                        executor.awaitTermination(
+                            if (isWiredTransport) wiredCloseTimeoutMillis else EXECUTOR_CLOSE_TIMEOUT_MILLIS,
+                            TimeUnit.MILLISECONDS,
+                        )
+                    } catch (_: InterruptedException) {
+                        Thread.currentThread().interrupt()
+                        false
+                    }
                     connectionDiagnostic(
                         "teardown end elapsedMs=${elapsedMillis(teardownStarted)} " +
                             "executorTerminated=$executorTerminated",
@@ -870,12 +872,17 @@ class CarPlayController(
     fun awaitClosed(timeoutMillis: Long): Boolean {
         require(timeoutMillis >= 0) { "timeoutMillis must not be negative" }
         return try {
-            teardownComplete.await(timeoutMillis, TimeUnit.MILLISECONDS)
+            teardownComplete.await(timeoutMillis, TimeUnit.MILLISECONDS) &&
+                (!isWiredTransport || (wiredResourcesClosed && executor.isTerminated))
         } catch (_: InterruptedException) {
             Thread.currentThread().interrupt()
             false
         }
     }
+
+    /** Cleanup failed rather than merely still running; retrying cannot make this owner safe. */
+    fun wiredTeardownFailed(): Boolean =
+        isWiredTransport && teardownComplete.count == 0L && !wiredResourcesClosed
 
     // HUD (SOME/IP) and cluster (AMap broadcast) keep separate state so one failing cannot stall the other.
     private fun onRouteFrame(frame: com.shilapi.xcertplay.iap2.wire.Iap2Frame) {
@@ -2955,7 +2962,7 @@ class CarPlayController(
         return text
     }
 
-    private fun closeBestEffort(name: String, close: () -> Unit) {
+    private fun closeBestEffort(name: String, close: () -> Unit): Boolean {
         val started = System.nanoTime()
         var completed = false
         try {
@@ -2966,6 +2973,7 @@ class CarPlayController(
         } finally {
             connectionDiagnostic("teardown resource=$name completed=$completed elapsedMs=${elapsedMillis(started)}")
         }
+        return completed
     }
 
     private fun controlLoopTimeoutMillis(): Long = when {
@@ -3269,6 +3277,7 @@ class CarPlayController(
         private const val IPHONE_NOT_LISTED_AFTER_MILLIS = 20_000L
         private const val START_SESSION_PROGRESS = "iap2 tx=0x4301"
         private const val EXECUTOR_CLOSE_TIMEOUT_MILLIS = 2_000L
+        private const val WIRED_EXECUTOR_CLOSE_TIMEOUT_MILLIS = 20_000L
         private const val ADAPTER_ADDRESS_PLACEHOLDER = "02:00:00:00:00:00"
         private val BLUETOOTH_ADDRESS = Regex("^[0-9A-Fa-f]{2}(:[0-9A-Fa-f]{2}){5}$")
     }

@@ -15,6 +15,7 @@ import com.shilapi.xcertplay.airplay.*
 import com.shilapi.xcertplay.hud.BydNavigationOutputs
 import com.shilapi.xcertplay.orchestration.*
 import com.shilapi.xcertplay.transport.Iap2IdentificationConfig
+import com.shilapi.xcertplay.transport.Iap2UsbMuxHost
 import com.shilapi.xcertplay.transport.UsbDeviceId
 import org.junit.After
 import org.junit.Assert.*
@@ -62,6 +63,43 @@ class CarPlayControllerUsbServiceTest {
             release.countDown()
         }
         assertTrue(controller.awaitClosed(3_000))
+    }
+
+    @Test fun wiredCloseTimeoutDoesNotTreatRunningWorkerAsSafe() {
+        val controller = controller(UsbContext(true), CarPlayTransport.WIRED, MfiTarget.LOCAL)
+        ReflectionHelpers.setField(controller, "wiredCloseTimeoutMillis", 50L)
+        val worker = ReflectionHelpers.getField<ExecutorService>(controller, "executor")
+        val entered = CountDownLatch(1)
+        val release = CountDownLatch(1)
+        worker.execute {
+            entered.countDown()
+            while (true) {
+                try { release.await(); break } catch (_: InterruptedException) { }
+            }
+        }
+        try {
+            assertTrue(entered.await(2, TimeUnit.SECONDS))
+            controller.close()
+            assertFalse(controller.awaitClosed(1_000))
+            assertFalse(controller.awaitClosed(0))
+        } finally {
+            release.countDown()
+        }
+        assertTrue(worker.awaitTermination(2, TimeUnit.SECONDS))
+        assertTrue(controller.awaitClosed(0))
+    }
+
+    @Test fun wiredCloseFailureNeverReportsSafeToRestart() {
+        val controller = controller(UsbContext(true), CarPlayTransport.WIRED, MfiTarget.LOCAL)
+        val mux = org.mockito.Mockito.mock(Iap2UsbMuxHost::class.java)
+        org.mockito.Mockito.doThrow(IllegalStateException("close failed")).`when`(mux).close()
+        ReflectionHelpers.setField(controller, "mux", mux)
+        controller.close()
+        val completed = ReflectionHelpers.getField<CountDownLatch>(controller, "teardownComplete")
+        assertTrue(completed.await(2, TimeUnit.SECONDS))
+        assertFalse("a failed USB close is not a safe handoff", controller.awaitClosed(0))
+        assertTrue(controller.wiredTeardownFailed())
+        controllers.remove(controller)
     }
 
     @Test fun wirelessLocalCanBeCreatedAndReachMfiWithoutAUsbService() {

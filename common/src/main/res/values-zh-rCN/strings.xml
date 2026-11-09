@@ -1014,4 +1014,6 @@
     <string name="cluster_projection_shape_description">半屏会在仪表盘地图旁保留仪表原本的车速与状态信息；全屏则让地图占满整个仪表盘。CarPlay 地图出现时 DiPlay 会设置该形态，否则会覆盖你在车机上选好的导航模式。需要车机已授权网络 ADB。</string>
     <string name="settings_cluster_speedometer_album_color">速度表背景使用专辑颜色</string>
     <string name="settings_cluster_speedometer_album_color_description">平滑过渡到专辑边框的颜色，并保留所选的不透明度。</string>
+    <string name="wired_teardown_pending">USB 清理仍在进行中。请断开 iPhone，稍候，然后点按重试连接。</string>
+    <string name="wired_teardown_failed">USB 清理失败。请断开 iPhone 并重启车机，然后重新连接。</string>
 </resources>
