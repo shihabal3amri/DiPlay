@@ -283,6 +283,18 @@ class BydClusterAdasPlacementTest {
         assertEquals(emptyList<String>(), commands)
     }
 
+    @Test fun aFileASettingsProbeFindsLaterIsLeftToTheDriverUntilTheNextStart() {
+        helper = { probeReply("STALE") }
+        BydClusterAdasPlacement.tick(context)
+        BydClusterAdasPlacement.refresh(context)
+        assertTrue(BydOutputSettings.adasPackInstalled(context))
+        commands.clear()
+        BydClusterAdasPlacement.tick(context)
+        assertEquals(emptyList<String>(), commands)
+        assertEquals(State.STALE, BydClusterAdasPlacement.status.state)
+        assertFalse(BydOutputSettings.adasPackRetired(context))
+    }
+
     @Test fun aStaleFileIsGivenUpAtStartWhateverTheSwitchSaysAndTheClusterIsReloadedInP() {
         BydOutputSettings.setAdasPackInstalled(context, true)
         assertFalse(BydOutputSettings.adasSceneBesideMap(context))

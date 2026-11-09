@@ -208,7 +208,12 @@ object BydClusterAdasPlacement : BydClusterAdasPlacementControl {
      * uses its own file the next time it starts.
      */
     private fun checkInstalled(app: Context) {
-        if (installedChecked || busy || nowMillis() < nextCheckAtMillis || !BydOutputSettings.adasPackInstalled(app)) return
+        if (installedChecked || busy || nowMillis() < nextCheckAtMillis) return
+        if (!BydOutputSettings.adasPackInstalled(app)) {
+            // Nothing of DiPlay's was installed when DiPlay started; what a probe finds later is left to the driver.
+            installedChecked = true
+            return
+        }
         nextCheckAtMillis = nowMillis() + PROBE_RETRY_MILLIS
         val answered = status.state !in UNANSWERED && nowMillis() - probedAtMillis < STALE_MILLIS
         if (!answered) probe(app)
