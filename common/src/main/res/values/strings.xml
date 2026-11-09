@@ -790,7 +790,7 @@
     <string name="call_echo_cancellation">Call echo cancellation (experimental)</string>
     <string name="call_echo_cancellation_description">Tries to reduce speaker echo sent to the other person during CarPlay calls. Results depend on the head unit. Applies at the next CarPlay connection.</string>
     <string name="call_voice_filter">Clearer call voices (experimental)</string>
-    <string name="call_voice_filter_description">Cuts bass from CarPlay call audio and lowers the caller\'s volume by 18 dB, because a head unit such as the BYD DiLink 3 plays calls much louder than music. This may change how voices sound. Applies at the next CarPlay connection.</string>
+    <string name="call_voice_filter_description">Cuts bass from CarPlay call audio. This may change how voices sound. Applies at the next CarPlay connection.</string>
     <string name="phone_audio_route">Car phone audio for CarPlay calls (experimental)</string>
     <string name="phone_audio_route_description">Holds a Telecom call during CarPlay calls so the car switches to its phone audio state and its own echo cancellation works. DiPlay’s echo canceller stays out of those calls. Your voice can come out louder or distorted. Off by default; applies at the next call.</string>
     <string name="phone_audio_route_apps">Car phone audio for VoIP calls in other apps (experimental)</string>
@@ -1021,6 +1021,8 @@
     <string name="settings_navigation_attenuation">Navigation guidance volume</string>
     <string name="settings_navigation_attenuation_value">%1$d dB</string>
     <string name="settings_navigation_attenuation_description">Reduce CarPlay navigation guidance without changing music or call volume. Applies immediately; your head unit’s navigation volume still works.</string>
+    <string name="settings_call_attenuation">Call voice level</string>
+    <string name="settings_call_attenuation_description">Lowers the caller\'s voice in CarPlay calls without changing the car\'s call volume. Applies immediately, whichever output the call uses. Leave it at 0 dB unless calls are louder than music at the same volume step. On one BYD Han (DiLink 3), about -18 dB brought a call level with reference speech.</string>
     <string name="settings_car_hotspot_control">Car hotspot</string>
     <string name="settings_auto_car_hotspot_system_description">Turns on the saved car hotspot when DiPlay opens and before a wireless connection. DiPlay needs Android\'s “Modify system settings” access; ADB is not required. To have the hotspot after a full restart, also turn on opening DiPlay after the car starts. The hotspot is not turned off automatically.</string>
     <string name="settings_write_settings_granted">“Modify system settings” access: allowed</string>

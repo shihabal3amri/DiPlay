@@ -785,7 +785,7 @@
     <string name="call_echo_cancellation">통화 에코 제거 (실험 기능)</string>
     <string name="call_echo_cancellation_description">CarPlay 통화 중 상대방에게 전달되는 스피커 에코를 줄입니다. 결과는 헤드 유닛에 따라 다릅니다. 다음 CarPlay 연결부터 적용됩니다.</string>
     <string name="call_voice_filter">더 선명한 통화 음성 (실험 기능)</string>
-    <string name="call_voice_filter_description">CarPlay 통화 오디오에서 저음을 줄이고 상대방 음성 볼륨을 18 dB 낮춥니다. BYD DiLink 3 같은 헤드 유닛은 통화를 음악보다 훨씬 크게 재생하기 때문입니다. 음성의 느낌이 달라질 수 있습니다. 다음 CarPlay 연결부터 적용됩니다.</string>
+    <string name="call_voice_filter_description">CarPlay 통화 오디오에서 저음을 줄입니다. 음성의 느낌이 달라질 수 있습니다. 다음 CarPlay 연결부터 적용됩니다.</string>
     <string name="phone_audio_route">CarPlay 통화에 차량 전화 오디오 사용 (실험 기능)</string>
     <string name="phone_audio_route_description">CarPlay 통화 중 Telecom 통화를 유지하여 차량이 전화 오디오 상태로 전환되고 자체 에코 제거 기능을 사용하도록 합니다. 이 통화에는 DiPlay의 에코 제거가 적용되지 않습니다. 내 목소리가 더 크게 들리거나 왜곡될 수 있습니다. 기본값은 꺼짐이며 다음 통화부터 적용됩니다.</string>
     <string name="phone_audio_route_apps">다른 앱의 VoIP 통화에 차량 전화 오디오 사용 (실험 기능)</string>
@@ -989,6 +989,8 @@
     <string name="settings_navigation_attenuation">내비게이션 안내 음량</string>
     <string name="settings_navigation_attenuation_value">%1$d dB</string>
     <string name="settings_navigation_attenuation_description">음악이나 통화 음량은 변경하지 않고 CarPlay 내비게이션 안내 음량을 낮춥니다. 즉시 적용되며 헤드 유닛의 내비게이션 음량 조절 기능은 계속 사용할 수 있습니다.</string>
+    <string name="settings_call_attenuation">통화 상대 음성 크기</string>
+    <string name="settings_call_attenuation_description">차량의 통화 음량은 바꾸지 않고 CarPlay 통화에서 상대방 음성을 낮춥니다. 통화가 어떤 출력을 사용하든 즉시 적용됩니다. 같은 음량 단계에서 통화가 음악보다 크지 않다면 0 dB로 두세요. BYD Han(DiLink 3) 한 대에서는 약 -18 dB로 통화가 기준 음성과 같은 수준이 되었습니다.</string>
     <string name="settings_car_hotspot_control">차량 핫스팟</string>
     <string name="settings_auto_car_hotspot_system_description">DiPlay를 열 때와 무선 연결 전에 저장된 차량 핫스팟을 켭니다. DiPlay에는 Android의 “시스템 설정 수정” 액세스 권한이 필요하며 ADB는 필요하지 않습니다. 차량을 완전히 재시작한 뒤에도 핫스팟을 사용하려면 차량 시동 후 DiPlay 열기도 켜세요. 핫스팟은 자동으로 꺼지지 않습니다.</string>
     <string name="settings_write_settings_granted">“시스템 설정 수정” 액세스 권한: 허용됨</string>

@@ -751,7 +751,7 @@
     <string name="call_echo_cancellation">通话回声消除（实验性）</string>
     <string name="call_echo_cancellation_description">尝试减少 CarPlay 通话中发送给对方的扬声器回声。效果取决于车载主机。下次连接 CarPlay 时生效。</string>
     <string name="call_voice_filter">更清晰的通话人声（实验性）</string>
-    <string name="call_voice_filter_description">削减 CarPlay 通话音频的低音，并将对方的声音降低 18 dB，因为 BYD DiLink 3 等车机播放通话比音乐响得多。这可能改变人声的音色。下次连接 CarPlay 时生效。</string>
+    <string name="call_voice_filter_description">削减 CarPlay 通话音频的低音。这可能改变人声的音色。下次连接 CarPlay 时生效。</string>
     <string name="phone_audio_route">CarPlay 通话使用车机电话音频（实验性）</string>
     <string name="phone_audio_route_description">CarPlay 通话期间保持一个 Telecom 通话，使车机切换到电话音频状态并启用自带的回声消除。这些通话中 DiPlay 自己的回声消除不会工作。你的声音可能变大或失真。默认关闭，下一次通话生效。</string>
     <string name="phone_audio_route_apps">其他应用的 VoIP 通话使用车机电话音频（实验性）</string>
@@ -978,6 +978,8 @@
     <string name="settings_navigation_attenuation">导航播报音量</string>
     <string name="settings_navigation_attenuation_value">%1$d dB</string>
     <string name="settings_navigation_attenuation_description">仅降低 CarPlay 导航播报音量，不影响音乐和通话。调整立即生效，车机自身的导航音量仍可使用。</string>
+    <string name="settings_call_attenuation">通话对方人声音量</string>
+    <string name="settings_call_attenuation_description">在不改变车辆通话音量的情况下，降低 CarPlay 通话中对方的人声。无论通话使用哪个输出，调整都会立即生效。除非同一音量档位下通话比音乐更响，否则请保持 0 dB。在一辆 BYD Han（DiLink 3）上，约 -18 dB 使通话与参考语音音量相当。</string>
     <string name="settings_car_hotspot_control">车辆热点</string>
     <string name="settings_auto_car_hotspot_system_description">打开 DiPlay 时及无线连接前开启已保存的车辆热点。DiPlay 需要 Android 的“修改系统设置”权限；无需 ADB。若要在完全重启后也有热点，请同时开启“车辆启动后打开 DiPlay”。热点不会自动关闭。</string>
     <string name="settings_write_settings_granted">“修改系统设置”权限：已允许</string>

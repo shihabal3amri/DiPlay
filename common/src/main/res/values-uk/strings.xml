@@ -703,7 +703,7 @@
     <string name="call_echo_cancellation">Придушення луни у дзвінках (експериментально)</string>
     <string name="call_echo_cancellation_description">Намагається зменшити луну динаміків, яку чує співрозмовник під час дзвінків CarPlay. Результат залежить від головного пристрою. Застосовується під час наступного підключення CarPlay.</string>
     <string name="call_voice_filter">Чіткіші голоси у дзвінках (експериментально)</string>
-    <string name="call_voice_filter_description">Зменшує баси у дзвінках CarPlay і знижує гучність співрозмовника на 18 дБ, бо головні пристрої, як-от BYD DiLink 3, відтворюють дзвінки значно гучніше за музику. Може змінити звучання голосів. Застосовується під час наступного підключення CarPlay.</string>
+    <string name="call_voice_filter_description">Зменшує баси у дзвінках CarPlay. Може змінити звучання голосів. Застосовується під час наступного підключення CarPlay.</string>
     <string name="phone_audio_route">Телефонний звук автомобіля для дзвінків CarPlay (експериментально)</string>
     <string name="phone_audio_route_description">Утримує виклик Telecom під час дзвінків CarPlay, щоб автомобіль перейшов у телефонний режим звуку й запрацювало його власне ехозаглушення. Ехозаглушувач DiPlay у таких дзвінках не використовується. Ваш голос може звучати гучніше або зі спотвореннями. За замовчуванням вимкнено; діє з наступного дзвінка.</string>
     <string name="phone_audio_route_apps">Телефонний звук автомобіля для VoIP-дзвінків в інших застосунках (експериментально)</string>
@@ -930,6 +930,8 @@
     <string name="settings_navigation_attenuation">Гучність навігаційних підказок</string>
     <string name="settings_navigation_attenuation_value">%1$d дБ</string>
     <string name="settings_navigation_attenuation_description">Зменшує лише гучність навігаційних підказок CarPlay, не змінюючи музику та виклики. Застосовується одразу; регулювання навігації на пристрої лишається доступним.</string>
+    <string name="settings_call_attenuation">Рівень голосу в дзвінках</string>
+    <string name="settings_call_attenuation_description">Зменшує гучність голосу співрозмовника в дзвінках CarPlay, не змінюючи гучність дзвінків в автомобілі. Застосовується одразу, який би вихід не використовував дзвінок. Залиште 0 dB, якщо дзвінки не гучніші за музику на тому ж рівні гучності. На одному BYD Han (DiLink 3) близько -18 dB довело дзвінок до рівня еталонної мови.</string>
     <string name="settings_car_hotspot_control">Точка доступу автомобіля</string>
     <string name="settings_auto_car_hotspot_system_description">Вмикає збережену точку доступу під час відкриття DiPlay і перед бездротовим підключенням. Потрібен доступ Android «Зміна системних налаштувань»; ADB не потрібен. Щоб точка доступу з’являлася й після повного перезапуску, увімкніть відкриття DiPlay після запуску автомобіля. Точка доступу автоматично не вимикається.</string>
     <string name="settings_write_settings_granted">Доступ «Зміна системних налаштувань»: дозволено</string>
