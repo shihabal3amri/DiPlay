@@ -5088,6 +5088,10 @@ open class CarPlayHostActivity : ComponentActivity() {
         appendLog(effectiveSummary)
         val carBluetoothAudio = AirPlayPersistence.loadCarBluetoothAudio(this)
         if (carBluetoothAudio) logCarBluetoothAudio()
+        val musicOutput = MusicOutputCapabilities.read(AirPlayPersistence.loadMediaAudioChannel(this))
+        appendLog("Audio: automatic music rate stream=${musicOutput.streamType} " +
+            "native=${musicOutput.nativeSampleRate} offered=${musicOutput.offeredSampleRates.joinToString(",")} " +
+            "fallback=${musicOutput.fallback} queryFailure=${musicOutput.queryFailure ?: "none"}")
         return AirPlayConfig(
             deviceName = "DiPlay",
             deviceId = DiPlayBootstrap.deviceId(airPlayIdentity),
@@ -5105,6 +5109,7 @@ open class CarPlayHostActivity : ComponentActivity() {
             icons = listOf(loadAirPlayIcon()),
             videoInCar = com.shilapi.xcertplay.hud.BydOutputSettings.videoWhileParkedActive(this),
             mainBufferedAudio = AirPlayPersistence.loadMainBufferedAudio(this),
+            entertainmentSampleRates = musicOutput.offeredSampleRates,
             speechWithout8And16Khz = AirPlayPersistence.loadSpeechWithout8And16Khz(this),
             callAtCallRate = AirPlayPersistence.loadCallAtCallRate(this),
             disableAudioOutput = carBluetoothAudio,
