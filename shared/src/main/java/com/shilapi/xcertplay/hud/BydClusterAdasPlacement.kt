@@ -35,9 +35,10 @@ interface BydClusterAdasPlacementControl {
  * waits for ([BydClusterAdasBeat]); the block then moves the scene into the box. Nothing is hidden, closed or sent to
  * the car: no frame, no signal, no setting. Without the heartbeat the cluster shows BYD's own layout.
  *
- * Installing and removing the file reload the cluster's interface, so they run only while the car is parked. All work
- * runs on one thread, through the same one-shot adb shell the other BYD features use; nothing is done without the
- * driver's approval of that link, and it is never asked for here.
+ * Installing and removing the file reload the cluster's interface, so they run only while the car is parked. While a
+ * file of DiPlay's is installed, DiPlay checks once after each start that it still fits the car's software, and gives
+ * it up when it does not. All work runs on one thread, through the same one-shot adb shell the other BYD features use;
+ * nothing is done without the driver's approval of that link, and it is never asked for here.
  */
 object BydClusterAdasPlacement : BydClusterAdasPlacementControl {
     private const val TAG = "DiPlay-AdasPlacement"
@@ -45,6 +46,9 @@ object BydClusterAdasPlacement : BydClusterAdasPlacementControl {
     private const val HELPER_TIMEOUT_MILLIS = 30_000
     private const val PROBE_RETRY_MILLIS = 60_000L
     private const val STALE_MILLIS = 30_000L
+
+    /** The states that say nothing about what the cluster uses: the head unit or the cluster did not answer. */
+    private val UNANSWERED = setOf(State.UNKNOWN, State.NO_ADB, State.NO_CLUSTER)
 
     enum class State { UNKNOWN, NOT_INSTALLED, CURRENT, STALE, OTHER, UNSUPPORTED, NO_ADB, NO_CLUSTER }
 
@@ -71,6 +75,8 @@ object BydClusterAdasPlacement : BydClusterAdasPlacementControl {
     private val started = AtomicBoolean(false)
     private var leaseHeld = false
     private var nextProbeAtMillis = 0L
+    private var nextCheckAtMillis = 0L
+    private var installedChecked = false
     private var probedAtMillis = 0L
     @Volatile private var context: Context? = null
 
@@ -85,7 +91,7 @@ object BydClusterAdasPlacement : BydClusterAdasPlacementControl {
 
     private fun runInShell(app: Context, command: String): String? = shell.run(app, command, HELPER_TIMEOUT_MILLIS)
 
-    /** Starts the heartbeat tick once; it does nothing while the setting is off or the map is not on the cluster. */
+    /** Starts the tick once: it checks an installed file at start and keeps the heartbeat while the setting is on and the map is on the cluster. */
     fun initialize(appContext: Context) {
         context = appContext.applicationContext
         if (started.compareAndSet(false, true)) {
@@ -121,7 +127,9 @@ object BydClusterAdasPlacement : BydClusterAdasPlacementControl {
     internal fun statusOf(result: BydClusterAdasTheme.Result?, access: LocalAdb.Access?): Status = when {
         result == null ->
             if (access != null && access != LocalAdb.Access.READY) Status(State.NO_ADB) else Status(State.UNKNOWN)
-        result.status == BydClusterAdasTheme.Status.UNSUPPORTED -> Status(State.UNSUPPORTED, result["code"])
+        // A file of DiPlay's that is in use stays stale even when the car's files no longer fit it.
+        result.status == BydClusterAdasTheme.Status.UNSUPPORTED ->
+            Status(if (result["state"] == "STALE") State.STALE else State.UNSUPPORTED, result["code"])
         result.status == BydClusterAdasTheme.Status.NO_CLUSTER -> Status(State.NO_CLUSTER)
         result.status == BydClusterAdasTheme.Status.READY -> Status(
             when (result["state"]) {
@@ -145,22 +153,37 @@ object BydClusterAdasPlacement : BydClusterAdasPlacementControl {
         val result = execute(app, BydClusterAdasThemeMain.PROBE)
         probedAtMillis = nowMillis()
         publish(statusOf(result, access()))
+        // Remember what the cluster showed, so a file DiPlay installed is found again at the next start.
+        when (status.state) {
+            State.CURRENT, State.STALE -> BydOutputSettings.setAdasPackInstalled(app, true)
+            State.NOT_INSTALLED -> BydOutputSettings.setAdasPackInstalled(app, false)
+            else -> Unit
+        }
     }
 
     private fun change(app: Context, action: String): Outcome {
         if (busy) return Outcome.BUSY
-        val gear = parked(app) ?: return Outcome.GEAR_UNKNOWN
-        if (!gear) return Outcome.NOT_PARKED
+        // Retiring never reloads the cluster, so it does not wait for P.
+        if (action != BydClusterAdasThemeMain.RETIRE) {
+            val gear = parked(app) ?: return Outcome.GEAR_UNKNOWN
+            if (!gear) return Outcome.NOT_PARKED
+        }
         busy = true
         onChange?.invoke()
         try {
-            if (action == BydClusterAdasThemeMain.REMOVE) stopBeat(app)
+            if (action != BydClusterAdasThemeMain.INSTALL) stopBeat(app)
             val result = execute(app, action)
             val outcome = outcomeOf(result)
             Log.i(TAG, "$action: ${result?.status ?: "no answer"} -> $outcome")
             when (outcome) {
-                Outcome.INSTALLED, Outcome.ALREADY -> publish(Status(State.CURRENT))
-                Outcome.REMOVED -> publish(Status(State.NOT_INSTALLED))
+                Outcome.INSTALLED, Outcome.ALREADY -> {
+                    remember(app, installed = true)
+                    publish(Status(State.CURRENT))
+                }
+                Outcome.REMOVED -> {
+                    remember(app, installed = false)
+                    publish(Status(State.NOT_INSTALLED))
+                }
                 Outcome.OTHER_ACTIVE -> publish(Status(State.OTHER))
                 Outcome.UNSUPPORTED -> publish(Status(State.UNSUPPORTED, result?.get("code")))
                 else -> probe(app)
@@ -169,6 +192,41 @@ object BydClusterAdasPlacement : BydClusterAdasPlacementControl {
         } finally {
             busy = false
             onChange?.invoke()
+        }
+    }
+
+    private fun remember(app: Context, installed: Boolean) {
+        installedChecked = true
+        BydOutputSettings.setAdasPackInstalled(app, installed)
+        BydOutputSettings.setAdasPackRetired(app, false)
+    }
+
+    /**
+     * While DiPlay's file is installed, whatever the switch says, asks once after each start of DiPlay whether it still
+     * fits the car's software. A file that does not is given up, and Settings says so: the cluster would otherwise keep
+     * loading an old copy of BYD's `cluster.qml` in place of the new one. In P the cluster is reloaded; otherwise it
+     * uses its own file the next time it starts.
+     */
+    private fun checkInstalled(app: Context) {
+        if (installedChecked || busy || nowMillis() < nextCheckAtMillis || !BydOutputSettings.adasPackInstalled(app)) return
+        nextCheckAtMillis = nowMillis() + PROBE_RETRY_MILLIS
+        val answered = status.state !in UNANSWERED && nowMillis() - probedAtMillis < STALE_MILLIS
+        if (!answered) probe(app)
+        when (status.state) {
+            in UNANSWERED -> return
+            State.STALE -> retire(app)
+            else -> Unit
+        }
+        installedChecked = true
+    }
+
+    private fun retire(app: Context) {
+        var outcome = if (parked(app) == true) change(app, BydClusterAdasThemeMain.REMOVE) else Outcome.NOT_PARKED
+        if (outcome == Outcome.NOT_PARKED || outcome == Outcome.GEAR_UNKNOWN) outcome = change(app, BydClusterAdasThemeMain.RETIRE)
+        Log.w(TAG, "the installed file does not fit the car's software: retired -> $outcome")
+        if (outcome == Outcome.REMOVED) {
+            BydOutputSettings.setAdasSceneBesideMap(app, false)
+            BydOutputSettings.setAdasPackRetired(app, true)
         }
     }
 
@@ -189,6 +247,7 @@ object BydClusterAdasPlacement : BydClusterAdasPlacementControl {
     }
 
     internal fun tick(app: Context) {
+        checkInstalled(app)
         val wanted = BydOutputSettings.adasSceneBesideMap(app) && mapShown()
         if (!wanted) {
             stopBeat(app)
@@ -218,6 +277,8 @@ object BydClusterAdasPlacement : BydClusterAdasPlacementControl {
         busy = false
         leaseHeld = false
         nextProbeAtMillis = 0L
+        nextCheckAtMillis = 0L
+        installedChecked = false
         probedAtMillis = 0L
         onChange = null
         submit = ::submitToWorker

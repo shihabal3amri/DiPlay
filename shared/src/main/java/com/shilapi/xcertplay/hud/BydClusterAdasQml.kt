@@ -11,7 +11,7 @@ import java.security.MessageDigest
  * While DiPlay's CarPlay map is on the cluster, BYD draws the large ADAS scene in the middle of the screen, over the
  * map, and leaves its own "navigation window" box on the right empty. The block moves the scene into that box, scaled
  * and centred, and only while that box is visible and DiPlay's heartbeat is fresh; otherwise nothing changes and the
- * layout is BYD's. It reads nothing from the car except the size of three small images in the cluster's translate
+ * layout is BYD's. It reads nothing from the car except the size of one small image in the cluster's translate
  * folder, and it adds no signal, frame or setting.
  */
 internal object BydClusterAdasQml {
@@ -23,6 +23,9 @@ internal object BydClusterAdasQml {
 
     /** Properties of the item `Center.qml` defines for the two ADAS scenes. */
     private val CENTER_PROPERTIES = listOf("adasUi", "adas3r1vUi")
+
+    /** The block sets `transform` on the two scenes, which replaces any list BYD sets; none of BYD's own QML uses it. */
+    private val TRANSFORM = Regex("""\btransform\b""")
 
     sealed class Result {
         class Patched(val qml: ByteArray) : Result()
@@ -46,6 +49,7 @@ internal object BydClusterAdasQml {
         for (property in CENTER_PROPERTIES) {
             if (!Regex("""\bproperty\s+\w+\s+$property\b""").containsMatchIn(centerText)) return Result.Refused("missing-$property")
         }
+        if (TRANSFORM.containsMatchIn(text) || TRANSFORM.containsMatchIn(centerText)) return Result.Refused("transform-used")
         val end = text.trimEnd().length
         if (end == 0 || text[end - 1] != '}') return Result.Refused("no-root-item")
         val crlf = "\r\n" in text
@@ -76,12 +80,10 @@ internal object BydClusterAdasQml {
     internal val BLOCK = """
     //DiPlay ADAS placement. During map projection BYD draws the big ADAS scene in the middle of the screen, on top of the map,
     //while its own "navi window" box (adas2dNaviWindowBg, x=1256 y=225, 563x353) on the right stays empty. While that box is
-    //visible (projection + big ADAS view) and DiPlay's heartbeat is alive, the scene is scaled and moved to sit centred in it.
-    //Channel: 1-row PNGs in .cluster/translate/ (only the image size is read).
+    //visible (projection + big ADAS view) and DiPlay's heartbeat is alive, the scene is scaled to 95% and moved to sit centred in it.
+    //Channel: one 1-row PNG in .cluster/translate/ (only the image size is read).
     //diplay-adas.png: width = mode (1 stock, 2 move into the box), height = heartbeat that changes every second.
-    //diplay-adas-p.png (optional): width/height = scene left/top px (both +1), overrides the centred default.
-    //diplay-adas-s.png (optional): width = scale in percent (20-100), default 95.
-    //Missing, unreadable or stale (3 s) = stock BYD layout.
+    //Missing, unreadable or stale (3 s) = stock BYD layout. The file is read once a second while there is no heartbeat.
     Item {
         id: diplayAdasId
         visible: false
@@ -93,21 +95,14 @@ internal object BydClusterAdasQml {
         property int beat: -1
         property double beatAt: 0
         property bool alive: false
-        property bool havePos: false
-        property real filePx: 0
-        property real filePy: 0
-        property bool haveSize: false
-        property real filePct: 95
-        property real pct: haveSize ? filePct : 95
+        property real pct: 95
         //the scene paints around (960, 409) of its own 608x290 item; that point is put on the box centre
-        property real defPx: adas2dNaviWindowBg.x + adas2dNaviWindowBg.width / 2 - 960 * pct / 100
-        property real defPy: adas2dNaviWindowBg.y + adas2dNaviWindowBg.height / 2 - 409 * pct / 100
-        property real px: havePos ? filePx : defPx
-        property real py: havePos ? filePy : defPy
+        property real px: adas2dNaviWindowBg.x + adas2dNaviWindowBg.width / 2 - 960 * pct / 100
+        property real py: adas2dNaviWindowBg.y + adas2dNaviWindowBg.height / 2 - 409 * pct / 100
         property bool compact: projecting && alive && mode === 2
         property var adasUi: centerContainerId.adasUi
         property var adas3r1vUi: centerContainerId.adas3r1vUi
-        property real sc: compact ? Math.max(20, Math.min(100, pct)) / 100 : 1
+        property real sc: compact ? pct / 100 : 1
         property real tx: compact ? px : 0
         property real ty: compact ? py : 0
         Scale { id: diplayScale1; origin.x: 0; origin.y: 0; xScale: diplayAdasId.sc; yScale: diplayAdasId.sc }
@@ -128,22 +123,8 @@ internal object BydClusterAdasQml {
             asynchronous: false
             source: "file:///data/cells/cell2-rw/data/media/0/.cluster/translate/diplay-adas.png?t=" + diplayAdasId.tick
         }
-        Image {
-            id: diplayPosImgId
-            visible: false
-            cache: false
-            asynchronous: false
-            source: "file:///data/cells/cell2-rw/data/media/0/.cluster/translate/diplay-adas-p.png?t=" + diplayAdasId.tick
-        }
-        Image {
-            id: diplaySizeImgId
-            visible: false
-            cache: false
-            asynchronous: false
-            source: "file:///data/cells/cell2-rw/data/media/0/.cluster/translate/diplay-adas-s.png?t=" + diplayAdasId.tick
-        }
         Timer {
-            interval: 250
+            interval: diplayAdasId.alive ? 250 : 1000
             running: true
             repeat: true
             onTriggered: {
@@ -157,15 +138,6 @@ internal object BydClusterAdasQml {
                         diplayAdasId.beat = h
                     }
                 }
-                var okPos = diplayPosImgId.status === Image.Ready && diplayPosImgId.implicitWidth > 0
-                diplayAdasId.havePos = okPos
-                if (okPos) {
-                    diplayAdasId.filePx = diplayPosImgId.implicitWidth - 1
-                    diplayAdasId.filePy = diplayPosImgId.implicitHeight - 1
-                }
-                var okSize = diplaySizeImgId.status === Image.Ready && diplaySizeImgId.implicitWidth > 0
-                diplayAdasId.haveSize = okSize
-                if (okSize) diplayAdasId.filePct = Math.max(20, Math.min(100, diplaySizeImgId.implicitWidth))
                 diplayAdasId.alive = diplayAdasId.beatAt > 0 && (now - diplayAdasId.beatAt) < 3000
             }
         }

@@ -940,9 +940,10 @@
     <string name="settings_launcher_bubble_description">Muestra el icono de DiPlay como una burbuja sobre la pantalla de inicio del coche: tócala para volver a CarPlay y arrástrala donde quieras. Se oculta al abrir DiPlay y vuelve al salir. Mantén pulsado para fijar su posición y vuelve a mantener pulsado para liberarla. Necesita el permiso para mostrarse sobre otras aplicaciones.</string>
     <string name="settings_adas_scene_title">Escena ADAS junto al mapa (experimental)</string>
     <string name="settings_adas_scene_toggle">Mover la escena ADAS grande junto al mapa</string>
-    <string name="settings_adas_scene_description">Mientras el mapa de CarPlay está en el cuadro de instrumentos, el coche puede abrir su escena ADAS grande en el centro, sobre el mapa. Con esto activado, DiPlay mueve la escena al recuadro vacío que BYD reserva a la derecha del cuadro, ajustada a su tamaño. No se oculta, cierra ni envía nada al coche: la escena y sus avisos siguen a la vista. DiPlay lo hace añadiendo su propio archivo al tema del cuadro, creado en la unidad a partir de los archivos del propio coche. El cuadro se recarga una vez al instalar o quitar el archivo, y muestra el diseño propio de BYD siempre que DiPlay no esté en marcha. Necesita el ADB de red del coche. Probado en un BYD Han con cuadro de 12,3 pulgadas.</string>
+    <string name="settings_adas_scene_description">Mientras el mapa de CarPlay está en el cuadro de instrumentos, el coche puede abrir su escena ADAS grande en el centro, sobre el mapa. Con esto activado, DiPlay mueve la escena al recuadro vacío que BYD reserva a la derecha del cuadro, ajustada a su tamaño. No se oculta, cierra ni envía nada al coche: la escena y sus avisos siguen a la vista. DiPlay lo hace añadiendo su propio archivo al tema del cuadro, creado en la unidad a partir de los archivos del propio coche. El cuadro se recarga una vez al instalar o quitar el archivo. Sin el mapa de DiPlay, el cuadro muestra el diseño propio de BYD, pero sigue usando el archivo de DiPlay hasta que se quite; usa «Quitar del cuadro» antes de desinstalar DiPlay. Necesita el ADB de red del coche.</string>
     <string name="settings_adas_scene_status_checking">Comprobando el cuadro…</string>
     <string name="settings_adas_scene_status_not_installed">Aún no instalado en el cuadro.</string>
+    <string name="settings_adas_scene_status_retired">El archivo de DiPlay ya no coincidía con el software del coche, así que DiPlay lo dejó y el cuadro usa el diseño propio de BYD. Activa el ajuste para instalarlo de nuevo.</string>
     <string name="settings_adas_scene_status_installed">Instalado en el cuadro.</string>
     <string name="settings_adas_scene_status_stale">El software del coche cambió después de crear el archivo de DiPlay. Reinstálalo o quítalo.</string>
     <string name="settings_adas_scene_status_other">Se está usando el tema del cuadro de otra aplicación. Quítalo primero.</string>
@@ -953,7 +954,7 @@
     <string name="settings_adas_scene_busy">Trabajando en el cuadro…</string>
     <string name="settings_adas_scene_reinstall">Reinstalar en el cuadro</string>
     <string name="settings_adas_scene_remove">Quitar del cuadro</string>
-    <string name="settings_adas_scene_confirm_install">DiPlay añadirá su propio archivo al tema del cuadro y recargará el cuadro una vez. Mientras se recarga, el cuadro muestra un aviso de que actualiza la versión multilingüe del instrumento; mantén el coche en P con el contacto puesto. Puedes quitar el archivo en cualquier momento. ¿Continuar?</string>
+    <string name="settings_adas_scene_confirm_install">DiPlay añadirá su propio archivo al tema del cuadro y recargará el cuadro una vez. Mientras se recarga, el cuadro muestra un aviso de que actualiza la versión multilingüe del instrumento; mantén el coche en P con el contacto puesto. Puedes quitar el archivo en cualquier momento con «Quitar del cuadro»; hazlo antes de desinstalar DiPlay, porque el cuadro sigue usando el archivo hasta que se quite. ¿Continuar?</string>
     <string name="settings_adas_scene_confirm_remove">DiPlay devolverá al cuadro su propio tema, borrará los archivos de DiPlay y recargará el cuadro una vez. Mantén el coche en P con el contacto puesto. ¿Continuar?</string>
     <string name="settings_adas_scene_install_action">Instalar</string>
     <string name="settings_adas_scene_remove_action">Quitar</string>
@@ -965,7 +966,7 @@
     <string name="settings_adas_scene_other_active">No hecho: se está usando el tema del cuadro de otra aplicación.</string>
     <string name="settings_adas_scene_unsupported">No hecho: los archivos de este cuadro no coinciden con lo que DiPlay espera. No se cambió nada.</string>
     <string name="settings_adas_scene_no_cluster">No hecho: el cuadro no respondió. No se cambió nada.</string>
-    <string name="settings_adas_scene_failed">No se pudo hacer. No se cambió nada.</string>
+    <string name="settings_adas_scene_failed">No se pudo hacer. El estado de arriba muestra lo que usa ahora el cuadro.</string>
     <string name="settings_launcher_bubble_size">Tamaño de la burbuja</string>
     <string name="settings_launcher_bubble_locked">Posición fijada</string>
     <string name="settings_launcher_bubble_unlocked">Posición liberada</string>

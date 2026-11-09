@@ -103,7 +103,7 @@ class BydClusterAdasThemeTest {
         assertEquals("CURRENT", tool(car("$TRANSLATE/$expected")).probe()["state"])
         val older = BydClusterAdasTheme.packName("0123456789abcdef")
         assertEquals("STALE", tool(car("$TRANSLATE/$older")).probe()["state"])
-        assertEquals("OTHER", tool(car("$TRANSLATE/${BydClusterAdasTheme.PACK_PREFIX}DashArc12p10.rcc")).probe()["state"])
+        assertEquals("OTHER", tool(car("$TRANSLATE/$OTHER_PACK")).probe()["state"])
         assertEquals("UNKNOWN", tool(car(null)).probe()["state"])
     }
 
@@ -127,6 +127,28 @@ class BydClusterAdasThemeTest {
         languageFile.delete()
         assertEquals(Status.UNSUPPORTED, tool(car()).probe().status)
         assertEquals("files", tool(car()).probe()["code"])
+    }
+
+    @Test fun aProbeRefusesAFileThatAlreadyMovesTheScenes() {
+        themeFile.writeBytes(theme(clusterQml, centerQml.replace("}\n", "    transform: []\n}\n")))
+        assertEquals("transform-used", tool(car()).probe()["code"])
+    }
+
+    @Test fun theNameAProbeReportsIsTheOneAnInstallWrites() {
+        val probed = tool(car()).probe()["expected"]!!
+        assertEquals(probed, tool(car()).install(30)["pack"])
+    }
+
+    @Test fun aFileOfDiPlaysInUseStaysStaleEvenWhenTheCarsFilesNoLongerFitIt() {
+        val name = tool(car()).install(30)["pack"]!!
+        themeFile.writeBytes(theme(clusterQml.replace("adas2dNaviWindowBg", "other"), centerQml))
+        val stale = tool(car("$TRANSLATE/$name")).probe()
+        assertEquals(Status.UNSUPPORTED, stale.status)
+        assertEquals("missing-adas2dNaviWindowBg", stale["code"])
+        assertEquals("STALE", stale["state"])
+        assertEquals("NONE", tool(car()).probe()["state"])
+        assertEquals("OTHER", tool(car("$TRANSLATE/$OTHER_PACK")).probe()["state"])
+        assertEquals("UNKNOWN", tool(car(null)).probe()["state"])
     }
 
     @Test fun installingBuildsAFileWithTheCarsLanguagesAndThePatchedClusterQml() {
@@ -167,7 +189,7 @@ class BydClusterAdasThemeTest {
     }
 
     @Test fun anotherAppsResourceInUseIsNeverReplaced() {
-        val other = "$TRANSLATE/${BydClusterAdasTheme.PACK_PREFIX}DashArc12p10.rcc"
+        val other = "$TRANSLATE/$OTHER_PACK"
         val channel = car(other)
         val result = tool(channel).install(30)
         assertEquals(Status.OTHER_ACTIVE, result.status)
@@ -203,7 +225,7 @@ class BydClusterAdasThemeTest {
         translate.mkdirs()
         val older = BydClusterAdasTheme.packName("0123456789abcdef")
         File(translate, older).writeBytes(ByteArray(10))
-        val foreign = File(translate, "${BydClusterAdasTheme.PACK_PREFIX}DashArc12p10.rcc").apply { writeBytes(ByteArray(10)) }
+        val foreign = File(translate, OTHER_PACK).apply { writeBytes(ByteArray(10)) }
         val channel = car("$TRANSLATE/$older")
         val result = tool(channel).install(30)
         assertEquals(Status.INSTALLED, result.status)
@@ -222,18 +244,42 @@ class BydClusterAdasThemeTest {
     @Test fun removingGivesTheCarsResourceBackAndDeletesOnlyDiPlaysFiles() {
         val channel = car()
         val name = tool(channel).install(30)["pack"]!!
-        val foreign = File(translate, "${BydClusterAdasTheme.PACK_PREFIX}DashArc12p10.rcc").apply { writeBytes(ByteArray(10)) }
+        val foreign = File(translate, OTHER_PACK).apply { writeBytes(ByteArray(10)) }
         File(translate, "diplay-adas.png").writeBytes(ByteArray(1))
         File(translate, "diplay-adas-p.png").writeBytes(ByteArray(1))
-        File(translate, "dasharc-modo.png").writeBytes(ByteArray(1))
+        File(translate, "other-modo.png").writeBytes(ByteArray(1))
         channel.calls.clear()
         pauses.clear()
         val result = tool(channel).remove(30)
         assertEquals(Status.REMOVED, result.status)
         assertEquals("true", result["reloaded"])
         assertEquals(listOf("select default", "refresh 30"), channel.calls)
-        assertEquals(setOf(foreign.name, "dasharc-modo.png"), translate.list()!!.toSet())
+        assertEquals(setOf(foreign.name, "other-modo.png"), translate.list()!!.toSet())
         assertFalse(File(translate, name).exists())
+    }
+
+    @Test fun removingWithoutAReloadSelectsTheCarsResourceAndLeavesTheClusterRunning() {
+        val channel = car()
+        val name = tool(channel).install(30)["pack"]!!
+        File(translate, "diplay-adas.png").writeBytes(ByteArray(1))
+        channel.calls.clear()
+        pauses.clear()
+        val result = tool(channel).remove(30, reload = false)
+        assertEquals(Status.REMOVED, result.status)
+        assertEquals("false", result["reloaded"])
+        assertEquals(listOf("select default"), channel.calls)
+        assertEquals(emptyList<Long>(), pauses)
+        assertFalse(File(translate, name).exists())
+        assertFalse(File(translate, "diplay-adas.png").exists())
+    }
+
+    @Test fun aFileIsNotDeletedWhileTheClusterStillSelectsIt() {
+        val channel = car()
+        val name = tool(channel).install(30)["pack"]!!
+        channel.confirm = false
+        val result = tool(channel).remove(30, reload = false)
+        assertEquals(Status.FAILED, result.status)
+        assertTrue(File(translate, name).isFile)
     }
 
     @Test fun removingWhenTheCarsOwnResourceIsInUseOnlyTidiesUp() {
@@ -251,7 +297,7 @@ class BydClusterAdasThemeTest {
         translate.mkdirs()
         val own = BydClusterAdasTheme.packName("0123456789abcdef")
         File(translate, own).writeBytes(ByteArray(10))
-        val channel = car("$TRANSLATE/${BydClusterAdasTheme.PACK_PREFIX}DashArc12p10.rcc")
+        val channel = car("$TRANSLATE/$OTHER_PACK")
         val result = tool(channel).remove(30)
         assertEquals("false", result["reloaded"])
         assertEquals(emptyList<String>(), channel.calls)
@@ -278,10 +324,14 @@ class BydClusterAdasThemeTest {
             BydClusterAdasThemeMain.command("/data/app/com.x-1/base.apk", "install"),
         )
         assertTrue(BydClusterAdasThemeMain.command("/a'b/base.apk", "probe").startsWith("CLASSPATH='/a'\"'\"'b/base.apk' "))
+        assertTrue(BydClusterAdasThemeMain.command("/x/base.apk", BydClusterAdasThemeMain.RETIRE).endsWith(" retire 30"))
     }
 
     private companion object {
         const val DEFAULT = "/system/lib64/commonTranslate.rcc"
         const val TRANSLATE = "/data/cells/cell2-rw/data/media/0/.cluster/translate"
+
+        /** Another app's resource file in the translate folder, named the way the cluster accepts. */
+        const val OTHER_PACK = BydClusterAdasTheme.PACK_PREFIX + "Other12p10.rcc"
     }
 }

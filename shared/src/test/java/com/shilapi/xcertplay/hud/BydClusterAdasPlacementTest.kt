@@ -45,10 +45,14 @@ class BydClusterAdasPlacementTest {
         BydClusterAdasPlacement.mapShown = { true }
         BydClusterAdasPlacement.nowMillis = { now }
         BydOutputSettings.setAdasSceneBesideMap(context, false)
+        BydOutputSettings.setAdasPackInstalled(context, false)
+        BydOutputSettings.setAdasPackRetired(context, false)
     }
 
     @After fun tearDown() {
         BydOutputSettings.setAdasSceneBesideMap(context, false)
+        BydOutputSettings.setAdasPackInstalled(context, false)
+        BydOutputSettings.setAdasPackRetired(context, false)
         BydClusterAdasPlacement.resetForTest()
     }
 
@@ -128,7 +132,7 @@ class BydClusterAdasPlacementTest {
 
     @Test fun anotherAppsThemeAndUnfitFilesAreReportedWithTheirReason() {
         var outcome: Outcome? = null
-        helper = { line(Status.OTHER_ACTIVE, "path" to "/x/DashArc.rcc") }
+        helper = { line(Status.OTHER_ACTIVE, "path" to "/x/Other.rcc") }
         BydClusterAdasPlacement.install(context) { outcome = it }
         assertEquals(Outcome.OTHER_ACTIVE, outcome)
         assertEquals(State.OTHER, BydClusterAdasPlacement.status.state)
@@ -243,5 +247,140 @@ class BydClusterAdasPlacementTest {
         BydOutputSettings.setAdasSceneBesideMap(context, false)
         BydClusterAdasPlacement.settingChanged(context)
         assertEquals(listOf(BydClusterAdasBeat.stop()), commands)
+    }
+
+    @Test fun aProbeRemembersWhetherDiPlaysFileIsInTheCluster() {
+        helper = { probeReply("CURRENT") }
+        BydClusterAdasPlacement.refresh(context)
+        assertTrue(BydOutputSettings.adasPackInstalled(context))
+        helper = { probeReply("NONE") }
+        BydClusterAdasPlacement.refresh(context)
+        assertFalse(BydOutputSettings.adasPackInstalled(context))
+        helper = { probeReply("STALE") }
+        BydClusterAdasPlacement.refresh(context)
+        assertTrue(BydOutputSettings.adasPackInstalled(context))
+        helper = { probeReply("OTHER") }
+        BydClusterAdasPlacement.refresh(context)
+        assertTrue(BydOutputSettings.adasPackInstalled(context))
+    }
+
+    @Test fun installingAndRemovingKeepTheRecordAndClearTheNotice() {
+        BydOutputSettings.setAdasPackRetired(context, true)
+        helper = { line(Status.INSTALLED, "pack" to "p") }
+        BydClusterAdasPlacement.install(context) {}
+        assertTrue(BydOutputSettings.adasPackInstalled(context))
+        assertFalse(BydOutputSettings.adasPackRetired(context))
+        BydOutputSettings.setAdasPackRetired(context, true)
+        helper = { line(Status.REMOVED, "reloaded" to "true") }
+        BydClusterAdasPlacement.remove(context) {}
+        assertFalse(BydOutputSettings.adasPackInstalled(context))
+        assertFalse(BydOutputSettings.adasPackRetired(context))
+    }
+
+    @Test fun nothingIsAskedAtStartUnlessDiPlayInstalledAFile() {
+        helper = { probeReply("STALE") }
+        BydClusterAdasPlacement.tick(context)
+        assertEquals(emptyList<String>(), commands)
+    }
+
+    @Test fun aStaleFileIsGivenUpAtStartWhateverTheSwitchSaysAndTheClusterIsReloadedInP() {
+        BydOutputSettings.setAdasPackInstalled(context, true)
+        assertFalse(BydOutputSettings.adasSceneBesideMap(context))
+        BydClusterAdasPlacement.mapShown = { false }
+        helper = { command -> if (" probe " in command) probeReply("STALE") else line(Status.REMOVED, "reloaded" to "true") }
+        BydClusterAdasPlacement.tick(context)
+        assertEquals(1, helperCommands("probe").size)
+        assertTrue(helperCommands("remove").single().endsWith(" remove 30"))
+        assertEquals(0, helperCommands("retire").size)
+        assertEquals(State.NOT_INSTALLED, BydClusterAdasPlacement.status.state)
+        assertFalse(BydOutputSettings.adasPackInstalled(context))
+        assertFalse(BydOutputSettings.adasSceneBesideMap(context))
+        assertTrue(BydOutputSettings.adasPackRetired(context))
+    }
+
+    @Test fun aStaleFileIsRetiredWithoutAReloadWhileTheCarIsNotInPOrTheGearIsUnknown() {
+        for (gear in listOf(false, null)) {
+            BydClusterAdasPlacement.resetForTest()
+            BydClusterAdasPlacement.submit = { it() }
+            BydClusterAdasPlacement.access = { LocalAdb.Access.READY }
+            BydClusterAdasPlacement.mapShown = { true }
+            BydClusterAdasPlacement.nowMillis = { now }
+            BydClusterAdasPlacement.run = { _, command ->
+                commands += command
+                if ("BydClusterAdasThemeMain" in command) helper(command) else "ok"
+            }
+            BydClusterAdasPlacement.parked = { gear }
+            BydOutputSettings.setAdasPackInstalled(context, true)
+            BydOutputSettings.setAdasSceneBesideMap(context, true)
+            BydOutputSettings.setAdasPackRetired(context, false)
+            commands.clear()
+            helper = { command -> if (" probe " in command) probeReply("STALE") else line(Status.REMOVED, "reloaded" to "false") }
+            BydClusterAdasPlacement.tick(context)
+            assertTrue("gear=$gear", helperCommands("retire").single().endsWith(" retire 30"))
+            assertEquals("gear=$gear", 0, helperCommands("remove").size)
+            assertFalse(BydOutputSettings.adasPackInstalled(context))
+            assertFalse(BydOutputSettings.adasSceneBesideMap(context))
+            assertTrue(BydOutputSettings.adasPackRetired(context))
+        }
+    }
+
+    @Test fun aStaleFileWhoseCarFilesNoLongerFitIsStillGivenUp() {
+        BydOutputSettings.setAdasPackInstalled(context, true)
+        helper = { command ->
+            if (" probe " in command) line(Status.UNSUPPORTED, "code" to "missing-adasUi", "state" to "STALE")
+            else line(Status.REMOVED, "reloaded" to "true")
+        }
+        BydClusterAdasPlacement.tick(context)
+        assertEquals(1, helperCommands("remove").size)
+        assertTrue(BydOutputSettings.adasPackRetired(context))
+    }
+
+    @Test fun anUnsupportedClusterIsStaleOnlyWhileAFileOfDiPlaysIsInUse() {
+        helper = { line(Status.UNSUPPORTED, "code" to "missing-adasUi", "state" to "NONE") }
+        BydClusterAdasPlacement.refresh(context)
+        assertEquals(State.UNSUPPORTED, BydClusterAdasPlacement.status.state)
+        helper = { line(Status.UNSUPPORTED, "code" to "missing-adasUi", "state" to "STALE") }
+        BydClusterAdasPlacement.refresh(context)
+        assertEquals(State.STALE, BydClusterAdasPlacement.status.state)
+        assertEquals("missing-adasUi", BydClusterAdasPlacement.status.code)
+    }
+
+    @Test fun aFileThatStillFitsIsLeftAloneAndCheckedOnlyOnce() {
+        BydOutputSettings.setAdasPackInstalled(context, true)
+        helper = { probeReply("CURRENT") }
+        BydClusterAdasPlacement.tick(context)
+        BydClusterAdasPlacement.tick(context)
+        now += 61_000L
+        BydClusterAdasPlacement.tick(context)
+        assertEquals(1, helperCommands("probe").size)
+        assertEquals(0, helperCommands("remove").size + helperCommands("retire").size)
+        assertTrue(BydOutputSettings.adasPackInstalled(context))
+        assertFalse(BydOutputSettings.adasPackRetired(context))
+    }
+
+    @Test fun aCheckThatGetsNoAnswerIsRepeatedAfterAMinuteAndThenStops() {
+        BydOutputSettings.setAdasPackInstalled(context, true)
+        helper = { null }
+        BydClusterAdasPlacement.tick(context)
+        BydClusterAdasPlacement.tick(context)
+        assertEquals(1, helperCommands("probe").size)
+        now += 61_000L
+        helper = { probeReply("CURRENT") }
+        BydClusterAdasPlacement.tick(context)
+        assertEquals(2, helperCommands("probe").size)
+        now += 61_000L
+        BydClusterAdasPlacement.tick(context)
+        assertEquals(2, helperCommands("probe").size)
+    }
+
+    @Test fun aFileThatCouldNotBeGivenUpIsNotTriedAgainInTheSameRun() {
+        BydOutputSettings.setAdasPackInstalled(context, true)
+        helper = { command -> if (" probe " in command) probeReply("STALE") else line(Status.FAILED, "code" to "select") }
+        BydClusterAdasPlacement.tick(context)
+        now += 61_000L
+        BydClusterAdasPlacement.tick(context)
+        assertEquals(1, helperCommands("remove").size)
+        assertTrue(BydOutputSettings.adasPackInstalled(context))
+        assertFalse(BydOutputSettings.adasPackRetired(context))
     }
 }

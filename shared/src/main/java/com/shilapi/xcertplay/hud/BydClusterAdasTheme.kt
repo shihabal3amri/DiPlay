@@ -52,25 +52,44 @@ internal class BydClusterAdasTheme(
         class Unsupported(val code: String) : Build()
     }
 
-    /** Read-only: whether the car's files fit, and which of DiPlay's resources is in use. */
+    /** The car's own files fit the block: [patched] is its `cluster.qml`, [digest] says which files it was made from. */
+    private class Fitted(val patched: ByteArray, val digest: String) {
+        val name: String get() = packName(digest)
+    }
+
+    private sealed class Inspection {
+        class Fits(val fitted: Fitted) : Inspection()
+        class Unsupported(val code: String) : Inspection()
+    }
+
+    /**
+     * Read-only: whether the car's files fit, and which of DiPlay's resources is in use. Only the car's two QML files
+     * are read and hashed; nothing is built. A resource of DiPlay's that is in use while the car's files do not fit,
+     * or while it was made from other files, is reported as `STALE`.
+     */
     fun probe(): Result {
-        val built = when (val build = build()) {
-            is Build.Unsupported -> return unsupported(build.code)
-            is Build.Ready -> build.built
-        }
+        val inspection = inspect()
+        val fitted = (inspection as? Inspection.Fits)?.fitted
         val active = channel.active()
-        val own = ownPacks().map { it.name }
         val state = when {
             active == null -> "UNKNOWN"
             isDefault(active.path) -> "NONE"
-            ownName(active.path) == built.name -> "CURRENT"
-            ownName(active.path) != null -> "STALE"
-            else -> "OTHER"
+            ownName(active.path) == null -> "OTHER"
+            ownName(active.path) == fitted?.name -> "CURRENT"
+            else -> "STALE"
         }
-        return Result(
-            Status.READY,
-            mapOf("state" to state, "expected" to built.name, "installed" to (own.firstOrNull() ?: "-"), "digest" to built.digest),
-        )
+        return when (inspection) {
+            is Inspection.Unsupported -> Result(Status.UNSUPPORTED, mapOf("code" to inspection.code, "state" to state))
+            is Inspection.Fits -> Result(
+                Status.READY,
+                mapOf(
+                    "state" to state,
+                    "expected" to inspection.fitted.name,
+                    "installed" to (ownPacks().firstOrNull()?.name ?: "-"),
+                    "digest" to inspection.fitted.digest,
+                ),
+            )
+        }
     }
 
     /** Builds the resource, writes it, selects it and asks for the interface to be reloaded. */
@@ -104,59 +123,76 @@ internal class BydClusterAdasTheme(
         return Result(Status.INSTALLED, mapOf("pack" to built.name))
     }
 
-    /** Gives the cluster its own resource back, reloads it, and deletes DiPlay's files. */
-    fun remove(refreshCode: Int): Result {
+    /**
+     * Gives the cluster its own resource back, reloads it, and deletes DiPlay's files. With [reload] false the cluster
+     * is not reloaded: it keeps what it has loaded and uses its own resource the next time it starts, which is what
+     * to do while the car is not parked.
+     */
+    fun remove(refreshCode: Int, reload: Boolean = true): Result {
         if (refreshCode != REFRESH_12_3) return unsupported("refresh-code")
         val active = channel.active() ?: return Result(Status.NO_CLUSTER)
-        val reload = ownName(active.path) != null
-        if (reload) {
+        val selected = ownName(active.path) != null
+        if (selected) {
             if (!channel.select(null) || channel.active()?.path?.let(::isDefault) != true) {
                 return Result(Status.FAILED, mapOf("code" to "select"))
             }
         }
         ownPacks().forEach { it.delete() }
         channelFiles().forEach { it.delete() }
-        if (reload) {
+        val reloaded = selected && reload
+        if (reloaded) {
             pause(RELOAD_DELAY_MILLIS)
             channel.refresh(refreshCode)
         }
-        return Result(Status.REMOVED, mapOf("reloaded" to reload.toString()))
+        return Result(Status.REMOVED, mapOf("reloaded" to reloaded.toString()))
     }
 
     private fun unsupported(code: String) = Result(Status.UNSUPPORTED, mapOf("code" to code))
 
-    private fun build(): Build = try {
+    private fun <T> withArchives(failed: T, use: (QtResource.Archive, QtResource.Archive) -> T): T = try {
         QtResource.open(QtResource.FileSource(themeFile)).use { theme ->
-            QtResource.open(QtResource.FileSource(languageFile)).use { languages ->
-                assemble(theme, languages)
-            }
+            QtResource.open(QtResource.FileSource(languageFile)).use { languages -> use(theme, languages) }
         }
     } catch (_: IOException) {
-        Build.Unsupported("files")
+        failed
     } catch (_: SecurityException) {
-        Build.Unsupported("files")
+        failed
     }
 
-    private fun assemble(theme: QtResource.Archive, languages: QtResource.Archive): Build {
-        val cluster = theme.find(CLUSTER_QML) ?: return Build.Unsupported("no-cluster-qml")
-        val center = theme.find(CENTER_QML) ?: return Build.Unsupported("no-center-qml")
+    private fun inspect(): Inspection = withArchives(Inspection.Unsupported("files")) { theme, languages ->
+        inspect(theme, languages)
+    }
+
+    private fun build(): Build = withArchives(Build.Unsupported("files")) { theme, languages ->
+        when (val inspection = inspect(theme, languages)) {
+            is Inspection.Unsupported -> Build.Unsupported(inspection.code)
+            is Inspection.Fits -> assemble(languages, inspection.fitted)
+        }
+    }
+
+    private fun inspect(theme: QtResource.Archive, languages: QtResource.Archive): Inspection {
+        val cluster = theme.find(CLUSTER_QML) ?: return Inspection.Unsupported("no-cluster-qml")
+        val center = theme.find(CENTER_QML) ?: return Inspection.Unsupported("no-center-qml")
         val clusterBytes = theme.content(cluster)
         val centerBytes = theme.content(center)
         val patched = when (val result = BydClusterAdasQml.patch(clusterBytes, centerBytes)) {
-            is BydClusterAdasQml.Result.Refused -> return Build.Unsupported(result.code)
+            is BydClusterAdasQml.Result.Refused -> return Inspection.Unsupported(result.code)
             is BydClusterAdasQml.Result.Patched -> result.qml
         }
         if (languages.entries.none { it.path.startsWith(LANGUAGE_DIR) && it.path.endsWith(".qm") }) {
-            return Build.Unsupported("no-languages")
+            return Inspection.Unsupported("no-languages")
         }
-        if (languages.find(CLUSTER_QML) != null) return Build.Unsupported("language-has-qml")
+        if (languages.find(CLUSTER_QML) != null) return Inspection.Unsupported("language-has-qml")
+        return Inspection.Fits(Fitted(patched, BydClusterAdasQml.digest(clusterBytes + centerBytes)))
+    }
+
+    private fun assemble(languages: QtResource.Archive, fitted: Fitted): Build {
         val items = languages.entries.map { entry ->
             QtResource.Item(entry.path, entry.flags, languages.stored(entry), entry.lastModified, entry.country, entry.language)
-        } + QtResource.item(CLUSTER_QML, patched, nowMillis())
+        } + QtResource.item(CLUSTER_QML, fitted.patched, nowMillis())
         val bytes = QtResource.write(items, VERSION)
-        verify(bytes, items, patched)?.let { return Build.Unsupported(it) }
-        val digest = BydClusterAdasQml.digest(clusterBytes + centerBytes)
-        return Build.Ready(Built(packName(digest), bytes, digest))
+        verify(bytes, items, fitted.patched)?.let { return Build.Unsupported(it) }
+        return Build.Ready(Built(fitted.name, bytes, fitted.digest))
     }
 
     /** Reads the built file back: every language blob is the car's own, and the file is the patched one. */
@@ -218,7 +254,7 @@ internal class BydClusterAdasTheme(
         const val REFRESH_12_3 = 30
 
         /** Raise when the block changes so a resource built earlier is replaced. */
-        const val PATCH_REVISION = 1
+        const val PATCH_REVISION = 3
 
         const val CLUSTER_QML = "/qml/cluster.qml"
         const val CENTER_QML = "/qml/Center.qml"

@@ -10,13 +10,15 @@ import kotlin.system.exitProcess
  * folder and asks the cluster service to use it, all through [BydClusterAdasTheme]. Prints one protocol line.
  *
  * `probe` changes nothing. `install` and `remove` reload the cluster's interface, so DiPlay asks for them only while
- * the car is parked.
+ * the car is parked. `retire` is `remove` without the reload, for a file that no longer fits the car's software while
+ * the car is not parked: the cluster uses its own resource the next time it starts.
  */
 object BydClusterAdasThemeMain {
     internal const val HEADER = "DIPLAY_ADAS_THEME_V1"
     internal const val PROBE = "probe"
     internal const val INSTALL = "install"
     internal const val REMOVE = "remove"
+    internal const val RETIRE = "retire"
     private const val DEADLINE_MS = 28_000L
     private const val ROOT_UID = 0
     private const val SHELL_UID = 2000
@@ -54,7 +56,7 @@ object BydClusterAdasThemeMain {
     private fun execute(args: Array<String>): String {
         val uid = Process.myUid()
         require(uid == SHELL_UID || uid == ROOT_UID)
-        require(args.size == 2 && args[0] in setOf(PROBE, INSTALL, REMOVE))
+        require(args.size == 2 && args[0] in setOf(PROBE, INSTALL, REMOVE, RETIRE))
         val code = requireNotNull(args[1].toIntOrNull())
         val link = BydClusterThemeLink.connect() ?: return BydClusterAdasTheme.Result(BydClusterAdasTheme.Status.NO_CLUSTER).line()
         val theme = BydClusterAdasTheme(
@@ -66,6 +68,7 @@ object BydClusterAdasThemeMain {
         return when (args[0]) {
             PROBE -> theme.probe()
             INSTALL -> theme.install(code)
+            RETIRE -> theme.remove(code, reload = false)
             else -> theme.remove(code)
         }.line()
     }

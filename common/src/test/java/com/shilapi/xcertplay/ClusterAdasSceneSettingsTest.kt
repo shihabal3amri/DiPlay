@@ -68,6 +68,7 @@ class ClusterAdasSceneSettingsTest {
         opened.forEach { it.finish() }
         AppAppearanceRuntime.resetForTest()
         BydOutputSettings.setAdasSceneBesideMap(context, false)
+        BydOutputSettings.setAdasPackRetired(context, false)
     }
 
     private fun installDiLink3Adapter() {
@@ -127,9 +128,19 @@ class ClusterAdasSceneSettingsTest {
         val description = screen.getString(R.string.settings_adas_scene_description)
         assertTrue(texts(screen).toString(), description in texts(screen))
         assertTrue("Nothing is hidden, closed or sent to the car" in description && "network ADB" in description)
+        assertTrue("before uninstalling DiPlay" in description && "Tested on" !in description)
         assertFalse(toggle(screen).isChecked)
         assertFalse(BydOutputSettings.adasSceneBesideMap(context))
         assertTrue("refresh" in placement.calls)
+    }
+
+    @Test fun theSettingsSearchDoesNotAskTheHeadUnitAnything() {
+        installDiLink3Adapter()
+        val screen = advancedSettings()
+        placement.calls.clear()
+        ReflectionHelpers.callInstanceMethod<Any>(screen, "buildSettingsSearchIndex")
+        // Only the screen that is shown afterwards asks, not the detached build of every card.
+        assertEquals(1, placement.calls.count { it == "refresh" })
     }
 
     @Test fun anotherClusterPanelDisablesTheToggleAndSaysWhy() {
@@ -156,6 +167,22 @@ class ClusterAdasSceneSettingsTest {
         }
         val screen = advancedSettings(State.UNSUPPORTED, code = "missing-adasUi")
         assertTrue(screen.getString(R.string.settings_adas_scene_status_unsupported, "missing-adasUi") in texts(screen))
+    }
+
+    @Test fun aFileDiPlayGaveUpIsExplainedWhereItWasOffered() {
+        installDiLink3Adapter()
+        BydOutputSettings.setAdasPackRetired(context, true)
+        val screen = advancedSettings(State.NOT_INSTALLED)
+        assertTrue(screen.getString(R.string.settings_adas_scene_status_retired) in texts(screen))
+        assertFalse(screen.getString(R.string.settings_adas_scene_status_not_installed) in texts(screen))
+    }
+
+    @Test fun anInstallAsksTheDriverToRemoveTheFileBeforeUninstallingDiPlay() {
+        installDiLink3Adapter()
+        val screen = advancedSettings()
+        toggle(screen).performClick()
+        val asked = message(dialog())
+        assertTrue(asked, "Remove from the cluster" in asked && "before uninstalling DiPlay" in asked)
     }
 
     @Test fun theToggleIsOfferedOnlyWhereInstallingCouldWork() {
@@ -286,6 +313,14 @@ class ClusterAdasSceneSettingsTest {
         reinstall.performClick()
         press(dialog(), AlertDialog.BUTTON_POSITIVE)
         assertEquals(1, placement.calls.count { it == "install" })
+    }
+
+    @Test fun aFileThatNoLongerFitsTheCarCanOnlyBeRemoved() {
+        installDiLink3Adapter()
+        val screen = advancedSettings(State.STALE, code = "missing-adasUi")
+        assertEquals(View.GONE, button(screen, R.string.settings_adas_scene_reinstall).visibility)
+        assertEquals(View.VISIBLE, button(screen, R.string.settings_adas_scene_remove).visibility)
+        assertTrue(screen.getString(R.string.settings_adas_scene_status_unsupported, "missing-adasUi") in texts(screen))
     }
 
     @Test fun theStatusFollowsThePlacementWhileTheScreenIsOpen() {

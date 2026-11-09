@@ -12,6 +12,8 @@ object BydOutputSettings {
     private const val KEY_ENABLED = "navigation_enabled"
     private const val KEY_CLUSTER_STREAM_PAUSE = "cluster_stream_pause"
     private const val KEY_ADAS_SCENE_BESIDE_MAP = "adas_scene_beside_map"
+    private const val KEY_ADAS_PACK_INSTALLED = "adas_pack_installed"
+    private const val KEY_ADAS_PACK_RETIRED = "adas_pack_retired"
     private const val KEY_CLUSTER_PROJECTION_SHAPE = "cluster_projection_shape"
     private const val KEY_BATTERY_TO_IPHONE = "battery_to_iphone"
     private const val KEY_LOW_CHARGE_PERCENT = "low_charge_percent"
@@ -50,6 +52,21 @@ object BydOutputSettings {
 
     fun setAdasSceneBesideMap(context: Context, enabled: Boolean) =
         prefs(context).edit().putBoolean(KEY_ADAS_SCENE_BESIDE_MAP, enabled).apply()
+
+    /**
+     * Whether DiPlay put its own file in the cluster's theme, whatever [adasSceneBesideMap] says. DiPlay checks at start,
+     * while this is set, that the file still fits the car's software; see [BydClusterAdasPlacement].
+     */
+    fun adasPackInstalled(context: Context): Boolean = prefs(context).getBoolean(KEY_ADAS_PACK_INSTALLED, false)
+
+    fun setAdasPackInstalled(context: Context, installed: Boolean) =
+        prefs(context).edit().putBoolean(KEY_ADAS_PACK_INSTALLED, installed).apply()
+
+    /** Set when DiPlay gave up its file because the car's software changed, so Settings can say why it is gone. */
+    fun adasPackRetired(context: Context): Boolean = prefs(context).getBoolean(KEY_ADAS_PACK_RETIRED, false)
+
+    fun setAdasPackRetired(context: Context, retired: Boolean) =
+        prefs(context).edit().putBoolean(KEY_ADAS_PACK_RETIRED, retired).apply()
 
     /**
      * How the CarPlay map is projected on the cluster: half screen (default) keeps the cluster's own

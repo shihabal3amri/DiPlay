@@ -1,7 +1,5 @@
 package com.shilapi.xcertplay.hud
 
-import java.io.File
-import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -71,6 +69,11 @@ class BydClusterAdasQmlTest {
         assertEquals("missing-adas3r1vUi", refusal(patch(cluster(), center = "Item { property CenterChild adasUi: null }")))
     }
 
+    @Test fun aFileThatAlreadyUsesTransformIsRefused() {
+        assertEquals("transform-used", refusal(patch(cluster().replace("Item {\r\n", "Item {\r\n    transform: []\r\n"))))
+        assertEquals("transform-used", refusal(patch(cluster(), center = center.replace("}\n", "    property var transform\n}\n"))))
+    }
+
     @Test fun aFileThatDoesNotEndWithTheRootBraceIsRefused() {
         assertEquals("no-root-item", refusal(patch(cluster(tail = "    // cut short"))))
     }
@@ -88,21 +91,17 @@ class BydClusterAdasQmlTest {
         )
     }
 
-    @Test fun theBlockUsesTheChannelFilesAndOnlyBydsOwnItems() {
+    @Test fun theBlockReadsOneChannelFileAndUsesOnlyBydsOwnItems() {
         val block = BydClusterAdasQml.BLOCK
-        for (name in listOf("diplay-adas.png", "diplay-adas-p.png", "diplay-adas-s.png")) assertTrue(name, name in block)
+        assertEquals(1, Regex("""\bImage\s*\{""").findAll(block).count())
+        assertEquals(setOf("diplay-adas.png"), Regex("""diplay-adas[\w-]*\.png""").findAll(block).map { it.value }.toSet())
         assertTrue("adas2dNaviWindowBg" in block && "centerContainerId.adasUi" in block)
         assertTrue(block.endsWith("}\n"))
         assertFalse('\r' in block)
     }
 
-    @Test fun anOptionalCheckAgainstThePatchedFileThatWasTestedOnTheCar() {
-        // DIPLAY_QML_STOCK is a car's own cluster.qml and DIPLAY_QML_EXPECTED the same file with the block added; CI
-        // leaves them unset because the car's file is BYD's and is not kept in this repository.
-        val stock = System.getenv("DIPLAY_QML_STOCK") ?: return
-        val expected = System.getenv("DIPLAY_QML_EXPECTED") ?: return
-        val result = BydClusterAdasQml.patch(File(stock).readBytes(), center.toByteArray()) as BydClusterAdasQml.Result.Patched
-        assertArrayEquals(File(expected).readBytes(), result.qml)
+    @Test fun theBlockReadsTheFileMoreSlowlyWhileThereIsNoHeartbeat() {
+        assertTrue("interval: diplayAdasId.alive ? 250 : 1000" in BydClusterAdasQml.BLOCK)
     }
 
     private companion object {

@@ -1042,9 +1042,10 @@
     <string name="settings_launcher_bubble_description">車載機のホーム画面に DiPlay のアイコンをバブルとして表示します。タップすると CarPlay に戻り、ドラッグでどこへでも移動できます。DiPlay の画面を開くと隠れ、離れると再び表示されます。長押しで位置をロックし、もう一度長押しで解除します。「他のアプリの上に重ねて表示」が必要です。</string>
     <string name="settings_adas_scene_title">マップ横のADASシーン（実験的機能）</string>
     <string name="settings_adas_scene_toggle">大きなADASシーンをマップの横に移す</string>
-    <string name="settings_adas_scene_description">CarPlayのマップがメーターにある間、車は大きなADASシーンを中央のマップの上に開くことがあります。これをオンにすると、DiPlayはシーンを、BYDがメーターの右側に空けているボックスに収まるよう縮小して移します。何も隠さず、閉じず、車へ何も送りません。シーンとその警告は表示されたままです。DiPlayは、車自身のファイルからヘッドユニット上で作成した専用ファイルをメーターのテーマに追加することで実現します。ファイルのインストール時と削除時にメーターは1回再読み込みされ、DiPlayが動作していないときはBYD本来のレイアウトで表示されます。車のネットワークADBが必要です。12.3インチメーターのBYD Hanで確認済みです。</string>
+    <string name="settings_adas_scene_description">CarPlayのマップがメーターにある間、車は大きなADASシーンを中央のマップの上に開くことがあります。これをオンにすると、DiPlayはシーンを、BYDがメーターの右側に空けているボックスに収まるよう縮小して移します。何も隠さず、閉じず、車へ何も送りません。シーンとその警告は表示されたままです。DiPlayは、車自身のファイルからヘッドユニット上で作成した専用ファイルをメーターのテーマに追加することで実現します。ファイルのインストール時と削除時にメーターは1回再読み込みされます。DiPlayのマップがないときはBYD本来のレイアウトで表示されますが、ファイルを削除するまでメーターはDiPlayのファイルを使い続けるため、DiPlayをアンインストールする前に「メーターから削除」を使ってください。車のネットワークADBが必要です。</string>
     <string name="settings_adas_scene_status_checking">メーターを確認しています…</string>
     <string name="settings_adas_scene_status_not_installed">メーターにはまだインストールされていません。</string>
+    <string name="settings_adas_scene_status_retired">DiPlayのファイルが車のソフトウェアと合わなくなったため、DiPlayはこれを手放し、メーターはBYD本来のレイアウトを使っています。もう一度インストールするには、設定をオンにしてください。</string>
     <string name="settings_adas_scene_status_installed">メーターにインストール済みです。</string>
     <string name="settings_adas_scene_status_stale">DiPlayのファイルを作成した後に車のソフトウェアが変更されました。再インストールするか、削除してください。</string>
     <string name="settings_adas_scene_status_other">他のアプリのメーターテーマが使用中です。先にそちらを削除してください。</string>
@@ -1055,7 +1056,7 @@
     <string name="settings_adas_scene_busy">メーターを処理しています…</string>
     <string name="settings_adas_scene_reinstall">メーターに再インストール</string>
     <string name="settings_adas_scene_remove">メーターから削除</string>
-    <string name="settings_adas_scene_confirm_install">DiPlayは専用ファイルをメーターのテーマに追加し、メーターを1回再読み込みします。再読み込み中、メーターには多言語メーターバージョンの更新を知らせるメッセージが表示されます。車をPレンジのまま電源オンにしておいてください。ファイルはいつでも削除できます。続行しますか？</string>
+    <string name="settings_adas_scene_confirm_install">DiPlayは専用ファイルをメーターのテーマに追加し、メーターを1回再読み込みします。再読み込み中、メーターには多言語メーターバージョンの更新を知らせるメッセージが表示されます。車をPレンジのまま電源オンにしておいてください。ファイルは「メーターから削除」でいつでも削除できます。DiPlayをアンインストールする前に必ず削除してください。削除するまでメーターはこのファイルを使い続けます。続行しますか？</string>
     <string name="settings_adas_scene_confirm_remove">DiPlayはメーターに元のテーマを戻し、DiPlayのファイルを削除して、メーターを1回再読み込みします。車をPレンジのまま電源オンにしておいてください。続行しますか？</string>
     <string name="settings_adas_scene_install_action">インストール</string>
     <string name="settings_adas_scene_remove_action">削除</string>
@@ -1067,7 +1068,7 @@
     <string name="settings_adas_scene_other_active">実行しませんでした：他のアプリのメーターテーマが使用中です。</string>
     <string name="settings_adas_scene_unsupported">実行しませんでした：このメーターのファイルがDiPlayの想定と一致しません。何も変更していません。</string>
     <string name="settings_adas_scene_no_cluster">実行しませんでした：メーターから応答がありませんでした。何も変更していません。</string>
-    <string name="settings_adas_scene_failed">実行できませんでした。何も変更していません。</string>
+    <string name="settings_adas_scene_failed">実行できませんでした。メーターが現在何を使っているかは、上のステータスで確認できます。</string>
     <string name="settings_launcher_bubble_size">バブルのサイズ</string>
     <string name="settings_launcher_bubble_locked">位置をロック中</string>
     <string name="settings_launcher_bubble_unlocked">位置のロックを解除</string>

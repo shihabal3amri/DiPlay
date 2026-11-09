@@ -6173,12 +6173,14 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
         adasSceneRepaint = repaint
         adasPlacement.onChange = repaint
         paintAdasScene()
-        adasPlacement.refreshIfStale(applicationContext)
+        // The settings search builds every card without showing it; it must not ask the head unit anything.
+        if (searchIndexSink == null) adasPlacement.refreshIfStale(applicationContext)
     }
 
     private fun paintAdasScene() {
         val placement = adasPlacement
         val state = placement.status.state
+        val code = placement.status.code
         val panel = adasScenePanel(applicationContext)
         val working = placement.busy
         adasSceneStatus?.text = when {
@@ -6186,12 +6188,18 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
             !panel -> getString(R.string.settings_adas_scene_status_wrong_panel)
             else -> when (state) {
                 BydClusterAdasPlacement.State.UNKNOWN -> getString(R.string.settings_adas_scene_status_checking)
-                BydClusterAdasPlacement.State.NOT_INSTALLED -> getString(R.string.settings_adas_scene_status_not_installed)
+                BydClusterAdasPlacement.State.NOT_INSTALLED -> getString(
+                    if (BydOutputSettings.adasPackRetired(this)) R.string.settings_adas_scene_status_retired
+                    else R.string.settings_adas_scene_status_not_installed,
+                )
                 BydClusterAdasPlacement.State.CURRENT -> getString(R.string.settings_adas_scene_status_installed)
-                BydClusterAdasPlacement.State.STALE -> getString(R.string.settings_adas_scene_status_stale)
+                // A file that is in use while the car's files no longer fit it cannot be reinstalled, only removed.
+                BydClusterAdasPlacement.State.STALE ->
+                    if (code == null) getString(R.string.settings_adas_scene_status_stale)
+                    else getString(R.string.settings_adas_scene_status_unsupported, code)
                 BydClusterAdasPlacement.State.OTHER -> getString(R.string.settings_adas_scene_status_other)
                 BydClusterAdasPlacement.State.UNSUPPORTED ->
-                    getString(R.string.settings_adas_scene_status_unsupported, placement.status.code ?: "?")
+                    getString(R.string.settings_adas_scene_status_unsupported, code ?: "?")
                 BydClusterAdasPlacement.State.NO_ADB -> getString(R.string.settings_adas_scene_status_no_adb)
                 BydClusterAdasPlacement.State.NO_CLUSTER -> getString(R.string.settings_adas_scene_status_no_cluster)
             }
@@ -6200,7 +6208,7 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
         // Turning it off needs nothing from the cluster, so a saved "on" can always be switched off.
         adasSceneSwitch?.isEnabled = !working && (usable || BydOutputSettings.adasSceneBesideMap(this))
         adasSceneReinstall?.apply {
-            visibility = if (state == BydClusterAdasPlacement.State.STALE) View.VISIBLE else View.GONE
+            visibility = if (state == BydClusterAdasPlacement.State.STALE && code == null) View.VISIBLE else View.GONE
             isEnabled = usable
         }
         adasSceneRemove?.apply {
