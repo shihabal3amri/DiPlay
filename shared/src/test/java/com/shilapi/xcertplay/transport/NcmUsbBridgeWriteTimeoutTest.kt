@@ -62,6 +62,29 @@ class NcmUsbBridgeWriteTimeoutTest {
         }
     }
 
+    @Test fun directAdvertisementUsesShortTimeoutAndReportsSuccessfulCount() {
+        NcmWriteReplay.results.addAll(listOf(NcmWriteReplay.ALL, -1, NcmWriteReplay.ALL, NcmWriteReplay.ALL))
+        val diagnostics = withBridge { ncm ->
+            assertTrue(ncm.send(frame, 2_000))
+            assertFalse(ncm.trySendAdvertisement(frame, 50))
+            assertTrue(ncm.trySendAdvertisement(frame, 50))
+            assertTrue(ncm.trySendAdvertisement(frame, 50))
+        }
+        assertEquals(listOf(NcmUsbBridge.NOT_READY_WRITE_TIMEOUT_MILLIS, 50, 50, 50), NcmWriteReplay.timeouts)
+        assertEquals(1, diagnostics.count { it == "NCM answered first USB neighbor solicitation directly" })
+        assertTrue(diagnostics.contains("NCM directly answered USB neighbor solicitations=2"))
+    }
+
+    @Test fun partialDirectWriteFailsRatherThanClaimingSuccess() {
+        NcmWriteReplay.results.add(1)
+        withBridge { ncm ->
+            try {
+                ncm.trySendAdvertisement(frame, 50)
+                org.junit.Assert.fail("partial NTB must fail the transport")
+            } catch (_: IphoneUsbException.DeviceUnavailable) { }
+        }
+    }
+
     private fun withBridge(block: (NcmUsbBridge) -> Unit): List<String> {
         val connection = ReflectionHelpers.callConstructor(UsbDeviceConnection::class.java,
             ClassParameter.from(UsbDevice::class.java, null))

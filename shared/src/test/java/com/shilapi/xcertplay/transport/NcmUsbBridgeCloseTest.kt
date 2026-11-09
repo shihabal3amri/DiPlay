@@ -43,6 +43,7 @@ class NcmUsbBridgeCloseTest {
         try {
             writer.start()
             assertTrue(BlockingNcmConnection.transferStarted.await(2, TimeUnit.SECONDS))
+            assertFalse("neighbor reply must fall back rather than wait behind a blocked writer", bridge.trySendAdvertisement(frame, 50))
             closer.start()
             assertTrue(closerStarted.await(2, TimeUnit.SECONDS))
             assertFalse("connection closed during bulk OUT", BlockingNcmConnection.closed.await(100, TimeUnit.MILLISECONDS))
