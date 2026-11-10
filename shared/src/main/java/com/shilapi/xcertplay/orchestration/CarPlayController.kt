@@ -314,6 +314,10 @@ class CarPlayController(
 
     private var permissionCloseable: Closeable? = null
     private var attachCloseable: Closeable? = null
+    private var detachCloseable: Closeable? = null
+    // Over this controller's life, so a cable that keeps dropping shows as a count (#1216).
+    private val usbIphoneAttaches = AtomicInteger()
+    private val usbIphoneDetaches = AtomicInteger()
     private var ch341PermissionCloseable: Closeable? = null
     private var lastCh341Listing: String? = null
     private var lastIphoneListing: String? = null
@@ -526,6 +530,7 @@ class CarPlayController(
         if (config.transport == CarPlayTransport.WIRED) {
             permissionCloseable = iphoneHost.registerPermissionReceiver(::onIphonePermission)
             attachCloseable = iphoneHost.registerAttachReceiver(::onIphoneAttached)
+            detachCloseable = iphoneHost.registerDetachReceiver(::onIphoneDetached)
         }
         startMfi()
     }
@@ -2176,13 +2181,32 @@ class CarPlayController(
     }
 
     private fun onIphoneAttached(device: UsbDevice) {
-        when (phase) {
-            Phase.REENUMERATION, Phase.IPHONE -> {
-                availabilityPollGeneration.incrementAndGet()
-                requestIphonePermission(device)
-            }
-            else -> Unit
+        val waiting = phase == Phase.REENUMERATION || phase == Phase.IPHONE
+        connectionDiagnostic(
+            ConnectionDiagnosticLines.usbIphone(
+                attached = true,
+                deviceId = device.deviceId,
+                attaches = usbIphoneAttaches.incrementAndGet(),
+                detaches = usbIphoneDetaches.get(),
+                permissionRequested = waiting,
+            ),
+        )
+        if (waiting) {
+            availabilityPollGeneration.incrementAndGet()
+            requestIphonePermission(device)
         }
+    }
+
+    /** Evidence only: a detach changes nothing here, the session's own I/O notices the lost cable. */
+    private fun onIphoneDetached(device: UsbDevice) {
+        connectionDiagnostic(
+            ConnectionDiagnosticLines.usbIphone(
+                attached = false,
+                deviceId = device.deviceId,
+                attaches = usbIphoneAttaches.get(),
+                detaches = usbIphoneDetaches.incrementAndGet(),
+            ),
+        )
     }
 
     private fun scheduleAvailabilityPoll(phase: Phase, check: () -> Unit) {
@@ -2614,7 +2638,9 @@ class CarPlayController(
     private fun selectWirelessBluetoothDevice(adapter: BluetoothAdapter): BluetoothDevice {
         val bonded = adapter.bondedDevices.orEmpty()
         config.wirelessBluetoothDeviceAddress?.let { selected ->
-            return bonded.firstOrNull { it.address.equals(selected, ignoreCase = true) }
+            val saved = bonded.firstOrNull { it.address.equals(selected, ignoreCase = true) }
+            connectionDiagnostic(ConnectionDiagnosticLines.savedBluetoothIphone(bonded.size, saved != null))
+            return saved
                 ?: throw ConnectionFailureException(ConnectionFailureCause.CHOSEN_IPHONE_NOT_PAIRED,
                     "The selected iPhone is no longer paired. Choose it again in DiPlay.")
         }
@@ -2622,11 +2648,6 @@ class CarPlayController(
             device.name?.contains("iPhone", ignoreCase = true) == true
         }
         val directlyConnectedIPhones = iPhones.filter(::isBluetoothDeviceConnected)
-        Log.i(
-            IphoneCarPlayConfiguration.TAG,
-            "wireless Bluetooth bondedIPhones=${iPhones.size} " +
-                "directlyConnected=${directlyConnectedIPhones.size}",
-        )
         val connectedIPhones = if (directlyConnectedIPhones.isNotEmpty()) {
             directlyConnectedIPhones
         } else {
@@ -2635,6 +2656,15 @@ class CarPlayController(
             }
             iPhones.filter { it.address in connectedAddresses }
         }
+        // Counts only: which of several iPhones was meant is a question for the driver, not the report.
+        connectionDiagnostic(
+            ConnectionDiagnosticLines.automaticBluetoothIphone(
+                bonded = bonded.size,
+                bondedIphones = iPhones.size,
+                directlyConnected = directlyConnectedIPhones.size,
+                connected = connectedIPhones.size,
+            ),
+        )
         if (connectedIPhones.size == 1) return connectedIPhones.single()
         if (connectedIPhones.size > 1) {
             throw ConnectionFailureException(ConnectionFailureCause.IPHONE_NOT_CHOSEN,
@@ -2766,22 +2796,18 @@ class CarPlayController(
                 connectionDiagnostic("Bluetooth snapshot point=$point unavailable reason=connect-permission")
                 return
             }
-            val bondState = device.bondState
-            val bondName = when (bondState) {
-                BluetoothDevice.BOND_NONE -> "NONE"
-                BluetoothDevice.BOND_BONDING -> "BONDING"
-                BluetoothDevice.BOND_BONDED -> "BONDED"
-                else -> "UNKNOWN"
-            }
             val cachedServices = runCatching { device.uuids }
             val uuids = cachedServices.getOrNull()
             val service = UUID.fromString(IAP2_IPHONE_UUID)
-            val activeAdapter = currentBluetoothAdapter()
             connectionDiagnostic(
-                "Bluetooth snapshot point=$point enabled=${activeAdapter?.isEnabled} " +
-                    "bondState=$bondState bondName=$bondName cachedServicesReadable=${cachedServices.isSuccess} " +
-                    "cachedServiceCount=${uuids?.size ?: "unknown"} " +
-                    "cachedIap2Service=${uuids?.any { it.uuid == service } ?: "unknown"}",
+                ConnectionDiagnosticLines.bluetoothSnapshot(
+                    point = point,
+                    adapterEnabled = currentBluetoothAdapter()?.isEnabled,
+                    bondState = device.bondState,
+                    cachedServicesReadable = cachedServices.isSuccess,
+                    cachedServiceCount = uuids?.size,
+                    cachedIap2Service = uuids?.any { it.uuid == service },
+                ),
             )
         } catch (error: RuntimeException) {
             connectionDiagnostic("Bluetooth snapshot point=$point unavailable failureClass=${diagnosticFailureClass(error)}")
@@ -3051,7 +3077,7 @@ class CarPlayController(
     }
 
     private fun closeReceivers() {
-        listOfNotNull(permissionCloseable, attachCloseable, ch341PermissionCloseable).forEach {
+        listOfNotNull(permissionCloseable, attachCloseable, detachCloseable, ch341PermissionCloseable).forEach {
             try {
                 it.close()
             } catch (_: Exception) {
@@ -3060,6 +3086,7 @@ class CarPlayController(
         }
         permissionCloseable = null
         attachCloseable = null
+        detachCloseable = null
         ch341PermissionCloseable = null
     }
 
