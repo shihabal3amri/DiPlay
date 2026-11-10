@@ -5713,7 +5713,10 @@ open class CarPlayHostActivity : ComponentActivity() {
         resetSidePanel() // a new session starts without the side panel
         updateClusterMapShown()
         CarPlayMediaKeys.attach(this, next)
-        if (airPlayConfig.videoInCar) CarPlayVideo.attach(this, next)
+        if (airPlayConfig.videoInCar) {
+            val diagnosticLog = sessionLog
+            CarPlayVideo.attach(this, next) { AsyncDiagnosticLog.append(diagnosticLog, it) }
+        }
         val display = CarPlaySessionDisplay(
             airPlayConfig.main.widthPixels, airPlayConfig.main.heightPixels,
             displayRotation(), hideTopBar, hideBottomBar, effectiveSize.width, effectiveSize.height,
@@ -6718,7 +6721,10 @@ open class CarPlayHostActivity : ComponentActivity() {
 
     private fun updateCallPopupGuard() {
         if (CarPlayBackgroundSession.isOwner(this)) CarPlayBackgroundSession.callPopupReady = callPopupSessionReady
-        com.shilapi.xcertplay.hud.BydCallPopupGuard.update(this, this, shouldHideBydCallPopup()) {
+        // The guard outlives this activity's turn as owner; it keeps the log file, not the activity.
+        val diagnosticLog = sessionLog
+        com.shilapi.xcertplay.hud.BydCallPopupGuard.update(this, this, shouldHideBydCallPopup(),
+            log = { AsyncDiagnosticLog.append(diagnosticLog, it) }) {
             CarPlayBackgroundSession.active && CarPlayBackgroundSession.callPopupReady && CarPlayBackgroundSession.isOwner(this)
         }
     }

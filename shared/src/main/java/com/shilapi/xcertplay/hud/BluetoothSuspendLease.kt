@@ -112,4 +112,48 @@ internal object BluetoothPauseOutcome {
         adbAccess != null && adbAccess != "READY" -> "car Bluetooth pause failed: ADB access $adbAccess"
         else -> "car Bluetooth pause failed: Android Bluetooth stayed on"
     }
+
+    /** True exactly when [describe] reports "pause failed". */
+    fun failed(paused: Boolean, radioBefore: Boolean?, stillCurrent: Boolean): Boolean =
+        !paused && stillCurrent && radioBefore == true
+}
+
+/**
+ * What a failed pause adds to the report (#1021): what `svc bluetooth disable` printed, and the
+ * `enabled:` and `state:` fields of `dumpsys bluetooth_manager`. The dump's name and address lines
+ * never leave [managerLine], and the command's reply keeps plain characters only.
+ */
+object BluetoothPauseEvidence {
+    private const val PREFIX = "car Bluetooth pause evidence:"
+    private const val MAX_REPLY_CHARS = 160
+    private val unsafeCharacters = Regex("[^A-Za-z0-9 _.,:;()/+-]")
+    private val spaces = Regex("\\s+")
+
+    fun lines(disableSent: Boolean, disableReply: String?, managerDump: String?): List<String> =
+        listOf(commandLine(disableSent, disableReply), managerLine(managerDump))
+
+    /** [sent] false: the command never ran; [reply] null: ADB returned nothing at all. */
+    fun commandLine(sent: Boolean, reply: String?): String = when {
+        !sent -> "$PREFIX svc bluetooth disable not sent"
+        reply == null -> "$PREFIX svc bluetooth disable got no ADB reply"
+        reply.isBlank() -> "$PREFIX svc bluetooth disable printed nothing"
+        else -> "$PREFIX svc bluetooth disable printed '${clean(reply)}'"
+    }
+
+    fun managerLine(dump: String?): String {
+        if (dump == null) return "$PREFIX bluetooth_manager unavailable"
+        return "$PREFIX bluetooth_manager enabled=${field(dump, "enabled") ?: "unknown"} " +
+            "state=${field(dump, "state") ?: "unknown"}"
+    }
+
+    private fun field(dump: String, key: String): String? = dump.lineSequence()
+        .map { it.trim() }
+        .firstOrNull { it.startsWith("$key:", ignoreCase = true) }
+        ?.substringAfter(':')?.trim()
+        ?.takeWhile { it.isLetterOrDigit() || it == '_' }
+        ?.take(24)
+        ?.ifEmpty { null }
+
+    private fun clean(reply: String): String =
+        reply.replace(unsafeCharacters, " ").replace(spaces, " ").trim().take(MAX_REPLY_CHARS)
 }

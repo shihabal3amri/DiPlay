@@ -34,12 +34,14 @@ class BluetoothSuspendLifecycleTest {
     private val worker = BydBluetoothSuspend::class.java.getDeclaredField("worker").apply { isAccessible = true }
         .get(null) as ScheduledExecutorService
     private val controllers = mutableListOf<CarPlayController>()
+    private val originalShell = BydBluetoothSuspend.runShell
 
     @After fun tearDown() {
         controllers.forEach { it.close(); assertTrue(it.awaitClosed(2_000)) }
         // Finish queued recovery before restoring the production dependency for other tests.
         worker.submit {}.get(2, TimeUnit.SECONDS)
         leaseField.set(null, original)
+        BydBluetoothSuspend.runShell = originalShell
     }
 
     @Test fun realControllerCloseCancelsDelayedDisableWithoutSessionEndedCallback() {
@@ -138,6 +140,52 @@ class BluetoothSuspendLifecycleTest {
         assertEquals(listOf("car Bluetooth pause in 0 s",
             "car Bluetooth paused: Android Bluetooth is off until CarPlay ends", "car Bluetooth back on"), lines)
         assertEquals(true, enabled)
+    }
+
+    // #1021: "stayed on" was all a report said; the command's reply and Android's own state were discarded.
+    @Test fun aFailedPauseRecordsTheCommandReplyAndTheManagerStateWithoutTheCarsName() {
+        val journal = Journal(); val enabled: Boolean? = true // the head unit ignores the command
+        val commands = java.util.concurrent.CopyOnWriteArrayList<String>()
+        BydBluetoothSuspend.runShell = { _, command ->
+            commands += command
+            when (command) {
+                "svc bluetooth disable" -> "Killed"
+                BydBluetoothSuspend.MANAGER_STATE_COMMAND ->
+                    "Bluetooth Status\n  enabled: true\n  state: ON\n  address: C0:A6:00:29:58:0A\n  name: Jane's Car"
+                else -> ""
+            }
+        }
+        leaseField.set(null, BluetoothSuspendLease(journal, { enabled },
+            { on -> BydBluetoothSuspend.requestRadio(app, on) }, { enabled == it }))
+        val lines = java.util.Collections.synchronizedList(mutableListOf<String>())
+        val owner = Any()
+        BydBluetoothSuspend.suspend(app, owner, 0, log = { lines += it })
+        worker.submit {}.get(2, TimeUnit.SECONDS)
+        BydBluetoothSuspend.resume(app, owner)
+        worker.submit {}.get(2, TimeUnit.SECONDS)
+        assertEquals(listOf("svc bluetooth disable", BydBluetoothSuspend.MANAGER_STATE_COMMAND), commands)
+        assertTrue(lines.toString(), lines[1].startsWith("car Bluetooth pause failed:"))
+        assertEquals(listOf(
+            "car Bluetooth pause evidence: svc bluetooth disable printed 'Killed'",
+            "car Bluetooth pause evidence: bluetooth_manager enabled=true state=ON",
+        ), lines.drop(2))
+        assertFalse(lines.toString(), lines.any { "Jane" in it || "C0:A6" in it })
+    }
+
+    @Test fun aPauseThatWorksRunsNoExtraCommand() {
+        val journal = Journal(); var enabled: Boolean? = true
+        val commands = java.util.concurrent.CopyOnWriteArrayList<String>()
+        BydBluetoothSuspend.runShell = { _, command -> commands += command; "" }
+        leaseField.set(null, BluetoothSuspendLease(journal, { enabled },
+            { on -> BydBluetoothSuspend.requestRadio(app, on); enabled = on }, { enabled == it }))
+        val lines = java.util.Collections.synchronizedList(mutableListOf<String>())
+        val owner = Any()
+        BydBluetoothSuspend.suspend(app, owner, 0, log = { lines += it })
+        worker.submit {}.get(2, TimeUnit.SECONDS)
+        BydBluetoothSuspend.resume(app, owner)
+        worker.submit {}.get(2, TimeUnit.SECONDS)
+        assertEquals(listOf("svc bluetooth disable", "svc bluetooth enable"), commands)
+        assertTrue(lines.none { it.contains("evidence") })
     }
 
     @Test fun aPauseThatFindsBluetoothOffSaysSo() {
