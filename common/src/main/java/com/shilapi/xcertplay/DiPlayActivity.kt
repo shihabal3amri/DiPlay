@@ -5608,7 +5608,7 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
         text.addView(label(
             if (custom != null) getString(R.string.car_button_icon_custom) else getString(badge.labelRes),
             14, MUTED,
-        ))
+        ).apply { setPadding(0, dp(6), 0, 0) })
         preview.addView(text, LinearLayout.LayoutParams(0, -2, 1f))
         parent.addView(preview)
         // Brand badge row sits above "Choose image" so the preset picks the badge before a custom image.
@@ -5624,7 +5624,7 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
                 documentPickerIsSystem = documentPickerIsSystem(),
             ).onFailure { toast(getString(R.string.this_head_unit_has_no_image_picker)) }
         }, settingsButtonLayout())
-        if (custom != null) parent.addView(button(getString(R.string.default_icon), false) {
+        if (custom != null) parent.addView(button(getString(R.string.settings_car_brand_reset_image), false) {
             AirPlayPersistence.clearCustomAirPlayIcon(this)
             refreshCarButton()
             carButtonSaved()
@@ -5651,7 +5651,7 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
     private fun showCarBrandPicker(current: CarBrandBadge) {
         var pending = current
         val checkedIndex = CarBrandBadge.entries.indexOf(current)
-        appDialogBuilder().setTitle(getString(R.string.settings_car_brand_title))
+        val dialog = appDialogBuilder().setTitle(getString(R.string.settings_car_brand_title))
             .setSingleChoiceItems(carBrandAdapter(), checkedIndex) { _, index ->
                 pending = CarBrandBadge.entries[index]
             }
@@ -5673,7 +5673,9 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
                 carButtonSaved()
             }
             .setNegativeButton(getString(R.string.cancel), null)
-            .show()
+            .create()
+        dialog.prepareSingleChoiceRows()
+        dialog.show()
     }
 
     // The default badge keeps the literal "BYD" label rather than its settings description.
@@ -5682,7 +5684,7 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
         else getString(badge.labelRes)
 
     private fun carBrandAdapter(): ListAdapter = object : ArrayAdapter<CarBrandBadge>(
-        this,
+        appDialogContext(),
         android.R.layout.simple_list_item_single_choice,
         android.R.id.text1,
         CarBrandBadge.entries,
@@ -5691,12 +5693,11 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
             val view = super.getView(position, convertView, parent) as CheckedTextView
             val badge = getItem(position)!!
             view.text = getString(badge.labelRes)
-            view.setTextColor(TEXT)
             val icon = BitmapDrawable(
                 resources,
                 BitmapFactory.decodeResource(resources, badge.iconRawRes),
             ).apply { setBounds(0, 0, dp(28), dp(28)) }
-            view.setCompoundDrawablesRelative(icon, null, null, view.compoundDrawablesRelative[2])
+            view.setCompoundDrawablesRelative(icon, null, null, null)
             view.compoundDrawablePadding = dp(16)
             return view
         }

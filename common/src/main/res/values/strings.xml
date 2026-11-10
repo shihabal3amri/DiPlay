@@ -194,7 +194,7 @@
     <string name="could_not_start_carplay_return_to_diplay_and_check_app_per">Could not start CarPlay. Return to DiPlay and check app permissions.</string>
     <string name="custom_1_1_icon">Custom 1:1 icon</string>
     <string name="debug_logs">Debug logs</string>
-    <string name="default_icon">Reset to brand badge</string>
+    <string name="default_icon">Default icon</string>
     <string name="default_placeholder_icon">Default placeholder icon</string>
     <string name="diagnostic_report_saved">Diagnostic report saved</string>
     <string name="diagnostics">Diagnostics</string>
@@ -825,7 +825,8 @@
     <string name="settings_car_brand_denza">Denza</string>
     <string name="settings_car_brand_yangwang">Yangwang</string>
     <string name="settings_car_brand_linghui">Linghui</string>
-    <string name="settings_car_brand_reset">Restore default badge and name</string>
+    <string name="settings_car_brand_reset_image">Reset to brand badge</string>
+<string name="settings_car_brand_reset">Restore default badge and name</string>
 
     <!-- Optional BYD ambient lighting. -->
     <string name="settings_ambient_title">Ambient lighting (experimental)</string>

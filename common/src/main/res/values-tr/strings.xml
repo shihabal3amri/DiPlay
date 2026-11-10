@@ -188,7 +188,7 @@
     <string name="could_not_start_carplay_return_to_diplay_and_check_app_per">CarPlay başlatılamadı. DiPlay\'e dönün ve uygulama izinlerini kontrol edin.</string>
     <string name="custom_1_1_icon">Özel 1:1 simge</string>
     <string name="debug_logs">Hata ayıklama günlükleri</string>
-    <string name="default_icon">Marka amblemine sıfırla</string>
+    <string name="default_icon">Varsayılan simge</string>
     <string name="default_placeholder_icon">Varsayılan yer tutucu simge</string>
     <string name="diagnostic_report_saved">Teşhis raporu kaydedildi</string>
     <string name="diagnostics">Teşhis</string>
@@ -784,7 +784,8 @@
     <string name="settings_car_brand_denza">Denza</string>
     <string name="settings_car_brand_yangwang">Yangwang</string>
     <string name="settings_car_brand_linghui">Linghui</string>
-    <string name="settings_car_brand_reset">Varsayılan amblemi ve adı geri yükle</string>
+    <string name="settings_car_brand_reset_image">Marka amblemine sıfırla</string>
+<string name="settings_car_brand_reset">Varsayılan amblemi ve adı geri yükle</string>
     <string name="this_head_unit_has_no_image_picker">Bu ana ünitede resim seçici yok.</string>
     <string name="settings_ambient_title">Ambiyans aydınlatması (deneysel)</string>
     <string name="settings_ambient_configuration">Ambiyans ışığı ayarları</string>

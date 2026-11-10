@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-Only
+// SPDX-License-Identifier: AGPL-3.0-only
 package com.shilapi.xcertplay
 
 import android.app.AlertDialog

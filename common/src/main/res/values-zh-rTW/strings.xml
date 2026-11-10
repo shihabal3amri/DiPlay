@@ -187,7 +187,7 @@
     <string name="could_not_start_carplay_return_to_diplay_and_check_app_per">無法啟動 CarPlay。請返回 DiPlay 檢查 App 權限。</string>
     <string name="custom_1_1_icon">自訂 1:1 圖示</string>
     <string name="debug_logs">除錯記錄</string>
-    <string name="default_icon">重置為品牌車標</string>
+    <string name="default_icon">預設圖示</string>
     <string name="default_placeholder_icon">預設預留位置圖示</string>
     <string name="diagnostic_report_saved">診斷報告已儲存</string>
     <string name="diagnostics">診斷</string>
@@ -732,7 +732,8 @@
     <string name="settings_car_brand_denza">騰勢</string>
     <string name="settings_car_brand_yangwang">仰望</string>
     <string name="settings_car_brand_linghui">領匯</string>
-    <string name="settings_car_brand_reset">恢復預設車標與名稱</string>
+    <string name="settings_car_brand_reset_image">重置為品牌車標</string>
+<string name="settings_car_brand_reset">恢復預設車標與名稱</string>
     <string name="carplay_call_controls_experimental">CarPlay 通話、Siri 與媒體按鍵（實驗性）</string>
     <string name="carplay_call_controls_experimental_description">電話鍵接聽 CarPlay 來電，掛斷鍵／模式鍵拒接或掛斷。來電響鈴時，也可用下一首接聽、上一首拒接；通話接通後，上下首不會掛斷通話。同時啟用 DiLink 3 專用 Siri 與播放／暫停按鍵。預設關閉，車型與韌體支援情況需實車確認；儀表通話顯示另行設定。</string>
     <string name="carplay_calls_on_dashboard">在儀表板顯示 CarPlay 通話</string>

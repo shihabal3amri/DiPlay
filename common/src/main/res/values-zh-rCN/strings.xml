@@ -188,7 +188,7 @@
     <string name="could_not_start_carplay_return_to_diplay_and_check_app_per">无法启动 CarPlay。请返回 DiPlay 检查应用权限。</string>
     <string name="custom_1_1_icon">自定义 1:1 图标</string>
     <string name="debug_logs">调试日志</string>
-    <string name="default_icon">重置为品牌车标</string>
+    <string name="default_icon">默认图标</string>
     <string name="default_placeholder_icon">默认占位图标</string>
     <string name="diagnostic_report_saved">诊断报告已保存</string>
     <string name="diagnostics">诊断</string>
@@ -781,7 +781,8 @@
     <string name="settings_car_brand_denza">腾势</string>
     <string name="settings_car_brand_yangwang">仰望</string>
     <string name="settings_car_brand_linghui">领汇</string>
-    <string name="settings_car_brand_reset">恢复默认车标与名称</string>
+    <string name="settings_car_brand_reset_image">重置为品牌车标</string>
+<string name="settings_car_brand_reset">恢复默认车标与名称</string>
     <string name="this_head_unit_has_no_image_picker">此车机没有图片选择器。</string>
 
     <!-- Optional BYD ambient lighting. -->

@@ -194,7 +194,7 @@
     <string name="could_not_start_carplay_return_to_diplay_and_check_app_per">CarPlay를 시작할 수 없습니다. DiPlay로 돌아가 앱 권한을 확인하세요.</string>
     <string name="custom_1_1_icon">사용자 지정 1:1 아이콘</string>
     <string name="debug_logs">디버그 로그</string>
-    <string name="default_icon">브랜드 뱃지로 재설정</string>
+    <string name="default_icon">기본 아이콘</string>
     <string name="default_placeholder_icon">기본 자리표시자 아이콘</string>
     <string name="diagnostic_report_saved">진단 보고서를 저장했습니다.</string>
     <string name="diagnostics">진단</string>
@@ -815,7 +815,8 @@
     <string name="settings_car_brand_denza">Denza</string>
     <string name="settings_car_brand_yangwang">Yangwang</string>
     <string name="settings_car_brand_linghui">Linghui</string>
-    <string name="settings_car_brand_reset">기본 뱃지와 이름으로 복원</string>
+    <string name="settings_car_brand_reset_image">브랜드 뱃지로 재설정</string>
+<string name="settings_car_brand_reset">기본 뱃지와 이름으로 복원</string>
     <string name="this_head_unit_has_no_image_picker">이 헤드 유닛에는 이미지 선택기가 없습니다.</string>
     <string name="settings_ambient_title">무드 조명 (실험 기능)</string>
     <string name="settings_ambient_configuration">무드 조명 설정</string>

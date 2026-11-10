@@ -192,7 +192,7 @@
     <string name="could_not_start_carplay_return_to_diplay_and_check_app_per">Impossibile avviare CarPlay. Torna a DiPlay e controlla i permessi dell’app.</string>
     <string name="custom_1_1_icon">Icona 1:1 personalizzata</string>
     <string name="debug_logs">Log di debug</string>
-    <string name="default_icon">Reimposta al logo del marchio</string>
+    <string name="default_icon">Icona predefinita</string>
     <string name="default_placeholder_icon">Icona segnaposto predefinita</string>
     <string name="diagnostic_report_saved">Report diagnostico salvato</string>
     <string name="diagnostics">Diagnostica</string>
@@ -798,7 +798,8 @@
     <string name="settings_car_brand_denza">Denza</string>
     <string name="settings_car_brand_yangwang">Yangwang</string>
     <string name="settings_car_brand_linghui">Linghui</string>
-    <string name="settings_car_brand_reset">Ripristina logo e nome predefiniti</string>
+    <string name="settings_car_brand_reset_image">Reimposta al logo del marchio</string>
+<string name="settings_car_brand_reset">Ripristina logo e nome predefiniti</string>
     <string name="this_head_unit_has_no_image_picker">Questa head unit non ha un selettore di immagini.</string>
 
     <!-- Optional BYD ambient lighting. -->

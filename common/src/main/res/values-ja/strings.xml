@@ -192,7 +192,7 @@
     <string name="could_not_start_carplay_return_to_diplay_and_check_app_per">CarPlayを起動できませんでした。DiPlayに戻り、アプリの権限を確認してください。</string>
     <string name="custom_1_1_icon">カスタムの正方形アイコン</string>
     <string name="debug_logs">デバッグログ</string>
-    <string name="default_icon">ブランドバッジにリセット</string>
+    <string name="default_icon">標準アイコン</string>
     <string name="default_placeholder_icon">標準の仮アイコン</string>
     <string name="diagnostic_report_saved">診断レポートを保存しました</string>
     <string name="diagnostics">診断</string>
@@ -825,7 +825,8 @@
     <string name="settings_car_brand_denza">Denza</string>
     <string name="settings_car_brand_yangwang">Yangwang</string>
     <string name="settings_car_brand_linghui">Linghui</string>
-    <string name="settings_car_brand_reset">既定のバッジと名前に戻す</string>
+    <string name="settings_car_brand_reset_image">ブランドバッジにリセット</string>
+<string name="settings_car_brand_reset">既定のバッジと名前に戻す</string>
     <string name="this_head_unit_has_no_image_picker">この車載端末には画像選択機能がありません。</string>
     <string name="settings_ambient_title">アンビエントライト（実験的機能）</string>
     <string name="settings_ambient_configuration">アンビエントライトの設定</string>
