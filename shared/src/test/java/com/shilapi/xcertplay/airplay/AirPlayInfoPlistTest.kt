@@ -19,7 +19,7 @@ class AirPlayInfoPlistTest {
         cluster = AirPlayDisplayConfig(widthPixels = 960, heightPixels = 360),
     )
 
-    /** As 0.2.15: with the four keys, a Yuan Plus (iOS 18) stopped following setNightMode (#1159). */
+    /** As 0.2.15: no appearance keys unless the driver opts in (#1159). */
     @Test
     fun noDisplayDeclaresAppearanceByDefault() {
         val displays = AirPlayInfoPlist.build(twoDisplayConfig())["displays"] as List<*>

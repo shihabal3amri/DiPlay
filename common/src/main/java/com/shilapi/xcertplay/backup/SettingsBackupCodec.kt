@@ -46,6 +46,12 @@ object SettingsBackupCodec {
         "bt_suspend_delay_seconds", "location_reporting_enabled", "external_controller", "usb_charging_current",
     )
 
+    /**
+     * Main-file keys whose reader would throw on another stored type and that most installs have never stored,
+     * so an import cannot take the type from the stored value. AirPlayPersistence reads this one with getBoolean.
+     */
+    private val AIRPLAY_TYPES = mapOf("declare_automatic_appearance" to KeyType.BOOLEAN)
+
     /** Families of layout settings with many keys and nothing sensitive in them. */
     private val AIRPLAY_PREFIXES = listOf("cluster_", "carplay_night_")
     private val DIPLAY_KEYS = setOf(
@@ -62,7 +68,7 @@ object SettingsBackupCodec {
     // The driver's choices only. "ignore_off_report" records what one car's firmware reports, so it stays out.
     private val CAR_HOTSPOT_KEYS = setOf("auto_enable", "config_write")
     private val FILES = mapOf(
-        "xcertplay_airplay" to Policy.Allow(AIRPLAY_KEYS, AIRPLAY_PREFIXES),
+        "xcertplay_airplay" to Policy.Allow(AIRPLAY_KEYS, AIRPLAY_PREFIXES, types = AIRPLAY_TYPES),
         "diplay" to Policy.Allow(DIPLAY_KEYS),
         // These readers call getInt and getBoolean, which throw on any other stored type. A key that is not stored yet
         // has no type to compare with, so the type is declared here.
