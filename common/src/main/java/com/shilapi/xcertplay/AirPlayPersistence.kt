@@ -78,6 +78,7 @@ object AirPlayPersistence {
     private const val KEY_MAIN_BUFFERED_AUDIO = "main_buffered_audio"
     private const val KEY_SPEECH_WITHOUT_8_16_KHZ = "speech_without_8_16_khz"
     private const val KEY_CALL_AT_CALL_RATE = "call_at_call_rate"
+    private const val KEY_DECLARE_AUTOMATIC_APPEARANCE = "declare_automatic_appearance"
     private const val KEY_CAR_BLUETOOTH_AUDIO = "car_bluetooth_audio"
     private const val KEY_CALL_ECHO_CANCELLATION = "call_echo_cancellation"
     private const val KEY_CALL_VOICE_FILTER = "call_voice_filter"
@@ -726,6 +727,18 @@ object AirPlayPersistence {
 
     fun saveCallAtCallRate(context: Context, enabled: Boolean) {
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putBoolean(KEY_CALL_AT_CALL_RATE, enabled).apply()
+    }
+
+    /**
+     * Declare automatic UI and map appearance on every display in /info, as 0.2.16 to 0.2.22 did for all cars (#346).
+     * Off by default since #1159; experimental, applies at reconnect.
+     */
+    fun loadDeclareAutomaticAppearance(context: Context): Boolean =
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getBoolean(KEY_DECLARE_AUTOMATIC_APPEARANCE, false)
+
+    fun saveDeclareAutomaticAppearance(context: Context, enabled: Boolean) {
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
+            .putBoolean(KEY_DECLARE_AUTOMATIC_APPEARANCE, enabled).apply()
     }
 
     /** Offer no CarPlay audio, so the iPhone keeps audio on its Bluetooth link with the car; applies at reconnect. */

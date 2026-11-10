@@ -9,21 +9,37 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class AirPlayInfoPlistTest {
+    private val appearanceKeys =
+        listOf("uiAppearanceMode", "uiAppearanceSetting", "mapAppearanceMode", "mapAppearanceSetting")
+
+    private fun twoDisplayConfig() = AirPlayConfig(
+        deviceName = "test", deviceId = "02:00:00:00:00:02", btMac = "02:00:00:00:00:02",
+        sourceVersion = "366.0",
+        main = AirPlayDisplayConfig(widthPixels = 1280, heightPixels = 720),
+        cluster = AirPlayDisplayConfig(widthPixels = 960, heightPixels = 360),
+    )
+
+    /** As 0.2.15: no appearance keys unless the driver opts in (#1159). */
     @Test
-    fun bothDisplaysDeclareAutomaticAppearanceAtConnection() {
-        val config = AirPlayConfig(
-            deviceName = "test", deviceId = "02:00:00:00:00:02", btMac = "02:00:00:00:00:02",
-            sourceVersion = "366.0",
-            main = AirPlayDisplayConfig(widthPixels = 1280, heightPixels = 720),
-            cluster = AirPlayDisplayConfig(widthPixels = 960, heightPixels = 360),
-        )
-        val displays = AirPlayInfoPlist.build(config)["displays"] as List<*>
+    fun noDisplayDeclaresAppearanceByDefault() {
+        val displays = AirPlayInfoPlist.build(twoDisplayConfig())["displays"] as List<*>
         assertEquals(2, displays.size)
         for (display in displays) {
             val fields = display as Map<*, *>
-            for (key in listOf("uiAppearanceMode", "uiAppearanceSetting", "mapAppearanceMode", "mapAppearanceSetting")) {
-                assertEquals(key, 0, fields[key])
-            }
+            for (key in appearanceKeys) assertFalse(key, fields.containsKey(key))
+        }
+    }
+
+    /** The opt-in restores the #346 declaration a 2023 Tang needed, on both displays and before viewAreas. */
+    @Test
+    fun optInDeclaresAutomaticAppearanceOnBothDisplays() {
+        val displays = AirPlayInfoPlist.build(twoDisplayConfig().copy(declareAutomaticAppearance = true))["displays"] as List<*>
+        assertEquals(2, displays.size)
+        for (display in displays) {
+            val fields = display as Map<*, *>
+            for (key in appearanceKeys) assertEquals(key, 0, fields[key])
+            val keys = fields.keys.toList()
+            assertEquals(appearanceKeys, keys.subList(keys.indexOf("primaryInputDevice") + 1, keys.indexOf("viewAreas")))
         }
     }
 
