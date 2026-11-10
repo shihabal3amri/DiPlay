@@ -1,6 +1,7 @@
 package com.shilapi.xcertplay.hud
 
 import org.junit.After
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -28,10 +29,46 @@ class ClusterMapShownSignalTest {
 
     @After
     fun tearDown() {
+        // Without a context the ticker BydClusterMapPauseTest may have left running does nothing.
+        pauseContext.set(null, null)
+        BydOutputSettings.setClusterStreamPause(context, false)
         BydNavigationOutputs.setClusterMapShown(false)
         BydClusterMapPause.readMode = originalReadMode
         BydClusterMapPause.streamControl = null
         BydClusterMapPause.onNaviMode = null
+    }
+
+    private val pauseContext
+        get() = BydClusterMapPause::class.java.getDeclaredField("context").apply { isAccessible = true }
+
+    @Test
+    fun hostSignalNeverLetsACopyClearShown() {
+        for (presentation in listOf(false, true)) for (route in listOf(false, true)) for (surface in listOf(false, true)) {
+            val onCluster = presentation || (route && surface)
+            for (mirrors in listOf(false, true)) {
+                val signal = BydNavigationOutputs.clusterMapSignal(presentation, route, surface, mirrors)
+                val case = "presentation=$presentation route=$route surface=$surface mirrors=$mirrors"
+                assertEquals(case, onCluster, signal.shown)
+                assertEquals(case, mirrors, signal.mirrored)
+            }
+        }
+    }
+
+    @Test
+    fun hostSignalWithCentreCopyKeepsClusterProjection() {
+        val signal = BydNavigationOutputs.clusterMapSignal(
+            presentation = true, confirmedRoute = false, clusterSurface = false, mirrors = true,
+        )
+        BydNavigationOutputs.setClusterMapShown(signal.shown, signal.mirrored)
+
+        assertTrue("the centre card must not switch DiLink 3 to its stock view", BydClusterBridge.mapShown)
+        assertFalse("the centre card still needs the stream", BydClusterMapPause.clusterMapShown)
+
+        val routed = BydNavigationOutputs.clusterMapSignal(
+            presentation = false, confirmedRoute = true, clusterSurface = true, mirrors = true,
+        )
+        BydNavigationOutputs.setClusterMapShown(routed.shown, routed.mirrored)
+        assertTrue("an ADB cluster route with a centre copy stays projected", BydClusterBridge.mapShown)
     }
 
     @Test
@@ -67,9 +104,10 @@ class ClusterMapShownSignalTest {
     fun centreCopyKeepsTheStreamWhileTheWheelModeHidesTheMap() {
         BydClusterMapPause.readMode = { BydClusterNaviMode.OFF }
         var streaming = true
-        BydClusterMapPause.streamControl = { streaming = it }
-        BydClusterMapPause::class.java.getDeclaredField("context")
-            .apply { isAccessible = true }.set(null, context)
+        // Only this thread's ticks count: a ticker left running by another test must not race the asserts.
+        val testThread = Thread.currentThread()
+        BydClusterMapPause.streamControl = { if (Thread.currentThread() === testThread) streaming = it }
+        pauseContext.set(null, context)
         val tick = BydClusterMapPause::class.java.getDeclaredMethod("tick").apply { isAccessible = true }
         BydOutputSettings.setClusterStreamPause(context, true)
 

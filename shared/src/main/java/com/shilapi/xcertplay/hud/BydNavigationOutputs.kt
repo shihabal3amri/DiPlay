@@ -42,6 +42,22 @@ object BydNavigationOutputs {
         BydClusterBridge.setMapShown(shown)
     }
 
+    /** What the host passes to [setClusterMapShown]. */
+    data class ClusterMapSignal(val shown: Boolean, val mirrored: Boolean)
+
+    /**
+     * The host's report, from its presentation, its confirmed ADB cluster route and surface, and
+     * whether any centre-screen copy is up. A copy goes only into [ClusterMapSignal.mirrored] and
+     * never clears [ClusterMapSignal.shown]: the map is still on the cluster, and on DiLink 3 a false
+     * `shown` switches the cluster back to its stock view (AutoContainer 18).
+     */
+    fun clusterMapSignal(
+        presentation: Boolean,
+        confirmedRoute: Boolean,
+        clusterSurface: Boolean,
+        mirrors: Boolean,
+    ) = ClusterMapSignal(shown = presentation || (confirmedRoute && clusterSurface), mirrored = mirrors)
+
     /** The running CarPlay session: told every second whether the cluster currently shows the map. */
     fun setClusterStreamControl(control: (Boolean) -> Unit) { BydClusterMapPause.streamControl = control }
 

@@ -1923,8 +1923,14 @@ open class CarPlayHostActivity : ComponentActivity() {
 
     // The dashboard map pause must not stop the stream while a copy of the map is on screen.
     private fun updateClusterMapShown() {
-        com.shilapi.xcertplay.hud.BydNavigationOutputs.setClusterMapShown(clusterPresentation != null ||
-            (ClusterActivityOutput.hasConfirmedRoute() && clusterSurface != null), mirrored = MapMirrors.any)
+        val outputs = com.shilapi.xcertplay.hud.BydNavigationOutputs
+        val signal = outputs.clusterMapSignal(
+            presentation = clusterPresentation != null,
+            confirmedRoute = ClusterActivityOutput.hasConfirmedRoute(),
+            clusterSurface = clusterSurface != null,
+            mirrors = MapMirrors.any,
+        )
+        outputs.setClusterMapShown(signal.shown, signal.mirrored)
         // Wheel zoom needs a physical map; centre-screen copies must not suppress that eligibility.
         val surface = clusterSurface?.takeIf { it.isValid }
         val presentation = clusterPresentation
