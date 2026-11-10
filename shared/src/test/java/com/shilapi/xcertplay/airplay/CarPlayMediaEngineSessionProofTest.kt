@@ -8,6 +8,7 @@ import java.nio.ByteBuffer
 import java.security.SecureRandom
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicInteger
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -46,7 +47,7 @@ class CarPlayMediaEngineSessionProofTest {
         }
     }
 
-    @Test fun altAudioAndUndecryptablePacketsDoNotCount() {
+    @Test fun undecryptablePacketsDoNotCount() {
         val delivered = CountDownLatch(1)
         val engine = CarPlayMediaEngine(object : MediaSink {
             override fun onAudioRtp(id: AudioStreamId, format: AudioFormat, rtp: ByteArray, sample: Int) {
@@ -55,8 +56,35 @@ class CarPlayMediaEngineSessionProofTest {
         })
         val session = session()
         try {
-            val main = engine.onAudio(session, 100, setup("media"))!!
-            send(main["dataPort"] as Int, ByteArray(32)) // wrong key: dropped before the sink
+            val stream = setup("media")
+            val port = engine.onAudio(session, 102, stream)!!["dataPort"] as Int
+            // A well-formed RTP packet sealed with another key: it fails authentication.
+            send(port, ByteArray(32).also(SecureRandom()::nextBytes))
+            val failures = authenticationFailures(engine)
+            val deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(10)
+            while (failures.get() == 0 && System.nanoTime() < deadline) Thread.sleep(5)
+            assertEquals("The packet was not processed", 1, failures.get())
+            assertFalse(session.hasReceivedAudio)
+            assertEquals(1L, delivered.count)
+            // The same stream with the right key counts, so the wait above watched the right stream.
+            send(port, key(engine, session, stream))
+            assertTrue(delivered.await(10, TimeUnit.SECONDS))
+            assertTrue(session.hasReceivedAudio)
+        } finally {
+            engine.onSessionClosed(session)
+            session.close()
+        }
+    }
+
+    @Test fun altAudioDoesNotCount() {
+        val delivered = CountDownLatch(1)
+        val engine = CarPlayMediaEngine(object : MediaSink {
+            override fun onAudioRtp(id: AudioStreamId, format: AudioFormat, rtp: ByteArray, sample: Int) {
+                delivered.countDown()
+            }
+        })
+        val session = session()
+        try {
             val alt = setup("default")
             val altResponse = engine.onAudio(session, 101, alt)!!
             // The alt stream is set up with the session, so its packets are no sign of activity.
@@ -84,6 +112,22 @@ class CarPlayMediaEngineSessionProofTest {
         assertEquals(listOf(110, 110), asked)
         assertTrue("Without a sink answer the strict rendered-frame rule applies",
             CarPlayMediaEngine(object : MediaSink {}).hasMainScreenOutput())
+    }
+
+    @Test fun mainScreenAttachmentsComeFromTheSinksMainScreen() {
+        val engine = CarPlayMediaEngine(object : MediaSink {
+            override fun videoOutputAttachments(type: Int): Long = if (type == 110) 4L else 9L
+        })
+        assertEquals(4L, engine.mainScreenOutputAttachments())
+    }
+
+    /** The failed-authentication count of the engine's only audio stream. */
+    private fun authenticationFailures(engine: CarPlayMediaEngine): AtomicInteger {
+        val streams = CarPlayMediaEngine::class.java.getDeclaredField("streams").apply { isAccessible = true }
+            .get(engine) as Map<*, *>
+        val stream = streams.values.single() as AudioStream
+        return AudioStream::class.java.getDeclaredField("authenticationFailures").apply { isAccessible = true }
+            .get(stream) as AtomicInteger
     }
 
     private fun setup(audioType: String): Map<String, Any?> = mapOf(

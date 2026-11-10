@@ -43,6 +43,8 @@ class WirelessHandoffWatchdogTest {
     private lateinit var proof: Any
     // Whether a surface is attached for the main screen; false while CarPlay is hidden.
     @Volatile private var screenAttached = true
+    // How many times a main-screen surface has been attached (AndroidMediaSink.videoOutputAttachments).
+    @Volatile private var screenAttachments = 0L
 
     @Before fun setUp() {
         val config = AirPlayConfig("test", "test", "", "1", AirPlayDisplayConfig(800, 480))
@@ -58,6 +60,7 @@ class WirelessHandoffWatchdogTest {
                 serialNumber = "test", firmwareVersion = "1", hardwareVersion = "1", carPlayUsbInterfaceNumber = 3)),
             config, identity, PairingStore(), listener, object : AirPlayMediaHandler {
                 override fun hasMainScreenOutput(): Boolean = screenAttached
+                override fun mainScreenOutputAttachments(): Long = screenAttachments
             }, statuses::add)
         session = AirPlaySession(Socket(), config, identity, PairingStore(), null, listener, object : AirPlayMediaHandler {})
         val phase = controller.javaClass.getDeclaredField("phase").apply { isAccessible = true }
@@ -219,6 +222,7 @@ class WirelessHandoffWatchdogTest {
     @Test fun hiddenSessionPlayingAudioIsKeptWithItsBluetoothControl() {
         // #1215: CarPlay hidden (no SurfaceView), music playing, tunnel iAP2 never ready.
         screenAttached = false
+        sessionStarts()
         audioReceived()
         timeout()
         timeout()
@@ -258,6 +262,45 @@ class WirelessHandoffWatchdogTest {
         verify(bootstrap).close()
     }
 
+    @Test fun audioCannotKeepASessionThatShowedABlackScreenBeforeCarPlayWasLeft() {
+        // CarPlay open when the session starts, no frame, then the user goes to another app before 45 s.
+        sessionStarts()
+        audioReceived()
+        screenAttached = false
+        assertFalse(keepControlAlive(0))
+        timeout()
+        assertFalse(flag("wirelessActiveReported").get())
+        assertEquals(1, hotspotCloses)
+        assertTrue(statuses.single() is CarPlayStatus.Failed)
+        verify(bootstrap).close()
+        assertTrue(diagnostics.any {
+            it.contains("handoff found no working session") &&
+                it.contains("audio=true screenAttached=false screenAttachedDuringSession=true")
+        })
+    }
+
+    @Test fun aScreenOpenedAndLeftBetweenChecksStillCountsAgainstAudio() {
+        screenAttached = false
+        sessionStarts()
+        audioReceived()
+        screenAttachments++ // CarPlay opened and left again; no check ran while it was on screen
+        timeout()
+        assertFalse(flag("wirelessActiveReported").get())
+        assertTrue(statuses.single() is CarPlayStatus.Failed)
+        assertEquals(1, hotspotCloses)
+    }
+
+    @Test fun aRenderedFrameKeepsTheSessionAfterCarPlayWasLeft() {
+        sessionStarts()
+        proofCall("rendered", 0, session)
+        screenAttached = false
+        timeout()
+        assertEquals(listOf(CarPlayStatus.WirelessActiveFallback), statuses)
+        assertEquals(0, hotspotCloses)
+        verify(bootstrap, never()).close()
+        assertTrue(diagnostics.any { it.contains("handoff fallback after rendered video") })
+    }
+
     @Test fun audioFromAnEndedSessionCannotKeepTheHandoff() {
         screenAttached = false
         audioReceived()
@@ -268,6 +311,11 @@ class WirelessHandoffWatchdogTest {
     }
 
     private fun audioReceived() = ReflectionHelpers.setField(session, "audioReceived", true)
+    /** What the controller notes when the session starts (onSessionActive). */
+    private fun sessionStarts() {
+        controller.javaClass.getDeclaredMethod("observeWirelessScreen", Int::class.javaPrimitiveType, AirPlaySession::class.java)
+            .apply { isAccessible = true }.invoke(controller, 0, session)
+    }
 
     private fun timeout() {
         controller.javaClass.getDeclaredMethod("handleWirelessHandoffTimeout", Int::class.javaPrimitiveType)

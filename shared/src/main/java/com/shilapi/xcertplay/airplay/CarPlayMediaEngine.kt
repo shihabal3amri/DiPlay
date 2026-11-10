@@ -39,6 +39,11 @@ interface MediaSink {
     fun onAudioDuck(ducked: Boolean) {}
     /** Whether a surface is attached that stream [type]'s frames could be drawn on, its own or a mirror. */
     fun hasVideoOutput(type: Int): Boolean = true
+    /**
+     * How many times a surface for stream [type], its own or a mirror, has been attached; it only grows.
+     * A change shows that one was attached in between, even if it is gone again.
+     */
+    fun videoOutputAttachments(type: Int): Long = 0L
 }
 
 /**
@@ -130,6 +135,7 @@ class CarPlayMediaEngine(
     @Volatile private var iapTunnelHandler: ((BlockingDuplexByteStream) -> Boolean)? = null
 
     override fun hasMainScreenOutput(): Boolean = sink.hasVideoOutput(STREAM_TYPE_MAIN_SCREEN)
+    override fun mainScreenOutputAttachments(): Long = sink.videoOutputAttachments(STREAM_TYPE_MAIN_SCREEN)
 
     /** [sink], noting on [session] that buffered music reached it. */
     private fun audioNotingSink(session: AirPlaySession): MediaSink = object : MediaSink by sink {

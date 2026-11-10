@@ -69,6 +69,11 @@ interface AirPlayMediaHandler {
      * is hidden behind another app. No frame can then render to prove that a session works.
      */
     fun hasMainScreenOutput(): Boolean = true
+    /**
+     * How many times a screen for the main screen has been attached; it only grows. A change shows that
+     * one was attached in between, even if CarPlay was hidden again before [hasMainScreenOutput] was asked.
+     */
+    fun mainScreenOutputAttachments(): Long = 0L
 }
 
 /**

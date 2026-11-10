@@ -2,6 +2,7 @@ package com.shilapi.xcertplay.media
 
 import android.graphics.SurfaceTexture
 import android.view.Surface
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -34,6 +35,35 @@ class AndroidMediaSinkVideoOutputTest {
             assertTrue(sink.hasVideoOutput(MAIN))
             assertTrue(sink.beginSurfaceDetach(surface, parkMain = true).await())
             assertFalse(sink.hasVideoOutput(MAIN))
+        } finally { sink.close() }
+    }
+
+    @Test fun theHostsAttachedSurfaceLeavesNoOutputOnceDestroyed() {
+        // Production: the sink starts without a surface, the host attaches 110, and a stop detaches it (#1215).
+        val surface = Surface(SurfaceTexture(0))
+        val sink = AndroidMediaSink()
+        try {
+            sink.setSurface(MAIN, surface)
+            assertTrue(sink.hasVideoOutput(MAIN))
+            assertTrue(sink.beginSurfaceDetach(surface, parkMain = true).await())
+            assertFalse(sink.hasVideoOutput(MAIN))
+        } finally { sink.close() }
+    }
+
+    @Test fun attachmentsCountEveryMainScreenSurfaceAndMirrorEvenAfterTheyAreGone() {
+        val surface = Surface(SurfaceTexture(0))
+        val card = Surface(SurfaceTexture(0))
+        val sink = AndroidMediaSink()
+        try {
+            assertEquals(0L, sink.videoOutputAttachments(MAIN))
+            sink.setSurface(MAIN, surface)
+            assertTrue(sink.beginSurfaceDetach(surface, parkMain = true).await())
+            assertEquals(1L, sink.videoOutputAttachments(MAIN))
+            sink.setMirrorSurface(MAIN, "card", card)
+            sink.setMirrorSurface(MAIN, "card", null)
+            assertEquals(2L, sink.videoOutputAttachments(MAIN))
+            sink.setSurface(ALT, surface)
+            assertEquals("The cluster's surface is not the main screen", 2L, sink.videoOutputAttachments(MAIN))
         } finally { sink.close() }
     }
 

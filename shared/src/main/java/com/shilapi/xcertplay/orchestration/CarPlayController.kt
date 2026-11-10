@@ -1772,6 +1772,7 @@ class CarPlayController(
                     it.close()
                 }
                 wirelessConnectionProof.activate(generation, session)
+                observeWirelessScreen(generation, session)
                 // Keep wirelessActiveReported false until maybeCompleteWirelessHandoff() closes
                 // the Bluetooth bootstrap after the tunneled iAP2 channel is ready.
                 sessionListener.onSessionActive(session)
@@ -1850,11 +1851,26 @@ class CarPlayController(
 
     private fun keepBluetoothControlAlive(generation: Int): Boolean {
         // Asked before taking the lock: the media sink takes its own locks.
-        val screenAttached = media.hasMainScreenOutput()
+        val screen = mainScreenOutput()
         return synchronized(wirelessResourceLock) {
             !closed && phase == Phase.WIRELESS && generation == wirelessGeneration.get() &&
-                !wirelessFailureReported.get() && wirelessSessionUsable(generation, screenAttached)
+                !wirelessFailureReported.get() && wirelessSessionUsable(generation, screen)
         }
+    }
+
+    /** Not under [wirelessResourceLock]: the media sink takes its own locks. */
+    private fun mainScreenOutput(): MainScreenOutput {
+        // Count first: an attach after it shows up as attached, or as a changed count next time.
+        val attachments = media.mainScreenOutputAttachments()
+        return MainScreenOutput(media.hasMainScreenOutput(), attachments)
+    }
+
+    /**
+     * Notes at [session]'s start whether CarPlay is on screen, so a screen attached and left again
+     * before the handoff watchdog fires still counts against audio-only proof (see [wirelessSessionUsable]).
+     */
+    private fun observeWirelessScreen(generation: Int, session: AirPlaySession) {
+        wirelessConnectionProof.observeScreen(generation, session, mainScreenOutput())
     }
 
     private fun armWirelessHandoffWatchdog(generation: Int) {
@@ -1884,7 +1900,7 @@ class CarPlayController(
 
     private fun handleWirelessHandoffTimeout(generation: Int) {
         // Asked before taking the lock: the media sink takes its own locks.
-        val screenAttached = media.hasMainScreenOutput()
+        val screen = mainScreenOutput()
         synchronized(wirelessResourceLock) {
             if (closed || phase != Phase.WIRELESS || generation != wirelessGeneration.get() || wirelessFailureReported.get() ||
                 !wirelessHandoffRequested.get() || wirelessActiveReported.get() || wirelessTunnelReady.get()) {
@@ -1892,8 +1908,9 @@ class CarPlayController(
             }
             // Session establishment alone also occurs on black-screen failures. A rendered frame
             // proves that projection is usable when the optional tunneled control is absent; while
-            // CarPlay is hidden no frame can render, and audio from the iPhone proves it (#1215).
-            if (wirelessSessionUsable(generation, screenAttached)) {
+            // CarPlay has been hidden all session no frame can render, and audio from the iPhone
+            // proves it (#1215).
+            if (wirelessSessionUsable(generation, screen)) {
                 if (!wirelessActiveReported.compareAndSet(false, true)) return
                 wirelessHandoffFellBack.set(true)
                 val proof = if (wirelessConnectionProof.hasRenderedFrame(generation)) {
@@ -1912,7 +1929,8 @@ class CarPlayController(
                 debugLog(
                     "wireless handoff found no working session: session=${session != null} " +
                         "renderedFrame=${wirelessConnectionProof.hasRenderedFrame(generation)} " +
-                        "audio=${session?.hasReceivedAudio == true} screenAttached=$screenAttached",
+                        "audio=${session?.hasReceivedAudio == true} screenAttached=${screen.attached} " +
+                        "screenAttachedDuringSession=${wirelessConnectionProof.screenShown(generation)}",
                 )
                 closeWirelessStack(generation = generation)
                 fail(IOException("Wireless CarPlay handoff timed out waiting for tunnel iAP2"), generation)
@@ -1921,9 +1939,9 @@ class CarPlayController(
     }
 
     /** See [WirelessConnectionProof.isUsable]. Call with [wirelessResourceLock] held. */
-    private fun wirelessSessionUsable(generation: Int, screenAttached: Boolean): Boolean {
+    private fun wirelessSessionUsable(generation: Int, screen: MainScreenOutput): Boolean {
         val session = activeSession ?: return false
-        return wirelessConnectionProof.isUsable(generation, session, session.hasReceivedAudio, screenAttached)
+        return wirelessConnectionProof.isUsable(generation, session, session.hasReceivedAudio, screen)
     }
 
 

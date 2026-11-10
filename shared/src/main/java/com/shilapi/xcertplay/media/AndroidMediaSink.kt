@@ -261,6 +261,8 @@ class AndroidMediaSink(
     // Native codec work and waits never run under this lock.
     private val videoOwnershipLock = Any()
     private var videoClosed = false
+    // Per stream type, how many times a surface or mirror was attached; see videoOutputAttachments.
+    private val videoOutputAttachments = HashMap<Int, Long>()
     private val videoReleasedListeners = ArrayList<() -> Unit>()
     // Closed decoders whose workers may still hold a codec on a surface until they exit; a surface
     // detach also waits for them.
@@ -321,9 +323,19 @@ class AndroidMediaSink(
             synchronized(mirrorLock) { mirrorSurfaces.keys.any { it.first == type } })
     }
 
+    override fun videoOutputAttachments(type: Int): Long = synchronized(videoOwnershipLock) {
+        videoOutputAttachments[type] ?: 0L
+    }
+
+    /** Call with [videoOwnershipLock] held. */
+    private fun countVideoOutputAttached(type: Int) {
+        videoOutputAttachments[type] = (videoOutputAttachments[type] ?: 0L) + 1
+    }
+
     fun setSurface(type: Int, surface: Surface) {
         synchronized(videoOwnershipLock) {
             if (videoClosed) return
+            countVideoOutputAttached(type)
             surfaces[type] = surface
             videoDecoders[type]?.setSurface(surface)
         }
@@ -460,6 +472,7 @@ class AndroidMediaSink(
                 }
                 mirrorSurfaces[id] = surface
             }
+            countVideoOutputAttached(type)
             lastVideoConfig[type]?.let { (codec, data) -> mirrorDecoders(type).forEach { it.configure(codec, data) } }
         }
     }
