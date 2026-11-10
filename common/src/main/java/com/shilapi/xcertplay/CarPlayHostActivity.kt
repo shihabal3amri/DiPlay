@@ -5162,17 +5162,9 @@ open class CarPlayHostActivity : ComponentActivity() {
 
     private fun defaultAirPlayIconBytes(): ByteArray =
         // Shown in CarPlay's app list as the "back to the car" button.
-        resources.openRawResource(carBrandRawRes()).use { it.readBytes() }
-
-    private fun carBrandRawRes(): Int = when (AirPlayPersistence.loadCarBrand(this)) {
-        "wangchao" -> R.raw.ic_car_wangchao
-        "haiyang" -> R.raw.ic_car_haiyang
-        "fangchengbao" -> R.raw.ic_car_fangchengbao
-        "denza" -> R.raw.ic_car_denza
-        "yangwang" -> R.raw.ic_car_yangwang
-        "linghui" -> R.raw.ic_car_linghui
-        else -> R.raw.ic_car_home
-    }
+        resources.openRawResource(
+            CarBrandBadge.fromKey(AirPlayPersistence.loadCarBrand(this)).iconRawRes,
+        ).use { it.readBytes() }
 
     private fun updateAirPlayIconPreview() {
         val preview = iconPreviewView ?: return

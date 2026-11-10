@@ -192,7 +192,7 @@
     <string name="could_not_start_carplay_return_to_diplay_and_check_app_per">Не вдалося запустити CarPlay. Поверніться до DiPlay та перевірте дозволи застосунку.</string>
     <string name="custom_1_1_icon">Власний значок 1:1</string>
     <string name="debug_logs">Журнали налагодження</string>
-    <string name="default_icon">Типовий значок</string>
+    <string name="default_icon">Скинути на фірмовий значок</string>
     <string name="default_placeholder_icon">Типовий значок-заповнювач</string>
     <string name="diagnostic_report_saved">Діагностичний звіт збережено</string>
     <string name="diagnostics">Діагностика</string>
@@ -725,7 +725,7 @@
     <string name="car_button_description">CarPlay показує цей значок і назву у списку застосунків. Натисніть його, щоб повернутися на екран автомобіля. Зміни застосуються під час наступного підключення CarPlay.</string>
     <string name="car_button_saved_next_connection">Збережено. CarPlay покаже новий значок і назву під час наступного підключення.</string>
     <string name="settings_car_brand_title">Значок бренду</string>
-    <string name="settings_car_brand_summary">Виберіть значок і назву лінійки BYD, які CarPlay показує в списку застосунків.</string>
+    <string name="settings_car_brand_summary">Виберіть значок лінійки BYD, які CarPlay показує в списку застосунків. Ім’я оновлюється лише, якщо воно лишилось типовим або іменем значка. Вибір значка замінює користувацьке зображення.</string>
     <string name="settings_car_brand_default">Типово (BYD)</string>
     <string name="settings_car_brand_wangchao">Dynasty</string>
     <string name="settings_car_brand_haiyang">Ocean</string>

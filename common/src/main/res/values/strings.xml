@@ -194,7 +194,7 @@
     <string name="could_not_start_carplay_return_to_diplay_and_check_app_per">Could not start CarPlay. Return to DiPlay and check app permissions.</string>
     <string name="custom_1_1_icon">Custom 1:1 icon</string>
     <string name="debug_logs">Debug logs</string>
-    <string name="default_icon">Default icon</string>
+    <string name="default_icon">Reset to brand badge</string>
     <string name="default_placeholder_icon">Default placeholder icon</string>
     <string name="diagnostic_report_saved">Diagnostic report saved</string>
     <string name="diagnostics">Diagnostics</string>
@@ -817,7 +817,7 @@
     <string name="car_button_saved_next_connection">Saved. CarPlay shows the new icon and name the next time it connects.</string>
     <string name="this_head_unit_has_no_image_picker">This head unit has no image picker.</string>
     <string name="settings_car_brand_title">Car brand badge</string>
-    <string name="settings_car_brand_summary">Picks the BYD-series badge and name CarPlay shows in its app list.</string>
+    <string name="settings_car_brand_summary">Picks the BYD-series badge CarPlay shows in its app list. The name is only updated when it is still the default or a badge name. Choosing a badge replaces a custom image.</string>
     <string name="settings_car_brand_default">Default (BYD)</string>
     <string name="settings_car_brand_wangchao">Dynasty</string>
     <string name="settings_car_brand_haiyang">Ocean</string>

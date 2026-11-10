@@ -188,7 +188,7 @@
     <string name="could_not_start_carplay_return_to_diplay_and_check_app_per">تعذّر بدء CarPlay. عد إلى DiPlay وتحقق من أذونات التطبيق.</string>
     <string name="custom_1_1_icon">أيقونة مخصصة 1:1</string>
     <string name="debug_logs">سجلات تصحيح</string>
-    <string name="default_icon">الأيقونة الافتراضية</string>
+    <string name="default_icon">إعادة التعيين إلى شعار العلامة</string>
     <string name="default_placeholder_icon">أيقونة بديلة افتراضية</string>
     <string name="diagnostic_report_saved">تم حفظ تقرير التشخيص</string>
     <string name="diagnostics">التشخيص</string>
@@ -713,8 +713,8 @@
     <string name="car_button_description">يعرض CarPlay هذه الأيقونة وهذا الاسم في قائمة التطبيقات. اضغط عليها للعودة إلى شاشة السيارة. تُطبَّق التغييرات عند اتصال CarPlay في المرة القادمة.</string>
     <string name="car_button_saved_next_connection">تم الحفظ. سيعرض CarPlay الأيقونة والاسم الجديدين عند اتصاله في المرة القادمة.</string>
     <string name="settings_car_brand_title">شعار العلامة التجارية</string>
-    <string name="settings_car_brand_summary">اختر شعار واسم سلسلة BYD التي يعرضها CarPlay في قائمة التطبيقات.</string>
-    <string name="settings_car_brand_default">تلقائي (BYD)</string>
+    <string name="settings_car_brand_summary">اختر شعار سلسلة BYD الذي يعرضه CarPlay في قائمة التطبيقات. يُحدَّث الاسم فقط عندما يظل الافتراضي أو اسم شعار. اختيار شعار يستبدل أي صورة مخصصة.</string>
+    <string name="settings_car_brand_default">افتراضي (BYD)</string>
     <string name="settings_car_brand_wangchao">Dynasty</string>
     <string name="settings_car_brand_haiyang">Ocean</string>
     <string name="settings_car_brand_fangchengbao">Fang Cheng Bao</string>
