@@ -10,7 +10,7 @@ import org.robolectric.annotation.Config
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk=[29],manifest=Config.NONE)
-class ClusterPlayerFullProjectionTest {
+class ClusterPlayerProjectionShapeTest {
     @Test fun playerRespectsSavedHalfAndFullModesAndStillReleases() {
         val app=RuntimeEnvironment.getApplication()
         val preferences=app.getSharedPreferences("xcertplay_airplay",0)

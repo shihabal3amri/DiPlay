@@ -33,6 +33,7 @@ internal object BydBattery {
     private const val REMAINING = "service call autoservice 7 i32 1005 i32 882901008" // float kWh
     private const val BMS_CHARGING = 1
 
+    // The Tang with DiLink 5 sets only sys.car.protocol; keep that fallback.
     fun protocol(shell: (String) -> String?): BydBatteryProtocol? {
         val property = shell("getprop ro.car.protocol")?.trim()?.takeIf { it.isNotEmpty() }
             ?: shell("getprop sys.car.protocol")?.trim()

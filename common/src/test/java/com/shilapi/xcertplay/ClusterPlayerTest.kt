@@ -45,7 +45,7 @@ class ClusterPlayerTest {
         AirPlayPersistence.saveClusterSpeedometerEnabled(context, true)
         AirPlayPersistence.saveClusterMapEnabled(context, true)
         assertFalse(ClusterPlayerSettings.selected(context))
-        assertTrue(ClusterPlayerSettings.speed(context))
+        assertFalse(ClusterPlayerSettings.speed(context))
         assertFalse(ClusterPlayerSettings.vehicle(context))
         ClusterPlayerSettings.save(context, true); idle()
         assertEquals(View.GONE, map.visibility)
@@ -58,6 +58,7 @@ class ClusterPlayerTest {
         activity.pause().stop().destroy()
     }
     @Test fun speedExpiresToUnknownAndCallbacksCannotReviveAfterDetach() {
+        ClusterPlayerSettings.saveSpeed(context, true)
         AirPlayPersistence.saveClusterMapEnabled(context, true)
         ClusterPlayerSettings.save(context, true)
         val activity = Robolectric.buildActivity(Activity::class.java).setup().visible()
@@ -95,6 +96,7 @@ class ClusterPlayerTest {
     }
 
     @Test fun hiddenProjectionLayerStopsSpeedReaderAndResumesWhenShown() {
+        ClusterPlayerSettings.saveSpeed(context, true)
         AirPlayPersistence.saveClusterMapEnabled(context,true)
         ClusterPlayerSettings.save(context,true)
         val activity=Robolectric.buildActivity(Activity::class.java).setup().visible()
@@ -133,6 +135,7 @@ class ClusterPlayerTest {
         stop()
     }
     @Test fun realPlayerCapturesWithSpeedAndMissingMetadata() {
+        ClusterPlayerSettings.saveSpeed(context, true)
         AirPlayPersistence.saveClusterMapEnabled(context, true)
         ClusterPlayerSettings.save(context, true)
         val activity = Robolectric.buildActivity(Activity::class.java).setup().visible()
@@ -161,6 +164,7 @@ class ClusterPlayerTest {
         activity.pause().stop().destroy()
     }
     @Test fun paleCoverHasVisibleMotionAndFullCanvasLongTitle() {
+        ClusterPlayerSettings.saveSpeed(context, true)
         com.shilapi.xcertplay.airplay.ClusterBackgroundSettings.saveMotion(context,true)
         ClusterPlayerSettings.saveFitVisible(context,false)
         AirPlayPersistence.saveClusterMapEnabled(context,true)
@@ -198,6 +202,21 @@ class ClusterPlayerTest {
         ReflectionHelpers.setField(activity.get(),"setupError",null)
         ReflectionHelpers.callInstanceMethod<Unit>(activity.get(),"render"); idle()
         assertNull(findText(activity.get().window.decorView,activity.get().getString(com.shilapi.xcertplay.host.R.string.settings_cluster_player_mode)))
+        // A restored/saved selection must always offer an escape back to Map.
+        ClusterPlayerSettings.save(context, true)
+        ReflectionHelpers.callInstanceMethod<Unit>(activity.get(), "render"); idle()
+        val selector = findText(activity.get().window.decorView,
+            activity.get().getString(com.shilapi.xcertplay.host.R.string.settings_cluster_player_mode))!!
+        assertTrue((selector as android.widget.TextView).text.toString().contains(
+            activity.get().getString(com.shilapi.xcertplay.host.R.string.settings_cluster_player)))
+        selector.performClick(); idle()
+        val dialog = org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog()
+        dialog.listView.performItemClick(null, 0, 0)
+        dialog.getButton(android.content.DialogInterface.BUTTON_POSITIVE).performClick(); idle()
+        assertFalse(ClusterPlayerSettings.selected(context))
+        assertFalse(ClusterPlayerSettings.enabled(context))
+        assertNull(findText(activity.get().window.decorView,
+            activity.get().getString(com.shilapi.xcertplay.host.R.string.settings_cluster_player_mode)))
         activity.pause().stop().destroy()
     }
 
@@ -300,6 +319,7 @@ class ClusterPlayerTest {
         activity.pause().stop().destroy()
     }
     @Test fun fittedPlayerKeepsChangingReadoutsOutOfTheNativeStripsAndCanReturnToFullCanvas() {
+        ClusterPlayerSettings.saveSpeed(context, true)
         RuntimeEnvironment.setQualifiers("es-w1280dp-h480dp-mdpi")
         AirPlayPersistence.saveClusterMapEnabled(context,true)
         ClusterPlayerSettings.save(context,true)
@@ -383,6 +403,7 @@ class ClusterPlayerTest {
     }
 
     @Test fun longTitlesDoNotPaintOverThreeDigitSpeed() {
+        ClusterPlayerSettings.saveSpeed(context, true)
         RuntimeEnvironment.setQualifiers("es-w1280dp-h480dp-mdpi")
         AirPlayPersistence.saveClusterMapEnabled(context,true)
         ClusterPlayerSettings.save(context,true)

@@ -12,7 +12,7 @@ object ClusterPlayerSettings {
     private fun prefs(context: Context) = context.getSharedPreferences("xcertplay_airplay", Context.MODE_PRIVATE)
     fun selected(context: Context) = prefs(context).getBoolean(MODE, false)
     fun enabled(context: Context) = selected(context) && prefs(context).getBoolean("cluster_map_enabled", false)
-    fun speed(context: Context) = prefs(context).getBoolean(SPEED, true)
+    fun speed(context: Context) = prefs(context).getBoolean(SPEED, false)
     fun vehicle(context: Context) = prefs(context).getBoolean(VEHICLE, false)
     fun fitVisible(context: Context) = prefs(context).getBoolean(FIT_VISIBLE, true)
     fun save(context: Context, selected: Boolean) { prefs(context).edit().putBoolean(MODE, selected).apply() }

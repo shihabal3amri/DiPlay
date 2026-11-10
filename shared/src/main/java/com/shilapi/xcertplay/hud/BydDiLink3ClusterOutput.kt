@@ -90,7 +90,6 @@ internal object BydDiLink3ClusterOutput {
             .onSuccess { accepted -> if (!accepted) Log.w(TAG, "Cluster mode pending recovery/retry") }
     }
 
-
     private fun state(app: Context): DiLink3ClusterModeSession {
         session?.let { return it }
         val journal = DiLink3ClusterRecoveryJournal(prefs(app).getBoolean(JOURNAL, false)) { pending ->
