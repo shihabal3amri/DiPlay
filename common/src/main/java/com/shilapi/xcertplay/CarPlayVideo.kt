@@ -49,7 +49,8 @@ internal object CarPlayVideo : CarPlayVideoListener {
     var activity: CarPlayVideoActivity? = null
 
     /**
-     * From the moment DiPlay opens its player until the player closes. The player hides the system bars, so
+     * From the moment DiPlay opens its player until the player closes, or until the item or video session ends
+     * while the player has not opened (see [stop]). The player hides the system bars, so
      * the CarPlay screen's window grows behind it; the host keeps its CarPlay canvas meanwhile (#1180).
      */
     @Volatile var playerOnScreen = false
@@ -120,14 +121,17 @@ internal object CarPlayVideo : CarPlayVideoListener {
     internal data class PlayerFailure(val iphoneCode: Int, @androidx.annotation.StringRes val message: Int)
 
     /**
-     * Only a DRM error names protected video. A lost connection or a decoder the head unit lacks is not a
-     * licence problem, and saying so sent drivers looking for the wrong cause (#1180).
+     * Only a DRM error names protected video, and only parsing and decoding errors name the format. A lost
+     * connection is not a licence problem, and saying so sent drivers looking for the wrong cause (#1180).
+     * The load text names no network: an app's own URL loads through the iPhone, and its failures are IO
+     * errors too. Other errors (a live stream fallen behind, a timeout, audio output) state no cause.
      */
     internal fun failureFor(playbackErrorCode: Int): PlayerFailure = when (playbackErrorCode) {
         in 2000..2999 -> PlayerFailure(VideoInCar.ERROR_NETWORK, R.string.video_cannot_load) // IO
+        in 3000..3999 -> PlayerFailure(VideoInCar.ERROR_INCOMPATIBLE_ASSET, R.string.video_cannot_play_here) // parsing
         in 4000..4999 -> PlayerFailure(VideoInCar.ERROR_DECODER, R.string.video_cannot_play_here) // decoding
         in 6000..6999 -> PlayerFailure(VideoInCar.ERROR_INCOMPATIBLE_ASSET, R.string.video_cannot_play) // DRM
-        else -> PlayerFailure(VideoInCar.ERROR_INCOMPATIBLE_ASSET, R.string.video_cannot_play_here) // parsing, unsupported
+        else -> PlayerFailure(VideoInCar.ERROR_INCOMPATIBLE_ASSET, R.string.video_cannot_play_on_car) // no stated cause
     }
 
     /** The player activity is going away (Back, the car left P, or the item stopped). */
@@ -281,6 +285,9 @@ internal object CarPlayVideo : CarPlayVideoListener {
         itemUuid = null
         playing = false
         pendingSeekMillis = null
+        // A player that was asked for but never opened (Android can refuse a start from the background)
+        // must not leave the CarPlay screen holding its size changes; one that opens later sets it again.
+        if (activity == null) playerOnScreen = false
         activity?.finish()
     }
 }

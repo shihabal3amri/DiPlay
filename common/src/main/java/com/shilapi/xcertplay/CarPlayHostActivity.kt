@@ -43,6 +43,7 @@ import android.text.InputType
 import android.text.TextUtils
 import android.text.TextWatcher
 import android.util.Log
+import android.view.Display
 import android.view.Gravity
 import android.view.MotionEvent
 import android.view.PixelCopy
@@ -2023,6 +2024,9 @@ open class CarPlayHostActivity : ComponentActivity() {
         if (MapMirrors.onChanged === mirrorsChanged) MapMirrors.onChanged = null
         dismissClusterPresentation()
         mainHandler.removeCallbacks(applyDisplaySize)
+        mainHandler.removeCallbacks(recheckSizeAfterVideoPlayer)
+        videoPlayerSettling = false
+        videoPlayerHeldSize = false
         mainHandler.removeCallbacks(expireOldLogLines)
         mainHandler.removeCallbacks(pollConfiguration)
         videoSurfaceOwner.clear()
@@ -5827,6 +5831,9 @@ open class CarPlayHostActivity : ComponentActivity() {
             maybeStartCarPlay()
             return
         }
+        // The player covering the host now may close before the debounced apply runs; still check the window
+        // again once the bars it hid are back, or that apply reconnects at the player's size (#1180).
+        if (sessionDisplay != null && videoPlayerCoversHost()) videoPlayerHeldSize = true
         pendingDisplaySize = size
         // With a turning screen's square canvas nothing reconnects, so the turn need not wait for the size to settle.
         mainHandler.postDelayed(applyDisplaySize,
@@ -5911,8 +5918,10 @@ open class CarPlayHostActivity : ComponentActivity() {
      * DiPlay's video player is open or opening over this screen, or DiPlay has just come back from it and the
      * system bars the player hid have not returned yet. Size changes then wait instead of reconnecting (#1180).
      */
-    private fun videoPlayerOverHost(): Boolean =
-        videoPlayerSettling || (CarPlayVideo.playerOnScreen && !hostAppearanceResumed)
+    private fun videoPlayerOverHost(): Boolean = videoPlayerSettling || videoPlayerCoversHost()
+
+    /** DiPlay's video player is open or opening, and this screen is not in front of it. */
+    private fun videoPlayerCoversHost(): Boolean = CarPlayVideo.playerOnScreen && !hostAppearanceResumed
 
     /**
      * Entering or leaving the head unit's split screen, or turning the screen with a square canvas, moves
@@ -5982,8 +5991,9 @@ open class CarPlayHostActivity : ComponentActivity() {
     /**
      * Why the window no longer matches the session's layout, or null: the screen turned, the saved system
      * bars changed, or (with "Adapt multi-window resolution") the window took another shape in multi-window
-     * or picture-in-picture. Outside those, a new shape is the system bars coming and going, for example as
-     * another app opens on DiLink 2.0, and must not reconnect (#1219).
+     * or in a launcher card or launcher PiP on another display. A full-screen window on the main display
+     * changes shape only as the system bars come and go, for example as another app opens on DiLink 2.0,
+     * and must not reconnect (#1219).
      */
     private fun layoutChange(newSize: DisplaySize? = activeDisplaySize): String? {
         val display = sessionDisplay ?: return null
@@ -5993,21 +6003,32 @@ open class CarPlayHostActivity : ComponentActivity() {
             return "saved bars hideTop=${display.hideTopBar} -> $hideTopBar hideBottom=${display.hideBottomBar} -> $hideBottomBar"
         }
         if (newSize != null && newSize.width > 0 && newSize.height > 0 &&
-            display.windowWidth > 0 && display.windowHeight > 0 && multiWindowOrPip()) {
+            display.windowWidth > 0 && display.windowHeight > 0) {
+            val where = sharedWindowPlace() ?: return null
             // The negotiated canvas may be square to support screen rotation; compare the
             // actual startup window instead, or every return to a landscape window looks like PiP.
             val baseAspect = display.windowWidth.toDouble() / display.windowHeight
             val currentAspect = newSize.width.toDouble() / newSize.height
             val aspectDiff = kotlin.math.abs(currentAspect / baseAspect - 1.0)
             if (aspectDiff > 0.08 && AirPlayPersistence.loadAdaptPipResolution(this)) {
-                return String.format(Locale.ROOT, "multi-window aspect %.2f -> %.2f, adapt multi-window resolution on",
-                    baseAspect, currentAspect)
+                return String.format(Locale.ROOT, "%s aspect %.2f -> %.2f, adapt multi-window resolution on",
+                    where, baseAspect, currentAspect)
             }
         }
         return null
     }
 
-    private fun multiWindowOrPip(): Boolean = isMultiWindowActive() || isInPictureInPictureMode
+    /**
+     * Where DiPlay's window shares the screen, so "Adapt multi-window resolution" may refit the canvas to its
+     * shape: "multi-window" (split screen, freeform), "display N" when a launcher shows DiPlay on another
+     * display (a launcher card or launcher PiP, which is not Android picture-in-picture and does not report
+     * multi-window), or null for a window on the main display outside multi-window.
+     */
+    private fun sharedWindowPlace(): String? {
+        if (isMultiWindowActive()) return "multi-window"
+        val displayId = (videoView?.display ?: window?.peekDecorView()?.display)?.displayId ?: return null
+        return if (displayId != Display.DEFAULT_DISPLAY) "display $displayId" else null
+    }
 
 
 
