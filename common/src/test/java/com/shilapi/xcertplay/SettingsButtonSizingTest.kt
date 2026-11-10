@@ -155,10 +155,13 @@ class SettingsButtonSizingTest {
                 .filter { it !is android.widget.CompoundButton }
                 .filter { it.width > 0 && it.height > 0 }.toList()
             assertTrue("Must check settings controls", buttons.size > 10)
+            val minimumPadding = (8 * metrics.density).roundToInt()
             for (button in buttons) {
                 val message = "Label must fit: ${button.text}"
                 assertTrue(message, button.height >= (60 * metrics.density).roundToInt())
                 assertTrue(message, button.layout.height <= button.height - button.compoundPaddingTop - button.compoundPaddingBottom)
+                assertTrue("Wrapped label needs vertical padding: ${button.text}", button.lineCount <= 1 ||
+                    (button.paddingTop >= minimumPadding && button.paddingBottom >= minimumPadding))
             }
         } finally { screen.finish() }
     }

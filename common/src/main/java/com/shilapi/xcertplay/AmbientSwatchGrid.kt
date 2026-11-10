@@ -90,7 +90,6 @@ internal class AmbientSwatchGrid(
     }
 
     private fun swatchView(context: Context, index: Int): FrameLayout {
-        val size = dp(SWATCH_DP)
         val check = TextView(context).apply {
             text = "✓"
             textSize = 18f
@@ -100,7 +99,6 @@ internal class AmbientSwatchGrid(
             tag = CHECK
         }
         return FrameLayout(context).apply {
-            layoutParams = MarginLayoutParams(size, size).apply { setMargins(dp(MARGIN_DP), dp(MARGIN_DP), dp(MARGIN_DP), dp(MARGIN_DP)) }
             isClickable = true
             isFocusable = true
             addView(check, FrameLayout.LayoutParams(-1, -1))

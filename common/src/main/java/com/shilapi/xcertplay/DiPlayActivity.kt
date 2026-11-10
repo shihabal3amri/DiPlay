@@ -6396,19 +6396,16 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
         }
         musicOptions = column()
         val modeNote = choiceNote(ambientModeDescription(draft.colorMode))
-        choice(musicOptions, getString(R.string.settings_ambient_color_mode), listOf(getString(R.string.settings_ambient_energy), getString(R.string.settings_ambient_beat), getString(R.string.settings_ambient_tempo), getString(R.string.settings_ambient_bass), getString(R.string.settings_ambient_smart)), draft.colorMode.ordinal, reconnects = false,
-            buttonLayout = matchButton(0, 60)) {
+        choice(musicOptions, getString(R.string.settings_ambient_color_mode), listOf(getString(R.string.settings_ambient_energy), getString(R.string.settings_ambient_beat), getString(R.string.settings_ambient_tempo), getString(R.string.settings_ambient_bass), getString(R.string.settings_ambient_smart)), draft.colorMode.ordinal, reconnects = false) {
             draft = draft.copy(colorMode = AmbientColorMode.entries[it])
             modeNote.text = ambientModeDescription(draft.colorMode)
         }
         musicOptions.addView(modeNote)
-        choice(musicOptions, getString(R.string.settings_ambient_speed), listOf(getString(R.string.settings_ambient_slow), getString(R.string.settings_ambient_standard), getString(R.string.settings_ambient_fast)), draft.speed.ordinal, reconnects = false,
-            buttonLayout = matchButton(0, 60)) {
+        choice(musicOptions, getString(R.string.settings_ambient_speed), listOf(getString(R.string.settings_ambient_slow), getString(R.string.settings_ambient_standard), getString(R.string.settings_ambient_fast)), draft.speed.ordinal, reconnects = false) {
             draft = draft.copy(speed = AmbientColorSpeed.entries[it])
         }
         body.addView(musicOptions)
-        choice(body, getString(R.string.settings_ambient_idle), listOf(getString(R.string.settings_ambient_idle_steady), getString(R.string.settings_ambient_idle_car), getString(R.string.settings_ambient_idle_off)), draft.idle.ordinal, reconnects = false,
-            buttonLayout = matchButton(0, 60)) {
+        choice(body, getString(R.string.settings_ambient_idle), listOf(getString(R.string.settings_ambient_idle_steady), getString(R.string.settings_ambient_idle_car), getString(R.string.settings_ambient_idle_off)), draft.idle.ordinal, reconnects = false) {
             draft = draft.copy(idle = AmbientIdleBehavior.entries[it])
             refreshAmbient()
         }
@@ -6453,18 +6450,17 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
             })
         }, LinearLayout.LayoutParams(-1, dp(48)))
         body.addView(space(12))
-        choice(body, getString(R.string.settings_ambient_area), listOf(getString(R.string.settings_ambient_front), getString(R.string.settings_ambient_rear), getString(R.string.settings_ambient_all)), draft.area - 1, reconnects = false,
-            buttonLayout = matchButton(0, 60)) {
+        choice(body, getString(R.string.settings_ambient_area), listOf(getString(R.string.settings_ambient_front), getString(R.string.settings_ambient_rear), getString(R.string.settings_ambient_all)), draft.area - 1, reconnects = false) {
             draft = draft.copy(area = it + 1)
             refreshAmbient()
         }
         refreshAmbient()
+        applySettingsButtonHeights(body)
         val dialog = appDialogBuilder().setTitle(getString(R.string.settings_ambient_configuration))
             .setView(ScrollView(appDialogContext()).apply { addView(body) })
             .setPositiveButton(getString(R.string.save), null)
             .setNegativeButton(getString(R.string.cancel), null).create()
         dialog.setOnShowListener {
-            dialog.addVerticalWindowInsets()
             val save = dialog.getButton(AlertDialog.BUTTON_POSITIVE)
             save.setOnClickListener {
                 val selected = draft.copy(colorCycle = draft.music)
@@ -6489,6 +6485,8 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
                 }
             }
         }
+        dialog.create()
+        dialog.addVerticalWindowInsets()
         dialog.show()
     }
 
@@ -6799,6 +6797,11 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
             when {
                 child is Button -> {
                     child.minHeight = dp(CONTROL_MIN_HEIGHT_DP)
+                    val verticalPadding = dp(SETTINGS_BUTTON_VERTICAL_PADDING_DP)
+                    child.setPaddingRelative(
+                        child.paddingStart, maxOf(child.paddingTop, verticalPadding),
+                        child.paddingEnd, maxOf(child.paddingBottom, verticalPadding),
+                    )
                     params.height = ViewGroup.LayoutParams.WRAP_CONTENT
                     child.layoutParams = params
                 }
@@ -7028,6 +7031,7 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
         private const val SEARCH_HIGHLIGHT_MILLIS = 900L
         private const val SPACER = "spacer"
         private const val CONTROL_MIN_HEIGHT_DP = 60
+        private const val SETTINGS_BUTTON_VERTICAL_PADDING_DP = 8
         private const val CONTROL_GAP_DP = 12
         private const val GROUP_GAP_DP = 20
         private const val NOTE_LINE_GAP_DP = 4

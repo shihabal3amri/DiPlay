@@ -99,15 +99,12 @@ class VehicleDataModeDialogTest {
                     layout()
                     assertEquals("Dialog dimensions must be ready on first layout", initialHeight, decor.height)
                     assertEquals(2, list.childCount)
-                    println("$locale $widthDp decor=${decor.width}x${decor.height} list=${list.width}x${list.height} padding=${list.paddingTop},${list.paddingBottom} rows=" +
-                        (0 until list.childCount).joinToString { "${list.getChildAt(it).top}..${list.getChildAt(it).bottom}" })
                     assertTrue("The first option must be fully visible", list.getChildAt(0).top >= list.paddingTop)
                     assertTrue("Both options fit this window without scrolling",
                         list.getChildAt(1).bottom <= list.height - list.paddingBottom)
                     for (index in 0 until list.childCount) {
                         val row = list.getChildAt(index) as TextView
                         val textLayout = requireNotNull(row.layout)
-                        println("$locale $widthDp option $index lines=${row.lineCount} height=${row.height} text=${row.text}")
                         for (line in 0 until textLayout.lineCount) {
                             assertEquals("Option text must not be ellipsized", 0, textLayout.getEllipsisCount(line))
                             assertTrue("Option text must fit horizontally", textLayout.getLineWidth(line) <= textLayout.width + 1f)
