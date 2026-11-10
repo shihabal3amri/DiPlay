@@ -33,6 +33,7 @@ internal object CarPlayVideo : CarPlayVideoListener {
     @Volatile private var appContext: Context? = null
     @Volatile private var controller: CarPlayController? = null
     @Volatile private var diagnostic: (String) -> Unit = {}
+    private val iphoneLoads = VideoDiagnostics.IphoneLoads()
 
     // Main-thread state; CarPlayVideoActivity applies it. The stream and item are also read by loader threads.
     @Volatile private var streamId: Long? = null
@@ -63,6 +64,25 @@ internal object CarPlayVideo : CarPlayVideoListener {
             if (warn) Log.w(TAG, message) else Log.i(TAG, message)
         }
         runCatching { diagnostic("Video: $message") }
+    }
+
+    /** A per-load line of an item loaded through the iPhone: the first few reach the report, then a count. */
+    private fun noteIphoneLoad(kind: VideoDiagnostics.IphoneLoads.Kind, message: String, warn: Boolean = false) {
+        if (iphoneLoads.take(kind)) {
+            note(message, warn)
+        } else if (warn) {
+            Log.w(TAG, message)
+        } else {
+            Log.i(TAG, message)
+        }
+    }
+
+    /** What the iPhone sent for one load ([IphoneResolvingDataSource]). Loader thread. */
+    fun noteIphoneLoaded(scheme: String?, status: Int?, bytes: Int?, redirect: Boolean) {
+        // Status 0 is a resource loader's data-only answer, not a failure.
+        val failed = !redirect && status != null && status != 0 && status !in 200..299
+        noteIphoneLoad(if (failed) VideoDiagnostics.IphoneLoads.Kind.FAILED else VideoDiagnostics.IphoneLoads.Kind.LOADED,
+            VideoDiagnostics.iphoneLoaded(scheme, status, bytes, redirect), warn = failed)
     }
 
     override fun readParked(): Boolean? = appContext?.let(BydNavigationOutputs::parked)
@@ -138,6 +158,7 @@ internal object CarPlayVideo : CarPlayVideoListener {
                         warn = true)
                     return
                 }
+                finishIphoneLoads() // a new item replaces one the iPhone did not stop first
                 url = item.url
                 itemUuid = item.uuid
                 streaming = queued?.get("mediaType") == "streaming"
@@ -198,11 +219,13 @@ internal object CarPlayVideo : CarPlayVideoListener {
             ),
             "item" to linkedMapOf("uuid" to itemUuid),
         ))
-        note("asked the iPhone to load a ${VideoDiagnostics.scheme(url)} URL request=$id")
+        noteIphoneLoad(VideoDiagnostics.IphoneLoads.Kind.ASKED,
+            "asked the iPhone to load a ${VideoDiagnostics.scheme(url)} URL request=$id")
         val response = try {
             answer.get(URL_TIMEOUT_SECONDS, TimeUnit.SECONDS)
         } catch (_: Exception) {
-            note("no iPhone answer for request=$id within ${URL_TIMEOUT_SECONDS}s", warn = true)
+            noteIphoneLoad(VideoDiagnostics.IphoneLoads.Kind.NO_ANSWER,
+                "no iPhone answer for request=$id within ${URL_TIMEOUT_SECONDS}s", warn = true)
             null
         } finally {
             pendingUrls.remove(id)
@@ -219,8 +242,9 @@ internal object CarPlayVideo : CarPlayVideoListener {
     private fun onUrlLoaded(message: Map<String, Any?>) {
         val response = message["response"] as? Map<*, *>
         val id = (response?.get("FCUP_Response_RequestID") as? Number)?.toLong()
-        note("iPhone unhandledURL answer request=$id keys=${VideoDiagnostics.keys(message.keys)} " +
-            "responseKeys=${response?.keys?.let(VideoDiagnostics::keys)}")
+        noteIphoneLoad(VideoDiagnostics.IphoneLoads.Kind.ANSWER,
+            "iPhone unhandledURL answer request=$id keys=${VideoDiagnostics.keys(message.keys)} " +
+                "responseKeys=${response?.keys?.let(VideoDiagnostics::keys)}")
         if (id != null) pendingUrls[id]?.complete(response)
     }
 
@@ -257,7 +281,12 @@ internal object CarPlayVideo : CarPlayVideoListener {
         player.finish()
     }
 
+    private fun finishIphoneLoads() {
+        iphoneLoads.finish()?.let(::note)
+    }
+
     private fun stop() {
+        finishIphoneLoads()
         url = null
         itemUuid = null
         playing = false

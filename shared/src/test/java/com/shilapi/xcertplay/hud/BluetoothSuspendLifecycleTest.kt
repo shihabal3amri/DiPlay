@@ -167,9 +167,41 @@ class BluetoothSuspendLifecycleTest {
         assertTrue(lines.toString(), lines[1].startsWith("car Bluetooth pause failed:"))
         assertEquals(listOf(
             "car Bluetooth pause evidence: svc bluetooth disable printed 'Killed'",
-            "car Bluetooth pause evidence: bluetooth_manager enabled=true state=ON",
+            "car Bluetooth pause evidence: Android Bluetooth was ON when the wait for the disable ended",
+            "car Bluetooth pause evidence: bluetooth_manager after DiPlay's restore step enabled=true state=ON",
         ), lines.drop(2))
         assertFalse(lines.toString(), lines.any { "Jane" in it || "C0:A6" in it })
+    }
+
+    // #1021: a disable that lands after the wait is undone by the lease, so the dump alone would say "ignored".
+    @Test fun aLateDisableShowsTheRadioAsTheWaitLeftItBeforeTheRestore() {
+        val journal = Journal(); var enabled: Boolean? = true
+        val commands = java.util.concurrent.CopyOnWriteArrayList<String>()
+        BydBluetoothSuspend.runShell = { _, command ->
+            commands += command
+            if (command == BydBluetoothSuspend.MANAGER_STATE_COMMAND) "  enabled: true\n  state: ON" else ""
+        }
+        leaseField.set(null, BluetoothSuspendLease(journal, { enabled },
+            { on -> BydBluetoothSuspend.requestRadio(app, on); if (on) enabled = true }, { want ->
+                val reached = enabled == want
+                if (!want) enabled = false // the radio goes off just after the wait gave up
+                reached
+            }))
+        val lines = java.util.Collections.synchronizedList(mutableListOf<String>())
+        val owner = Any()
+        BydBluetoothSuspend.suspend(app, owner, 0, log = { lines += it })
+        worker.submit {}.get(2, TimeUnit.SECONDS)
+        BydBluetoothSuspend.resume(app, owner)
+        worker.submit {}.get(2, TimeUnit.SECONDS)
+        assertEquals(listOf("svc bluetooth disable", "svc bluetooth enable", BydBluetoothSuspend.MANAGER_STATE_COMMAND),
+            commands)
+        assertEquals(listOf(
+            "car Bluetooth pause evidence: svc bluetooth disable printed nothing",
+            "car Bluetooth pause evidence: Android Bluetooth was OFF when the wait for the disable ended",
+            "car Bluetooth pause evidence: bluetooth_manager after DiPlay's restore step enabled=true state=ON",
+        ), lines.drop(2))
+        assertEquals(true, enabled)
+        assertFalse(journal.recorded)
     }
 
     @Test fun aPauseThatWorksRunsNoExtraCommand() {

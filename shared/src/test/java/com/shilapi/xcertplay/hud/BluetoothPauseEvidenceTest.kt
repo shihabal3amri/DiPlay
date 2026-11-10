@@ -35,12 +35,19 @@ class BluetoothPauseEvidenceTest {
             Bluetooth Service state: BLE_ON
         """.trimIndent()
         val line = BluetoothPauseEvidence.managerLine(dump)
-        assertEquals("$prefix bluetooth_manager enabled=true state=ON", line)
+        assertEquals("$prefix bluetooth_manager after DiPlay's restore step enabled=true state=ON", line)
         assertEquals("$prefix bluetooth_manager unavailable", BluetoothPauseEvidence.managerLine(null))
-        assertEquals("$prefix bluetooth_manager enabled=unknown state=unknown",
+        assertEquals("$prefix bluetooth_manager after DiPlay's restore step enabled=unknown state=unknown",
             BluetoothPauseEvidence.managerLine("Can't find service: bluetooth_manager"))
-        assertEquals("$prefix bluetooth_manager enabled=false state=TURNING_OFF",
+        assertEquals("$prefix bluetooth_manager after DiPlay's restore step enabled=false state=TURNING_OFF",
             BluetoothPauseEvidence.managerLine("  enabled: false\n  state: TURNING_OFF (12)\n  name: x"))
+    }
+
+    @Test fun theWaitLineIsLeftOutWhenNoDisableWasAwaited() {
+        assertEquals(listOf("$prefix svc bluetooth disable not sent", "$prefix bluetooth_manager unavailable"),
+            BluetoothPauseEvidence.lines(false, null, null, null))
+        assertEquals("$prefix Android Bluetooth was OFF when the wait for the disable ended",
+            BluetoothPauseEvidence.lines(true, "", "OFF", null)[1])
     }
 
     @Test fun aFailedPauseIsExactlyTheOutcomeThatSaysFailed() {

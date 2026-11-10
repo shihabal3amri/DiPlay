@@ -8,8 +8,8 @@ import java.util.UUID
 
 /**
  * Report text for video in car (#1180). A media URL can carry a session token in its path or query,
- * so these lines keep only the scheme and the host of a URL, protocol keys, sizes and error codes.
- * Exception messages stay out as well: players put the failing URL in them.
+ * so these lines keep only the scheme of a URL (and the domain of a web one), protocol keys, sizes and
+ * error codes. Exception messages stay out as well: players put the failing URL in them.
  */
 internal object VideoDiagnostics {
     private const val MAX_WORD = 64
@@ -17,12 +17,23 @@ internal object VideoDiagnostics {
     private val unsafeWordCharacters = Regex("[^A-Za-z0-9_.:-]")
 
     fun queueItem(app: Any?, url: String, mediaType: Any?): String =
-        "queue item app=${word(app)} scheme=${scheme(url)} host=${host(url)} mediaType=${word(mediaType)}"
+        "queue item app=${word(app)} scheme=${scheme(url)}" + (host(url)?.let { " host=$it" } ?: "") +
+            " mediaType=${word(mediaType)}"
 
     fun scheme(url: String): String = word(runCatching { Uri.parse(url).scheme?.lowercase() }.getOrNull())
 
-    /** The host alone; the redactor masks one that is an IP address. */
-    fun host(url: String): String = word(runCatching { Uri.parse(url).host?.lowercase() }.getOrNull())
+    /**
+     * The domain of an http or https URL: its last two labels (rr3---sn-abc.googlevideo.com becomes
+     * googlevideo.com), since a CDN node name hints at where the viewer is, and "ip" for an address.
+     * Null for an app's own scheme: the app can put an id or a token where the host would be.
+     */
+    fun host(url: String): String? {
+        val uri = runCatching { Uri.parse(url) }.getOrNull() ?: return null
+        if (uri.scheme?.lowercase() !in WEB_SCHEMES) return null
+        val host = uri.host?.lowercase()?.trim('.')?.takeIf { it.isNotEmpty() } ?: return null
+        if (':' in host || host.startsWith('[') || host.all { it.isDigit() || it == '.' }) return "ip"
+        return word(host.split('.').filter { it.isNotEmpty() }.takeLast(2).joinToString("."))
+    }
 
     /** A protocol word (a message type, a media type, an app id) cut to plain characters. */
     fun word(value: Any?): String {
@@ -73,4 +84,35 @@ internal object VideoDiagnostics {
     }
 
     private val FAIRPLAY_UUID: UUID = UUID.fromString("94ce86fb-07ff-4f43-adb8-93d2fa968ca2")
+    private val WEB_SCHEMES = setOf("http", "https")
+
+    /**
+     * Keeps the per-load lines of an item loaded through the iPhone (asked, answer, loaded) from filling
+     * the report: an app-scheme playlist can resolve every segment that way. The first [limit] lines of
+     * each kind are written in full; [finish] then gives one line with the counts. Any thread.
+     */
+    class IphoneLoads(private val limit: Int = 3) {
+        enum class Kind(val label: String) {
+            ASKED("asked"), ANSWER("answers"), LOADED("loaded"), FAILED("failed"), NO_ANSWER("noAnswer"),
+        }
+
+        private val counts = IntArray(Kind.entries.size)
+
+        /** Counts one line of [kind]; true while it is still one to write in full. */
+        @Synchronized
+        fun take(kind: Kind): Boolean = ++counts[kind.ordinal] <= limit
+
+        /** The summary of the item that ended, or null when every line was written; starts the next item. */
+        @Synchronized
+        fun finish(): String? {
+            val summary = if (counts.any { it > limit }) {
+                "iPhone loads for the item " + Kind.entries.joinToString(" ") { "${it.label}=${counts[it.ordinal]}" } +
+                    " (first $limit of each kind written in full)"
+            } else {
+                null
+            }
+            counts.fill(0)
+            return summary
+        }
+    }
 }

@@ -5542,6 +5542,8 @@ open class CarPlayHostActivity : ComponentActivity() {
             (DiLink4ClusterDisplay.STREAM_WIDTH to DiLink4ClusterDisplay.STREAM_HEIGHT)
         controller = snapshot.controller
         updateClusterMapShown()
+        // The host that started the session closed its log; video lines now belong in this one.
+        if (snapshot.controller.videoListener === CarPlayVideo) attachVideoInCar(snapshot.controller)
         sink = snapshot.sink
         sessionDisplay = snapshot.display
         // The hotspot came up under the host that started this session; the menu keeps naming it.
@@ -5713,10 +5715,7 @@ open class CarPlayHostActivity : ComponentActivity() {
         resetSidePanel() // a new session starts without the side panel
         updateClusterMapShown()
         CarPlayMediaKeys.attach(this, next)
-        if (airPlayConfig.videoInCar) {
-            val diagnosticLog = sessionLog
-            CarPlayVideo.attach(this, next) { AsyncDiagnosticLog.append(diagnosticLog, it) }
-        }
+        if (airPlayConfig.videoInCar) attachVideoInCar(next)
         val display = CarPlaySessionDisplay(
             airPlayConfig.main.widthPixels, airPlayConfig.main.heightPixels,
             displayRotation(), hideTopBar, hideBottomBar, effectiveSize.width, effectiveSize.height,
@@ -6719,9 +6718,15 @@ open class CarPlayHostActivity : ComponentActivity() {
             !handshakeResetInProgress && !reconnectScheduled && CarPlayBackgroundSession.active &&
             CarPlayBackgroundSession.isOwner(this) && AirPlayPersistence.loadHideBydCallPopup(this)
 
+    private fun attachVideoInCar(next: CarPlayController) {
+        val diagnosticLog = sessionLog
+        CarPlayVideo.attach(this, next) { AsyncDiagnosticLog.append(diagnosticLog, it) }
+    }
+
     private fun updateCallPopupGuard() {
         if (CarPlayBackgroundSession.isOwner(this)) CarPlayBackgroundSession.callPopupReady = callPopupSessionReady
         // The guard outlives this activity's turn as owner; it keeps the log file, not the activity.
+        // Lines after onDestroy closes that log are dropped; the report header keeps the last status.
         val diagnosticLog = sessionLog
         com.shilapi.xcertplay.hud.BydCallPopupGuard.update(this, this, shouldHideBydCallPopup(),
             log = { AsyncDiagnosticLog.append(diagnosticLog, it) }) {

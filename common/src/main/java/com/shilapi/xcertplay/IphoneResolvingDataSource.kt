@@ -38,7 +38,7 @@ internal class IphoneResolvingDataSource(
         }
         if (scheme in DIRECT_SCHEMES) return openSource(upstream, dataSpec)
         val resolved = resolveOnIphone(url) ?: throw IOException("iPhone did not load the $scheme URL")
-        CarPlayVideo.note(VideoDiagnostics.iphoneLoaded(scheme, resolved.status, resolved.data?.size, resolved.location != null))
+        CarPlayVideo.noteIphoneLoaded(scheme, resolved.status, resolved.data?.size, resolved.location != null)
         resolved.location?.let { location ->
             if (redirects >= MAX_REDIRECTS) throw IOException("Too many iPhone URL redirects")
             // Reapply the policy: a resource loader's Location must not select an Android file,

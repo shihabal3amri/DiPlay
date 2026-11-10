@@ -1,12 +1,14 @@
 package com.shilapi.xcertplay
 
 import android.bluetooth.BluetoothAdapter
+import android.bluetooth.BluetoothDevice
 import android.bluetooth.BluetoothProfile
 import android.content.Context
 import android.content.ContextWrapper
 import android.content.Intent
 import android.content.ServiceConnection
 import android.os.Looper
+import android.os.ParcelUuid
 import com.shilapi.xcertplay.airplay.*
 import com.shilapi.xcertplay.network.*
 import com.shilapi.xcertplay.orchestration.*
@@ -192,6 +194,28 @@ class WirelessStartupControllerTest {
             assertEquals(line, DiagnosticRedactor.redact(line))
             assertFalse(line, line.contains("Jane") || line.contains("00:11:22"))
         }
+    }
+
+    // #1151: an inline "bondName=" made the redactor drop every snapshot; the controller must use the shared builder.
+    @Test fun theBluetoothSnapshotIsTheSharedLineAndSurvivesTheRedactor() {
+        val logs = java.util.concurrent.CopyOnWriteArrayList<String>()
+        val adapter = BluetoothAdapter.getDefaultAdapter()
+        shadowOf(adapter).setState(BluetoothAdapter.STATE_ON)
+        val device = adapter.getRemoteDevice("00:11:22:33:44:05")
+        shadowOf(device).setName("Jane's iPhone")
+        shadowOf(device).setBondState(BluetoothDevice.BOND_BONDED)
+        shadowOf(device).setUuids(arrayOf(ParcelUuid.fromString("00000000-deca-fade-deca-deafdecacafe")))
+        val controller = controller(logs = logs)
+        try {
+            controller.javaClass.getDeclaredMethod("logBluetoothConnectionSnapshot", BluetoothDevice::class.java,
+                String::class.java).apply { isAccessible = true }.invoke(controller, device, "test")
+        } finally { controller.close(); controller.awaitClosed(2_000) }
+        val line = logs.single { it.contains("Bluetooth snapshot") }
+        assertEquals(ConnectionDiagnosticLines.bluetoothSnapshot(point = "test", adapterEnabled = true,
+            bondState = BluetoothDevice.BOND_BONDED, cachedServicesReadable = true, cachedServiceCount = 1,
+            cachedIap2Service = true), line.substringAfter(" phase=").substringAfter(' '))
+        assertEquals(line, DiagnosticRedactor.redact(line))
+        assertFalse(line, line.contains("Jane") || line.contains("00:11:22"))
     }
 
     private fun assertCause(cause: ConnectionFailureCause, message: String, failure: Throwable) {

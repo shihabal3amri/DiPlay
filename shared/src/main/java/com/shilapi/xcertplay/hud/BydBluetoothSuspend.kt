@@ -15,8 +15,11 @@ object BydBluetoothSuspend {
     private const val PREFS = "diplay_bt_suspend"
     private const val KEY_RESTORE_ENABLED = "restore_initially_enabled"
     private const val STATE_TIMEOUT_MILLIS = 8_000L
-    /** Enough of the dump for its status block; only `enabled:` and `state:` are kept from it. */
-    internal const val MANAGER_STATE_COMMAND = "dumpsys bluetooth_manager | head -n 40"
+    /**
+     * The dump's status block; only `enabled:` and `state:` are kept from it. It runs on the worker that
+     * serves [resumeAndWait], so `timeout` ends a dump that a wedged Bluetooth stack holds open.
+     */
+    internal const val MANAGER_STATE_COMMAND = "timeout 2 dumpsys bluetooth_manager | head -n 12"
     private val shell = BydAdbShell(TAG)
     /** Every ADB command this pause runs; tests replace it. */
     @Volatile internal var runShell: (Context, String) -> String? = { context, command -> shell.run(context, command) }
@@ -76,9 +79,12 @@ object BydBluetoothSuspend {
                 if (paused) Log.i(TAG, outcome) else Log.w(TAG, "$outcome; recovery retained if needed")
                 log(outcome)
                 if (BluetoothPauseOutcome.failed(paused, radioBefore, stillCurrent)) {
-                    // Why the radio stayed on: what the command printed, and what Android's manager says now.
+                    // Why the radio stayed on: what the command printed, the radio when the wait ended,
+                    // and what Android's manager says after the lease's restore step.
                     val manager = runCatching { runShell(app, MANAGER_STATE_COMMAND) }.getOrNull()
-                    for (line in BluetoothPauseEvidence.lines(disableSent, disableReply, manager)) {
+                    val evidence = BluetoothPauseEvidence.lines(disableSent, disableReply,
+                        state.radioWhenDisableWaitEnded, manager)
+                    for (line in evidence) {
                         Log.w(TAG, line)
                         log(line)
                     }

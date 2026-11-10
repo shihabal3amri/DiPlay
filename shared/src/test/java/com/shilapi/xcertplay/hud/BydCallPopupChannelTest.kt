@@ -126,6 +126,9 @@ class BydCallPopupChannelTest {
             guard.update(context, owner, false) { true }
             ReflectionHelpers.setField(guard, "leased", false)
             ReflectionHelpers.setField(guard, "running", false)
+            // The owner already let go above, so update() leaves these alone: reset them for later tests.
+            ReflectionHelpers.setField(guard, "diagnostic", { _: String -> })
+            ReflectionHelpers.setField(guard, "status", "OFF")
         }
     }
 

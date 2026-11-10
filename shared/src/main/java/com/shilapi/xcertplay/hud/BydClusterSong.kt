@@ -382,7 +382,10 @@ internal object BydClusterSong {
     )
 }
 
-/** Formats [BydClusterSong.report]; each setting under its [BydOutputSettings] name. */
+/**
+ * Formats [BydClusterSong.report]; each setting under its [BydOutputSettings] name. The gate, ADB access
+ * and writes live in memory only, so the line puts them after "since app start:".
+ */
 internal object ClusterSongReport {
     fun line(
         clusterSong: Boolean,
@@ -397,7 +400,7 @@ internal object ClusterSongReport {
         unanswered: Int,
     ): String =
         "Dashboard song: clusterSong=$clusterSong clusterSongGate=$clusterSongGate " +
-            "clusterSongOnChange=$clusterSongOnChange gate=${if (clusterSongGate) gate else "off"} " +
+            "clusterSongOnChange=$clusterSongOnChange; since app start: gate=${if (clusterSongGate) gate else "off"} " +
             "adbAccess=${adbAccess ?: "not tried"} lastWrite=$lastWrite" +
             (lastWriteAgeSeconds?.let { " ${it}s ago" } ?: "") +
             " writes accepted=$accepted rejected=$rejected unanswered=$unanswered"

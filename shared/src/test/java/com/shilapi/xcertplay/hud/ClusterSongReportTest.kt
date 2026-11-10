@@ -8,8 +8,8 @@ import org.junit.Test
 class ClusterSongReportTest {
     @Test fun theLineCarriesSettingsGateAccessAndTheLastWrite() {
         assertEquals(
-            "Dashboard song: clusterSong=true clusterSongGate=true clusterSongOnChange=false " +
-                "gate=opened, back to CarPlay adbAccess=READY lastWrite=rejected (source=0 state=0 text=-1) 12s ago " +
+            "Dashboard song: clusterSong=true clusterSongGate=true clusterSongOnChange=false; " +
+                "since app start: gate=opened, back to CarPlay adbAccess=READY lastWrite=rejected (source=0 state=0 text=-1) 12s ago " +
                 "writes accepted=3 rejected=1 unanswered=0",
             ClusterSongReport.line(clusterSong = true, clusterSongGate = true, clusterSongOnChange = false,
                 gate = "opened, back to CarPlay", adbAccess = "READY",
@@ -17,8 +17,8 @@ class ClusterSongReportTest {
                 accepted = 3, rejected = 1, unanswered = 0),
         )
         assertEquals(
-            "Dashboard song: clusterSong=false clusterSongGate=false clusterSongOnChange=false " +
-                "gate=off adbAccess=not tried lastWrite=none writes accepted=0 rejected=0 unanswered=0",
+            "Dashboard song: clusterSong=false clusterSongGate=false clusterSongOnChange=false; " +
+                "since app start: gate=off adbAccess=not tried lastWrite=none writes accepted=0 rejected=0 unanswered=0",
             ClusterSongReport.line(false, false, false, "not tried", null, "none", null, 0, 0, 0),
         )
     }

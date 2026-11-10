@@ -24,7 +24,9 @@ object BydCallPopupGuard {
     private var running = false
     private var leased = false
     private var adb: LocalAdb? = null
-    // The latest owner's report sink; kept after it lets go so the restore still reaches its report.
+    // The latest owner's report sink, kept after it lets go so a restore that ends while that host is still
+    // open reaches its report. A host closes its log in onDestroy, and no other log is open then, so a STOP
+    // that ends later (it can take up to 15 s) loses its line. The header's callPopupStatus still shows it.
     @Volatile private var diagnostic: (String) -> Unit = {}
     @Volatile var status = "OFF"
         private set
