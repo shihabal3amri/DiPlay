@@ -597,8 +597,9 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
     private val isCompactLayout: Boolean
         // Window size only: a multi-window task can fill the whole screen, and in multi-window the
         // configuration already reports the window's own size.
-        get() = resources.configuration.screenWidthDp < 550 ||
-            resources.configuration.screenHeightDp < 450
+        get() = resources.configuration.let {
+            SettingsLayoutPolicy.isCompact(it.screenWidthDp, it.screenHeightDp)
+        }
 
     override fun onWindowFocusChanged(hasFocus: Boolean) {
         super.onWindowFocusChanged(hasFocus)
@@ -2023,6 +2024,12 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
                 getString(R.string.settings_low_latency_decoder_description),
                 AirPlayPersistence.loadLowLatencyDecoder(this)) {
                 AirPlayPersistence.saveLowLatencyDecoder(this, it)
+                markReconnectNeeded()
+            }
+            toggle(card, getString(R.string.settings_force_video_in_car),
+                getString(R.string.settings_force_video_in_car_description),
+                AirPlayPersistence.loadForceVideoInCar(this)) {
+                AirPlayPersistence.saveForceVideoInCar(this, it)
                 markReconnectNeeded()
             }
             toggle(card, getString(R.string.call_echo_cancellation), getString(R.string.call_echo_cancellation_description),
@@ -6615,17 +6622,10 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
         }
         setCompoundDrawablesRelative(drawable, null, null, null)
         compoundDrawablePadding = dp(8)
+        val alignment = IconTextAlignment()
         doOnLayout {
-            // Use the same text alignment reference as other buttons in this locale.
-            if (baseline >= 0 && text.isNotEmpty()) {
-                val glyphCentre = textAlignmentCentreY()
-                val drawableCentre = paddingTop + (height - paddingTop - paddingBottom) / 2f
-                val offset = (glyphCentre - drawableCentre).roundToInt()
-                drawable?.setBounds(0, offset, iconSize, iconSize + offset)
-                // Move the aligned icon/text group to the button's visual centre.
-                contentOffsetY = drawableCentre - glyphCentre
-                invalidate()
-            }
+            contentOffsetY = alignment.align(this)
+            invalidate()
         }
     }
 
@@ -6922,27 +6922,6 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
     private val FOCUS_RING get() = palette.focusRing
 
     companion object {
-        private fun alignedTextCentreY(
-            view: TextView,
-            text: CharSequence,
-            bounds: android.graphics.Rect,
-            drawingBaseline: Int = view.baseline,
-        ): Float {
-            if (usesChineseGlyphAlignment(view.resources.configuration.locales[0].language, text)) {
-                val value = text.toString()
-                view.paint.getTextBounds(value, 0, value.length, bounds)
-                return drawingBaseline + (bounds.top + bounds.bottom) / 2f
-            }
-            // Keep the baseline stable when labels contain descenders or accents.
-            val metrics = view.paint.fontMetrics
-            return drawingBaseline + (metrics.ascent + metrics.descent) / 2f
-        }
-
-        private fun usesChineseGlyphAlignment(language: String, text: CharSequence): Boolean {
-            return language == "zh" && text.isNotBlank() &&
-                text.none { it in 'A'..'Z' || it in 'a'..'z' }
-        }
-
         // Any app can start this exported activity, so an intent may only open pages that do nothing on their own.
         // "backup" is absent: it starts a network server and only a driver tap may open it.
         private val INTENT_PAGES = setOf("home", "settings", "connection", "setup", "wireless-recovery")

@@ -1288,6 +1288,38 @@ class AdaptiveSettingsUiTest {
         assertTrue(texts(screen).any { it.text == screen.getString(R.string.save_diagnostic_report) })
     }
 
+    @Test
+    fun forcedVideoIsOptInAndPreservesBydSettingAndRunningConnection() {
+        assertFalse(AirPlayPersistence.loadForceVideoInCar(context))
+        com.shilapi.xcertplay.hud.BydOutputSettings.setVideoWhileParked(context, true)
+        val screen = openSettings()
+        val session = mock(CarPlayController::class.java)
+        var stops = 0
+        CarPlayBackgroundSession.store(session, mock(AndroidMediaSink::class.java), 800, 480, Any(),
+            CarPlaySessionDisplay(800, 480, Surface.ROTATION_0, false, false, 800, 480)) { stops++ }
+        CarPlayBackgroundSession.active = true
+        try {
+            ReflectionHelpers.setField(screen, "settingsCategory", SettingsCategory.ADVANCED)
+            ReflectionHelpers.callInstanceMethod<Unit>(screen, "render")
+            val setting = descendants(screen.window.decorView).filterIsInstance<Switch>()
+                .single { it.contentDescription == screen.getString(R.string.settings_force_video_in_car) }
+            for (enabled in listOf(true, false)) {
+                PendingReconnect.clear()
+                setting.performClick()
+                assertEquals(enabled, AirPlayPersistence.loadForceVideoInCar(context))
+                assertTrue(com.shilapi.xcertplay.hud.BydOutputSettings.videoWhileParked(context))
+                assertTrue(PendingReconnect.isPending(session))
+                assertEquals(0, stops)
+                assertSame(session, CarPlayBackgroundSession.snapshot()?.controller)
+                assertNull(shadowOf(screen).nextStartedActivity)
+            }
+        } finally {
+            CarPlayBackgroundSession.clear()
+            PendingReconnect.clear()
+            com.shilapi.xcertplay.hud.BydOutputSettings.setVideoWhileParked(context, false)
+        }
+    }
+
     private fun openSettings(): DiPlayActivity = Robolectric.buildActivity(
         DiPlayActivity::class.java,
         Intent(context, DiPlayActivity::class.java).putExtra("page", "settings"),

@@ -510,6 +510,7 @@ class CarPlayController(
         connectionDiagnostic("start transport=${config.transport}")
         if (!hasRequiredUsbService()) return
         videoListener?.let { listener ->
+            debugLog("video in car force=${airPlayConfig.forceVideoInCar}")
             videoGate = VideoInCarGate(
                 readParked = listener::readParked,
                 onChanged = { allowed ->
@@ -521,6 +522,7 @@ class CarPlayController(
                 onObserved = { parked ->
                     debugLog("video in car gear=${when (parked) { true -> "P"; false -> "not-P"; null -> "unknown" }}")
                 },
+                forceVideoInCar = airPlayConfig.forceVideoInCar,
             ).also { it.start() }
         }
         if (config.transport == CarPlayTransport.WIRED) {

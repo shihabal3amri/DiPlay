@@ -47,6 +47,33 @@ class CarPlayHostResolutionTest {
         assertEquals(100, AirPlayPersistence.loadDisplayScalePercent(activity))
     }
 
+    @Test fun forceVideoDeclaresSupportIndependentlyOfBydAndKeepsConnectionConfigStable() {
+        val byd = com.shilapi.xcertplay.hud.BydOutputSettings
+        try {
+            for (bydEnabled in listOf(false, true)) {
+                byd.setVideoWhileParked(activity, bydEnabled)
+                AirPlayPersistence.saveForceVideoInCar(activity, false)
+                val normal = config(100)
+                assertEquals(bydEnabled, normal.videoInCar)
+                assertFalse(normal.forceVideoInCar)
+
+                AirPlayPersistence.saveForceVideoInCar(activity, true)
+                val forced = config(100)
+                assertTrue(forced.videoInCar)
+                assertTrue(forced.forceVideoInCar)
+                assertTrue(com.shilapi.xcertplay.airplay.AirPlayInfoPlist.build(forced).containsKey("videoPlaybackInfo"))
+                assertEquals(bydEnabled, byd.videoWhileParked(activity))
+
+                AirPlayPersistence.saveForceVideoInCar(activity, false)
+                assertTrue(forced.forceVideoInCar) // Existing connections keep their captured mode.
+                assertEquals(bydEnabled, config(100).videoInCar)
+            }
+        } finally {
+            AirPlayPersistence.saveForceVideoInCar(activity, false)
+            byd.setVideoWhileParked(activity, false)
+        }
+    }
+
     @Test fun supportedEnlargedResolutionKeepsItsPrecisePercentAndPhysicalSize() {
         decoder(maxWidth = 3840, maxHeight = 2160)
         val native = config(100).main
