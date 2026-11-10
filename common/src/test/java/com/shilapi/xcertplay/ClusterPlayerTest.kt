@@ -6,6 +6,7 @@ import android.content.res.Configuration
 import android.graphics.*
 import android.os.Looper
 import android.os.SystemClock
+import android.text.StaticLayout
 import android.view.View
 import com.shilapi.xcertplay.airplay.ClusterPlayerSettings
 import com.shilapi.xcertplay.media.CarPlayNowPlaying
@@ -32,6 +33,7 @@ class ClusterPlayerTest {
     private fun idle() = shadowOf(Looper.getMainLooper()).idle()
     @Before fun clear() {
         context.getSharedPreferences("xcertplay_airplay", 0).edit().clear().commit()
+        context.getSharedPreferences("diplay", 0).edit().clear().commit()
         ClusterMusicState.publish(CarPlayNowPlaying(), null); idle()
     }
     @Test fun switchingWholePagesKeepsExistingMapPreferencesAndReleasesSpeedReader() {
@@ -159,6 +161,7 @@ class ClusterPlayerTest {
         activity.pause().stop().destroy()
     }
     @Test fun paleCoverHasVisibleMotionAndFullCanvasLongTitle() {
+        com.shilapi.xcertplay.airplay.ClusterBackgroundSettings.saveMotion(context,true)
         ClusterPlayerSettings.saveFitVisible(context,false)
         AirPlayPersistence.saveClusterMapEnabled(context,true)
         ClusterPlayerSettings.save(context,true)
@@ -187,7 +190,50 @@ class ClusterPlayerTest {
         activity.pause().stop().destroy()
     }
 
+    @Test fun virtualOnlyRouteDoesNotOfferPlayer() {
+        AirPlayPersistence.saveClusterMapEnabled(context,true)
+        val activity=Robolectric.buildActivity(DiPlayActivity::class.java,
+            Intent(context,DiPlayActivity::class.java).putExtra("page","settings")).setup().visible()
+        ReflectionHelpers.setField(activity.get(),"settingsCategory",SettingsCategory.ADVANCED)
+        ReflectionHelpers.setField(activity.get(),"setupError",null)
+        ReflectionHelpers.callInstanceMethod<Unit>(activity.get(),"render"); idle()
+        assertNull(findText(activity.get().window.decorView,activity.get().getString(com.shilapi.xcertplay.host.R.string.settings_cluster_player_mode)))
+        activity.pause().stop().destroy()
+    }
+
+    @Test fun staticBackgroundIsDefaultAndTitleLayoutIsReusedDuringProgressFrames() {
+        assertFalse(com.shilapi.xcertplay.airplay.ClusterBackgroundSettings.motion(context))
+        AirPlayPersistence.saveClusterMapEnabled(context,true)
+        ClusterPlayerSettings.save(context,true)
+        val activity=Robolectric.buildActivity(Activity::class.java).setup().visible()
+        val player=ClusterPlayerView(activity.get(),observeSpeed={ {} })
+        activity.get().setContentView(player)
+        val art=Bitmap.createBitmap(100,100,Bitmap.Config.ARGB_8888).apply { eraseColor(Color.WHITE) }
+        ClusterMusicState.publish(CarPlayNowPlaying(title="Static",playing=true,elapsedMillis=0,durationMillis=100000),art);idle()
+        capture(player,1280,480,"player-static")
+        val layout=ReflectionHelpers.getField<StaticLayout>(player,"cachedTitle")
+        val first=Bitmap.createBitmap(1280,480,Bitmap.Config.ARGB_8888).also { player.draw(Canvas(it)) }
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(3))
+        val later=Bitmap.createBitmap(1280,480,Bitmap.Config.ARGB_8888).also { player.draw(Canvas(it)) }
+        assertSame(layout,ReflectionHelpers.getField<StaticLayout>(player,"cachedTitle"))
+        for(x in 0 until 1280 step 16) assertEquals(first.getPixel(x,10),later.getPixel(x,10))
+        activity.pause().stop().destroy();first.recycle();later.recycle();art.recycle()
+    }
+
+    @Test fun diLink3OffersPlayerBeforeItsProjectionDisplayExists() {
+        AirPlayPersistence.saveClusterMapEnabled(context,true)
+        com.shilapi.xcertplay.setup.DiLinkGeneration.save(context,com.shilapi.xcertplay.setup.DiLinkGeneration.DILINK_3)
+        val activity=Robolectric.buildActivity(DiPlayActivity::class.java,
+            Intent(context,DiPlayActivity::class.java).putExtra("page","settings")).setup().visible()
+        ReflectionHelpers.setField(activity.get(),"settingsCategory",SettingsCategory.ADVANCED)
+        ReflectionHelpers.setField(activity.get(),"setupError",null)
+        ReflectionHelpers.callInstanceMethod<Unit>(activity.get(),"render");idle()
+        assertNotNull(findText(activity.get().window.decorView,activity.get().getString(com.shilapi.xcertplay.host.R.string.settings_cluster_player_mode)))
+        activity.pause().stop().destroy()
+    }
+
     @Test fun settingsCapturesSpanishCompactFullAndArabic() {
+        AirPlayPersistence.saveAdbClusterEnabled(context,true)
         AirPlayPersistence.saveClusterMapEnabled(context,true)
         ClusterPlayerSettings.save(context,true)
         for ((language,width) in listOf("es" to 800,"es" to 1280,"ar" to 1280)) {

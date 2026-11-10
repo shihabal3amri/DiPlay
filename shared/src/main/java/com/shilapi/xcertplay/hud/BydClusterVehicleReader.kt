@@ -66,17 +66,8 @@ object BydClusterVehicleReader {
     }
 
     internal fun readBattery(shell: (String) -> String?): Pair<Double?, Int?> {
-        val protocol = shell("getprop ro.car.protocol")?.trim()?.takeIf { it.isNotEmpty() }
-            ?: shell("getprop sys.car.protocol")?.trim()
-        val addresses = when (protocol) {
-            "CAN" -> BydBatteryProtocol.CAN
-            "CANFD" -> BydBatteryProtocol.CANFD
-            else -> return null to null
-        }
-        return decodeBattery(
-            shell("service call autoservice 7 i32 1014 i32 ${addresses.percentId}"),
-            shell("service call autoservice 5 i32 1014 i32 ${addresses.rangeId}"),
-        )
+        val protocol = BydBattery.protocol(shell) ?: return null to null
+        return decodeBattery(BydBattery.percentReply(shell, protocol), BydBattery.rangeReply(shell, protocol))
     }
 
     private fun decodeBattery(percentReply: String?, rangeReply: String?): Pair<Double?, Int?> =

@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="settings_cluster_player_mode">View</string>
-    <string name="settings_cluster_player_map">Map · current options</string>
+    <string name="settings_cluster_player_map">Map</string>
     <string name="settings_cluster_player">Player (experimental)</string>
-    <string name="settings_cluster_player_description">Requests the car’s full projection for the player. The visible result depends on firmware; native warning lights and alerts remain controlled by the car. Switches instantly and pauses map video and its center-screen copies.</string>
+    <string name="settings_cluster_player_description">Switches instantly between the map and player, using the saved dashboard map shape. Player pauses the map and its center-screen copies; cluster turn-by-turn guidance is unavailable in Player. Native indicators remain controlled by the car.</string>
     <string name="settings_cluster_player_speed">Show speed in player</string>
     <string name="settings_cluster_player_speed_description">Vehicle speed in km/h, without a box. Requires vehicle reading over ADB; shows — without recent data.</string>
     <string name="settings_cluster_player_idle">Nothing playing</string>

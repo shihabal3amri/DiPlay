@@ -7,6 +7,7 @@ import android.graphics.Paint
 import android.graphics.RectF
 import android.graphics.Typeface
 import android.view.View
+import androidx.core.graphics.ColorUtils
 import com.shilapi.xcertplay.airplay.ClusterSpeedometerOverlay
 
 /**
@@ -29,11 +30,12 @@ internal class ClusterSpeedometerView(
     private var stopObservingSpeed: (() -> Unit)? = null
     private var stopObservingArtwork: (() -> Unit)? = null
     private var albumArtwork: android.graphics.Bitmap? = null
+    private var albumColor: Int? = null
     private var useAlbumColor = false
-    private var playing = false
-    private val artworkBackground = ClusterArtworkBackground()
-    private val backgroundClip = android.graphics.Path()
-    private val animate = Runnable { invalidate() }
+    private var previousBackgroundColor = Color.rgb(12, 14, 18)
+    private var targetBackgroundColor = previousBackgroundColor
+    private var backgroundChangedAt = 0L
+    private val colorEvaluator = android.animation.ArgbEvaluator()
     private var readingGeneration = 0
     private val main = android.os.Handler(android.os.Looper.getMainLooper())
     private val expireSpeed = Runnable { setSpeedKmh(null) }
@@ -74,17 +76,16 @@ internal class ClusterSpeedometerView(
                 stopObservingArtwork = ClusterMusicState.observe { snapshot ->
                     if (albumArtwork !== snapshot.artwork) {
                         albumArtwork = snapshot.artwork
-                        artworkBackground.setArtwork(albumArtwork)
+                        albumColor = snapshot.artwork?.takeUnless { it.isRecycled }
+                            ?.let { ClusterMusicView.coverFrameColor(it) }
+                        updateBackgroundTarget()
                     }
-                    playing = snapshot.info.playing == true
-                    main.removeCallbacks(animate)
-                    invalidate()
                 }
             }
         } else {
             stopArtwork()
         }
-        invalidate()
+        updateBackgroundTarget()
         if (!enabled) {
             stopSpeed()
         } else if (stopObservingSpeed == null) {
@@ -162,19 +163,21 @@ internal class ClusterSpeedometerView(
         stopObservingArtwork?.invoke()
         stopObservingArtwork = null
         albumArtwork = null
-        playing = false
-        main.removeCallbacks(animate)
-        artworkBackground.setArtwork(null)
+        albumColor = null
     }
 
-    override fun onVisibilityChanged(changedView: View, visibility: Int) {
-        super.onVisibilityChanged(changedView, visibility)
-        if (isAttachedToWindow) main.removeCallbacks(animate)
-    }
+    private fun backgroundColor(now: Long): Int = colorEvaluator.evaluate(
+        ClusterMusicView.progress(now, backgroundChangedAt), previousBackgroundColor, targetBackgroundColor,
+    ) as Int
 
-    override fun onWindowVisibilityChanged(visibility: Int) {
-        super.onWindowVisibilityChanged(visibility)
-        if (isAttachedToWindow) main.removeCallbacks(animate)
+    private fun updateBackgroundTarget() {
+        val next = if (useAlbumColor) albumColor ?: Color.rgb(12, 14, 18) else Color.rgb(12, 14, 18)
+        if (next == targetBackgroundColor) return
+        val now = android.os.SystemClock.elapsedRealtime()
+        previousBackgroundColor = backgroundColor(now)
+        targetBackgroundColor = next
+        backgroundChangedAt = now
+        invalidate()
     }
 
     private fun applyPalette() {
@@ -216,26 +219,28 @@ internal class ClusterSpeedometerView(
         )
 
         val now = android.os.SystemClock.elapsedRealtime()
+        val color = backgroundColor(now)
+        backgroundPaint.color = Color.argb((opacityPercent * 255 / 100).coerceIn(51, 255),
+            Color.red(color), Color.green(color), Color.blue(color))
+        if (ClusterMusicView.progress(now, backgroundChangedAt) < 1f) postInvalidateOnAnimation()
         val radius = h * 0.22f
-        if (useAlbumColor && albumArtwork?.isRecycled == false) {
-            // Composite all layers first, then apply the user's background opacity once.
-            val layer = canvas.saveLayerAlpha(rect, (opacityPercent * 255 / 100).coerceIn(51, 255))
-            backgroundClip.reset()
-            backgroundClip.addRoundRect(rect, radius, radius, android.graphics.Path.Direction.CW)
-            canvas.clipPath(backgroundClip)
-            canvas.translate(rect.left, rect.top)
-            artworkBackground.drawWideCrop(canvas, w, h, now)
-            canvas.restoreToCount(layer)
-            if ((playing || artworkBackground.isTransitioning(now)) && isShown && windowVisibility == VISIBLE) {
-                main.removeCallbacks(animate)
-                main.postDelayed(animate, 50)
-            }
-        } else {
-            canvas.drawRoundRect(rect, radius, radius, backgroundPaint)
-        }
+        canvas.drawRoundRect(rect, radius, radius, backgroundPaint)
         canvas.drawRoundRect(rect, radius, radius, strokePaint)
-        speedPaint.color = Color.WHITE
-        unitPaint.color = Color.argb(210, 220, 220, 225)
+
+        // Use the displayed (interpolated) album color, not the final fade target.
+        // Never fade the text through low-contrast gray. The map behind this translucent
+        // view is a separate surface, so contrast is measured against the card RGB.
+        if (useAlbumColor) {
+            val luminance = ColorUtils.calculateLuminance(color)
+            val blackContrast = (luminance + 0.05) / 0.05
+            val whiteContrast = 1.05 / (luminance + 0.05)
+            val foreground = if (blackContrast >= whiteContrast) Color.BLACK else Color.WHITE
+            speedPaint.color = foreground
+            unitPaint.color = foreground
+        } else {
+            speedPaint.color = Color.WHITE
+            unitPaint.color = Color.argb(210, 220, 220, 225)
+        }
 
         speedPaint.textSize = h * 0.48f
         unitPaint.textSize = h * 0.16f

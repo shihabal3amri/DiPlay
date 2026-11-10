@@ -477,6 +477,23 @@ open class CarPlayHostActivity : ComponentActivity() {
     }
     // Copies of stream 111 outside the dashboard (centre card, launcher maps) each get their own decoder.
     private var stopPlayerSettings: (() -> Unit)? = null
+    private fun observeClusterPlayerSettings() {
+        stopPlayerSettings = com.shilapi.xcertplay.airplay.ClusterPlayerSettings.observe(this) {
+            runOnUiThread {
+                if (playerMode()) {
+                    CenterMapOverlay.hide()
+                    clusterSurface?.let { sink?.clearSurface(SCREEN_TYPE_ALT, it) }
+                } else if (clusterOutputReady()) {
+                    // TextureView retains its surface while GONE; no new surface callback arrives.
+                    clusterSurface?.let { sink?.setSurface(SCREEN_TYPE_ALT, it) }
+                }
+                MapMirrors.reapply()
+                MapMirrors.setStreamActive(!playerMode() && SCREEN_TYPE_ALT in activeScreenStreamTypes)
+                updateClusterMapShown()
+            }
+        }
+    }
+
     private fun playerMode() = com.shilapi.xcertplay.airplay.ClusterPlayerSettings.enabled(this)
     private val mirrorSink: (String, Surface?) -> Unit = { key, surface ->
         sink?.setMirrorSurface(SCREEN_TYPE_ALT, key, if (playerMode()) null else surface)
@@ -871,17 +888,7 @@ open class CarPlayHostActivity : ComponentActivity() {
         CenterMapOverlay.requestShow = ::showCenterMap
         MapMirrors.sink = mirrorSink
         MapMirrors.onChanged = mirrorsChanged
-        stopPlayerSettings = com.shilapi.xcertplay.airplay.ClusterPlayerSettings.observe(this) {
-            runOnUiThread {
-                if (playerMode()) {
-                    CenterMapOverlay.hide()
-                    clusterSurface?.let { sink?.clearSurface(SCREEN_TYPE_ALT, it) }
-                }
-                MapMirrors.reapply()
-                MapMirrors.setStreamActive(!playerMode() && SCREEN_TYPE_ALT in activeScreenStreamTypes)
-                updateClusterMapShown()
-            }
-        }
+        observeClusterPlayerSettings()
         languagePreferenceAtCreate = AppLocale.preference(this)
         if (isIphoneUsbAttachment(intent)) {
             AirPlayPersistence.saveWirelessEnabled(this, false)

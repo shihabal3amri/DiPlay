@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="settings_cluster_player_mode">视图</string>
-    <string name="settings_cluster_player_map">地图 · 当前选项</string>
+    <string name="settings_cluster_player_map">地图</string>
     <string name="settings_cluster_player">播放器（实验性）</string>
-    <string name="settings_cluster_player_description">为播放器请求车辆全屏投影。实际显示取决于固件，原车警告灯和提示仍由车辆控制。立即切换，并暂停地图视频及中控屏上的副本。</string>
+    <string name="settings_cluster_player_description">按已保存的投影形式即时切换地图与播放器。播放器暂停地图及中央屏幕副本；此时仪表盘不显示转向指引。原车指示灯仍由车辆控制。</string>
     <string name="settings_cluster_player_speed">在播放器中显示车速</string>
     <string name="settings_cluster_player_speed_description">以 km/h 显示无边框车速。需要通过 ADB 读取车辆数据；无最新数据时显示 —。</string>
     <string name="settings_cluster_player_idle">未在播放</string>

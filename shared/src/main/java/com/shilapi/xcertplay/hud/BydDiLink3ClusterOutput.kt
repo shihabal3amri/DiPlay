@@ -18,7 +18,6 @@ internal object BydDiLink3ClusterOutput {
     private val applyQueued = AtomicBoolean()
     @Volatile private var context: Context? = null
     @Volatile private var desiredMode: BydDiLink3ClusterMode.Mode? = null
-    @Volatile private var lastApplyAccepted: Boolean? = null
     private var session: DiLink3ClusterModeSession? = null
 
     /** Also called when the setting is off, so an interrupted output is always recoverable. */
@@ -33,11 +32,10 @@ internal object BydDiLink3ClusterOutput {
         requestApply()
     }
 
-    /** The player requests the OEM full mode independently of the saved map shape. */
+    /** Both pages respect the driver's saved projection shape. */
     internal fun requestedMode(appContext: Context, mapShown: Boolean, guidanceActive: Boolean): BydDiLink3ClusterMode.Mode? {
         return when {
-            mapShown -> if (com.shilapi.xcertplay.airplay.ClusterPlayerSettings.enabled(appContext) ||
-                BydOutputSettings.clusterProjectionShape(appContext) == BydClusterProjectionShape.FULL) {
+            mapShown -> if (BydOutputSettings.clusterProjectionShape(appContext) == BydClusterProjectionShape.FULL) {
                 BydDiLink3ClusterMode.Mode.FULL_PROJECTION
             } else {
                 BydDiLink3ClusterMode.Mode.PROJECTION
@@ -89,10 +87,9 @@ internal object BydDiLink3ClusterOutput {
         if (adbClusterRouteSelected(app)) return
         runCatching { state(app).apply(desiredMode) }
             .onFailure { Log.w(TAG, "Cluster mode will retry", it) }
-            .onSuccess { accepted -> lastApplyAccepted = accepted; if (!accepted) Log.w(TAG, "Cluster mode pending recovery/retry") }
+            .onSuccess { accepted -> if (!accepted) Log.w(TAG, "Cluster mode pending recovery/retry") }
     }
 
-    fun diagnosticState(): String = "desired=$desiredMode lastApplyAccepted=$lastApplyAccepted (Binder acknowledgement, not proof of visible composition)"
 
     private fun state(app: Context): DiLink3ClusterModeSession {
         session?.let { return it }

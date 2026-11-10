@@ -35,6 +35,23 @@ class ClusterArtworkBackgroundTest {
         black.recycle()
     }
 
+    @Test fun whiteAndYellowBackgroundsKeepEvenDimMetadataAboveMinimumContrast() {
+        for (color in listOf(Color.WHITE,Color.YELLOW)) {
+            val cover=art(color)
+            val background=ClusterArtworkBackground().apply { setArtwork(cover,0) }
+            val image=Bitmap.createBitmap(320,120,Bitmap.Config.ARGB_8888)
+            for (time in 0L..45000L step 1500L) {
+                background.draw(Canvas(image),320f,120f,time,true)
+                for (y in 0 until 120 step 4) for (x in 0 until 320 step 4) {
+                    val underText=image.getPixel(x,y)
+                    val text=androidx.core.graphics.ColorUtils.compositeColors(Color.argb(205,255,255,255),underText)
+                    assertTrue("Contrast at $x,$y time=$time",androidx.core.graphics.ColorUtils.calculateContrast(text,underText)>=4.5)
+                }
+            }
+            image.recycle();cover.recycle()
+        }
+    }
+
     @Test fun busySleevesAlwaysHaveADominantFallback() {
         val cover = art(Color.BLACK)
         for (y in 0 until 120) for (x in 0 until 120)

@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="settings_cluster_player_mode">Вид</string>
-    <string name="settings_cluster_player_map">Карта · текущие параметры</string>
+    <string name="settings_cluster_player_map">Карта</string>
     <string name="settings_cluster_player">Плеер (экспериментально)</string>
-    <string name="settings_cluster_player_description">Запрашивает полноэкранную проекцию для плеера. Видимый результат зависит от прошивки; штатные индикаторы и предупреждения остаются под управлением автомобиля. Переключает сразу и приостанавливает видео карты и его копии на центральном экране.</string>
+    <string name="settings_cluster_player_description">Мгновенно переключает карту и плеер с сохранённой формой проекции. Плеер приостанавливает карту и её копии на центральном экране; подсказки поворотов на приборной панели недоступны. Штатными индикаторами управляет автомобиль.</string>
     <string name="settings_cluster_player_speed">Скорость в плеере</string>
     <string name="settings_cluster_player_speed_description">Скорость автомобиля в км/ч без рамки. Требуется чтение через ADB; без свежих данных отображается —.</string>
     <string name="settings_cluster_player_idle">Нет воспроизведения</string>

@@ -2209,7 +2209,9 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
                 render()
             }
             if (clusterMapEnabled) {
-                val player = com.shilapi.xcertplay.airplay.ClusterPlayerSettings.selected(this)
+                val physicalCluster = clusterDisplay != null || adbCluster || diLink3
+                val player = physicalCluster && com.shilapi.xcertplay.airplay.ClusterPlayerSettings.selected(this)
+                if (physicalCluster) {
                 choice(card, getString(R.string.settings_cluster_player_mode), listOf(
                     getString(R.string.settings_cluster_player_map), getString(R.string.settings_cluster_player)),
                     if (player) 1 else 0, reconnects = false) {
@@ -2217,7 +2219,13 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
                     render()
                 }
                 card.addView(label(getString(R.string.settings_cluster_player_description), 14, MUTED))
+                }
                 if (player) {
+                    toggle(card, getString(R.string.settings_cluster_background_motion),
+                        getString(R.string.settings_cluster_background_motion_description),
+                        com.shilapi.xcertplay.airplay.ClusterBackgroundSettings.motion(this)) {
+                        com.shilapi.xcertplay.airplay.ClusterBackgroundSettings.saveMotion(this, it)
+                    }
                     toggle(card, getString(R.string.settings_cluster_player_fit_visible),
                         getString(R.string.settings_cluster_player_fit_visible_description),
                         com.shilapi.xcertplay.airplay.ClusterPlayerSettings.fitVisible(this)) {

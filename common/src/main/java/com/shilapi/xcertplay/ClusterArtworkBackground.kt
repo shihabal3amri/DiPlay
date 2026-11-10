@@ -46,12 +46,12 @@ internal class ClusterArtworkBackground {
     }
 
     /** Sample a central window of the player's wide composition, rather than shrink it to a square. */
-    fun drawWideCrop(canvas: Canvas, w: Float, h: Float, now: Long) {
+    fun drawWideCrop(canvas: Canvas, w: Float, h: Float, now: Long, motion: Boolean = false) {
         val wide = maxOf(w, h * (1280f / 480f))
         val save = canvas.save()
         canvas.clipRect(0f, 0f, w, h)
         canvas.translate((w - wide) / 2f, 0f)
-        draw(canvas, wide, h, now)
+        draw(canvas, wide, h, now, motion)
         canvas.restoreToCount(save)
     }
 
@@ -60,12 +60,12 @@ internal class ClusterArtworkBackground {
         shaders = colors.map { RadialGradient(0f, 0f, radius, it, Color.TRANSPARENT, Shader.TileMode.CLAMP) }
     }
 
-    fun draw(canvas: Canvas, w: Float, h: Float, now: Long) {
+    fun draw(canvas: Canvas, w: Float, h: Float, now: Long, motion: Boolean = false) {
         if (w != width || h != height || shaders.isEmpty()) {
             width = w; height = h; rebuild()
         }
         updateColors(now)
-        val phase = now / 5_000.0
+        val phase = if (motion) now / 5_000.0 else 0.0
         canvas.drawColor(Color.rgb(16, 19, 27))
         shaders.forEachIndexed { index, shader ->
             matrix.setTranslate(w * (.5f + .48f * sin(phase + index * 2.1).toFloat()),
@@ -128,7 +128,7 @@ internal class ClusterArtworkBackground {
                 Color.colorToHSV(color, hsv)
                 // Keep source hue and saturation; do not lift tiny dark colored details
                 // to the same brightness as large light regions of the artwork.
-                hsv[2] = minOf(hsv[2] * 1.08f + .04f, floatArrayOf(.80f, .49f, .67f)[index])
+                hsv[2] = minOf(hsv[2] * 1.08f + .04f, floatArrayOf(.46f, .43f, .45f)[index])
                 Color.HSVToColor(hsv)
             }.toIntArray()
         }

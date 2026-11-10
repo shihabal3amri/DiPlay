@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="settings_cluster_player_mode">Vista</string>
-    <string name="settings_cluster_player_map">Mappa · opzioni attuali</string>
+    <string name="settings_cluster_player_map">Mappa</string>
     <string name="settings_cluster_player">Lettore (sperimentale)</string>
-    <string name="settings_cluster_player_description">Richiede la proiezione completa per il lettore. Il risultato visibile dipende dal firmware; spie e avvisi restano controllati dal veicolo. Cambia subito e sospende il video della mappa e le copie sullo schermo centrale.</string>
+    <string name="settings_cluster_player_description">Passa subito tra mappa e lettore rispettando il formato salvato. Il lettore sospende la mappa e le copie centrali; le indicazioni di svolta nel quadro non sono disponibili. Gli indicatori originali restano gestiti dall’auto.</string>
     <string name="settings_cluster_player_speed">Mostra velocità nel lettore</string>
     <string name="settings_cluster_player_speed_description">Velocità del veicolo in km/h senza riquadro. Richiede lettura tramite ADB; senza dati recenti appare —.</string>
     <string name="settings_cluster_player_idle">Nessuna riproduzione</string>

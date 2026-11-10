@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="settings_cluster_player_mode">العرض</string>
-    <string name="settings_cluster_player_map">الخريطة · الخيارات الحالية</string>
+    <string name="settings_cluster_player_map">الخريطة</string>
     <string name="settings_cluster_player">المشغل (تجريبي)</string>
-    <string name="settings_cluster_player_description">يطلب عرض المشغل على كامل شاشة السيارة. تعتمد النتيجة المرئية على البرنامج الثابت؛ تبقى لمبات التحذير والتنبيهات تحت تحكم السيارة. يبدّل فورًا ويوقف فيديو الخريطة ونسخه على الشاشة الوسطى.</string>
+    <string name="settings_cluster_player_description">يبدّل فورًا بين الخريطة والمشغل مع احترام شكل العرض المحفوظ. يوقف المشغل الخريطة ونسخها الوسطية؛ لا تتوفر إرشادات الانعطاف في لوحة العدادات أثناء استخدامه. تبقى المؤشرات الأصلية تحت تحكم السيارة.</string>
     <string name="settings_cluster_player_speed">عرض السرعة في المشغل</string>
     <string name="settings_cluster_player_speed_description">سرعة السيارة بوحدة كم/س دون إطار. تتطلب قراءة بيانات السيارة عبر ADB؛ تظهر — عند غياب بيانات حديثة.</string>
     <string name="settings_cluster_player_idle">لا يوجد تشغيل</string>

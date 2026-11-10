@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="settings_cluster_player_mode">Görünüm</string>
-    <string name="settings_cluster_player_map">Harita · mevcut seçenekler</string>
+    <string name="settings_cluster_player_map">Harita</string>
     <string name="settings_cluster_player">Oynatıcı (deneysel)</string>
-    <string name="settings_cluster_player_description">Oynatıcı için aracın tam ekran yansıtmasını ister. Görünen sonuç yazılıma bağlıdır; özgün uyarı ışıkları ve bildirimler aracın kontrolünde kalır. Hemen geçiş yapar, harita videosunu ve orta ekran kopyalarını duraklatır.</string>
+    <string name="settings_cluster_player_description">Kaydedilen gösterim biçimiyle harita ve oynatıcı arasında anında geçiş yapar. Oynatıcı haritayı ve orta ekran kopyalarını duraklatır; göstergede dönüş yönlendirmesi sunmaz. Yerel göstergeleri araç yönetir.</string>
     <string name="settings_cluster_player_speed">Oynatıcıda hızı göster</string>
     <string name="settings_cluster_player_speed_description">Çerçevesiz km/sa araç hızı. ADB üzerinden araç okuması gerekir; güncel veri yoksa — görünür.</string>
     <string name="settings_cluster_player_idle">Oynatılmıyor</string>

@@ -24,9 +24,15 @@ internal class ClusterPlayerView(
     private val observeSpeed: ((Int?) -> Unit) -> (() -> Unit) = { changed ->
         com.shilapi.xcertplay.hud.BydClusterSpeedReader.observe(context, changed)
     },
-) : View(context) {
+) : View(context), ClusterOutputVisibility {
     private val main = Handler(Looper.getMainLooper())
     private var stopState: (() -> Unit)? = null
+    private var stopMotion: (() -> Unit)? = null
+    private var motion = false
+    private var fit = true
+    private var showSpeed = true
+    private var showVehicle = false
+    private var outputVisible = true
     private var stopSettings: (() -> Unit)? = null
     private var stopSpeed: (() -> Unit)? = null
     private var stopVehicle: (() -> Unit)? = null
@@ -45,6 +51,24 @@ internal class ClusterPlayerView(
         typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
     }
     private val clip = Path()
+    private val artworkRect = RectF()
+    private val artworkSource = Rect()
+    private val titlePaint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply { typeface = text.typeface; color = Color.WHITE }
+    private var cachedTitle: StaticLayout? = null
+    private var cachedTitleText = ""
+    private var cachedTitleWidth = -1
+    private var cachedBase = -1f
+    private var cachedTitleY = -1f
+    private var cachedBarY = -1f
+    private var fittedBase = 0f
+    private var fittedTop = 0f
+    private var cachedFooter: StaticLayout? = null
+    private var cachedFooterValue = ""
+    private var cachedFooterWidth = -1
+    private var cachedFooterSize = -1f
+    private val footerPaint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply { typeface = text.typeface; color = Color.argb(230,255,255,255) }
+    private var numberLocale: java.util.Locale? = null
+    private var numbers: NumberFormat? = null
     private val expireSpeed = Runnable { speedKmh = null; invalidate() }
     private val expireVehicle = Runnable { vehicle = ClusterVehicleReading(); invalidate() }
     private val frame = Runnable { invalidate() }
@@ -52,7 +76,13 @@ internal class ClusterPlayerView(
     override fun onAttachedToWindow() {
         super.onAttachedToWindow()
         stopSettings = ClusterPlayerSettings.observe(context) { refresh() }
+        stopMotion = com.shilapi.xcertplay.airplay.ClusterBackgroundSettings.observe(context) { refresh() }
         stopState = ClusterMusicState.observe {
+            val now = SystemClock.elapsedRealtime()
+            val redraw = snapshot.artwork !== it.artwork || snapshot.info.title != it.info.title ||
+                snapshot.info.artist != it.info.artist || snapshot.info.album != it.info.album ||
+                snapshot.info.playing != it.info.playing || snapshot.info.durationMillis != it.info.durationMillis ||
+                kotlin.math.abs((elapsed(snapshot, now) ?: 0) - (elapsed(it, now) ?: 0)) > 1_500
             snapshot = it
             if (cover !== it.artwork) {
                 val now = SystemClock.elapsedRealtime()
@@ -62,12 +92,22 @@ internal class ClusterPlayerView(
                 coverChangedAt = if (previousCover == null) now - ClusterMusicView.FADE_MILLIS else now
                 background.setArtwork(cover, now)
             }
-            invalidate()
+            if (redraw) invalidate()
         }
         refresh()
     }
 
+    override fun setOutputVisible(visible: Boolean) {
+        outputVisible = visible
+        main.removeCallbacks(frame); removeCallbacks(frame)
+        invalidate()
+    }
+
     private fun refresh() {
+        motion = com.shilapi.xcertplay.airplay.ClusterBackgroundSettings.motion(context)
+        fit = ClusterPlayerSettings.fitVisible(context)
+        showSpeed = ClusterPlayerSettings.speed(context)
+        showVehicle = ClusterPlayerSettings.vehicle(context)
         val enabled = ClusterPlayerSettings.enabled(context)
         visibility = if (enabled) VISIBLE else GONE
         if (enabled && isShown && windowVisibility == VISIBLE && ClusterPlayerSettings.speed(context) && stopSpeed == null) {
@@ -119,7 +159,8 @@ internal class ClusterPlayerView(
         stopSpeed?.invoke(); stopSpeed = null
         stopState?.invoke(); stopState = null
         stopSettings?.invoke(); stopSettings = null
-        main.removeCallbacksAndMessages(null)
+        stopMotion?.invoke(); stopMotion = null
+        main.removeCallbacksAndMessages(null); removeCallbacks(frame)
         speedKmh = null
         cover = null
         previousCover = null
@@ -130,12 +171,12 @@ internal class ClusterPlayerView(
     override fun onVisibilityChanged(changedView: View, visibility: Int) {
         super.onVisibilityChanged(changedView, visibility)
         // Visibility callbacks may run from View's constructor, before our fields initialize.
-        if (isAttachedToWindow) { main.removeCallbacks(frame); refresh() }
+        if (isAttachedToWindow) { main.removeCallbacks(frame); removeCallbacks(frame); refresh() }
     }
 
     override fun onWindowVisibilityChanged(visibility: Int) {
         super.onWindowVisibilityChanged(visibility)
-        if (isAttachedToWindow) { main.removeCallbacks(frame); refresh() }
+        if (isAttachedToWindow) { main.removeCallbacks(frame); removeCallbacks(frame); refresh() }
     }
 
     override fun onDraw(canvas: Canvas) {
@@ -143,10 +184,9 @@ internal class ClusterPlayerView(
         if (width <= 0 || height <= 0) return
         val w = width.toFloat(); val backgroundHeight = height.toFloat()
         val now = SystemClock.elapsedRealtime()
-        background.draw(canvas, w, backgroundHeight, now)
+        background.draw(canvas, w, backgroundHeight, now, motion)
         // Temporary layout for the reported native strips. The gradient still fills the canvas;
         // only foreground content is laid out inside the unobscured projection area.
-        val fit = ClusterPlayerSettings.fitVisible(context)
         val contentTop = if (fit) backgroundHeight * .18f else 0f
         val contentBottom = if (fit) backgroundHeight * .76f else backgroundHeight
         val foreground = canvas.save()
@@ -157,7 +197,7 @@ internal class ClusterPlayerView(
         val side = if (stacked) minOf(w * .64f, h * .30f) else minOf(h * .84f, w * .27f)
         val left = if (stacked) (w - side) / 2 else w * .075f
         val top = if (stacked) h * .22f else (h - side) / 2
-        val rect = RectF(left, top, left + side, top + side)
+        val rect = artworkRect.apply { set(left, top, left + side, top + side) }
         clip.reset(); clip.addRoundRect(rect, side * .045f, side * .045f, Path.Direction.CW)
         val saved = canvas.save(); canvas.clipPath(clip)
         val artwork = cover?.takeUnless { it.isRecycled }
@@ -165,8 +205,8 @@ internal class ClusterPlayerView(
         if (artwork != null) {
             fun drawCover(bitmap: Bitmap, alpha: Int) {
                 val crop = minOf(bitmap.width, bitmap.height)
-                val source = Rect((bitmap.width - crop) / 2, (bitmap.height - crop) / 2,
-                    (bitmap.width + crop) / 2, (bitmap.height + crop) / 2)
+                val source = artworkSource.apply { set((bitmap.width - crop) / 2, (bitmap.height - crop) / 2,
+                    (bitmap.width + crop) / 2, (bitmap.height + crop) / 2) }
                 paint.color = Color.WHITE; paint.alpha = alpha
                 canvas.drawBitmap(bitmap, source, rect, paint)
             }
@@ -184,7 +224,6 @@ internal class ClusterPlayerView(
         text.textAlign = Paint.Align.LEFT
         val x = if (stacked) w * .08f else rect.right + w * .055f
         val available = (w * .93f - x).coerceAtLeast(1f)
-        val showSpeed = ClusterPlayerSettings.speed(context)
         val speedSize = minOf(h * .20f, w * .17f)
         text.textSize = speedSize
         val speedLeft = w * .91f - text.measureText("888")
@@ -193,26 +232,34 @@ internal class ClusterPlayerView(
         else available
         val scale = resources.configuration.fontScale.coerceIn(1f, 1.5f)
         var base = (minOf(h * (if (stacked) .070f else .16f), available * .085f) * scale).coerceAtMost(h * .18f)
-        val showVehicle = ClusterPlayerSettings.vehicle(context)
         val timeSize = minOf(backgroundHeight * .033f * scale, h * .063f)
         val barY = if (stacked) h * (if (showVehicle) .80f else .84f)
             else rect.bottom - timeSize * 2.15f - (if (showVehicle) h * .045f else 0f)
         val titleY = if (stacked) h * .61f else h * .30f
         text.textSize = base; text.color = Color.WHITE
         val title = snapshot.info.title ?: context.getString(R.string.settings_cluster_player_idle)
-        fun titleBlock() = StaticLayout.Builder.obtain(title, 0, title.length, text, metadataWidth.toInt().coerceAtLeast(1))
-            .setAlignment(Layout.Alignment.ALIGN_NORMAL).setMaxLines(2).setEllipsize(TextUtils.TruncateAt.END)
-            .setIncludePad(false).setLineSpacing(0f, 1.02f).build()
-        var titleLayout = titleBlock()
-        var titleTop = titleY + text.fontMetrics.ascent
-        // Reserve actual room for artist/album before the progress bar, including large fonts.
-        repeat(10) {
-            val metadataBottom = titleTop + titleLayout.height + base * 1.42f
-            if (metadataBottom > barY - h * .025f) {
-                base *= .90f; text.textSize = base
-                titleLayout = titleBlock(); titleTop = titleY + text.fontMetrics.ascent
+        val titleWidth = metadataWidth.toInt().coerceAtLeast(1)
+        if (cachedTitle == null || title != cachedTitleText || titleWidth != cachedTitleWidth ||
+            base != cachedBase || titleY != cachedTitleY || barY != cachedBarY) {
+            cachedTitleText = title; cachedTitleWidth = titleWidth; cachedBase = base
+            cachedTitleY = titleY; cachedBarY = barY
+            titlePaint.textSize = base
+            fun build() = StaticLayout.Builder.obtain(title, 0, title.length, titlePaint, titleWidth)
+                .setAlignment(Layout.Alignment.ALIGN_NORMAL).setMaxLines(2).setEllipsize(TextUtils.TruncateAt.END)
+                .setIncludePad(false).setLineSpacing(0f, 1.02f).build()
+            var layout = build()
+            var top = titleY + titlePaint.fontMetrics.ascent
+            repeat(10) {
+                if (top + layout.height + base * 1.42f > barY - h * .025f) {
+                    base *= .90f; titlePaint.textSize = base
+                    layout = build(); top = titleY + titlePaint.fontMetrics.ascent
+                }
             }
+            cachedTitle = layout; fittedBase = base; fittedTop = top
         }
+        base = fittedBase
+        val titleTop = fittedTop
+        val titleLayout = cachedTitle!!
         val titleSave = canvas.save(); canvas.translate(x, titleTop); titleLayout.draw(canvas); canvas.restoreToCount(titleSave)
         val artistY = titleTop + titleLayout.height + base * .68f
         line(canvas, snapshot.info.artist.orEmpty(), x, artistY, metadataWidth, base * .53f, 235)
@@ -239,27 +286,35 @@ internal class ClusterPlayerView(
         }
         if (showVehicle) {
             val current = vehicle.fresh(now)
-            val numbers = NumberFormat.getIntegerInstance(resources.configuration.locales[0])
+            val locale = resources.configuration.locales[0]
+            if (numberLocale != locale) { numberLocale = locale; numbers = NumberFormat.getIntegerInstance(locale) }
+            val numbers = numbers!!
             val percent = current.batteryPercent?.let { numbers.format(kotlin.math.round(it)) + "%" } ?: "—"
             val range = current.rangeKm?.let { numbers.format(it) + " km" } ?: "—"
             val value = context.getString(R.string.cluster_player_vehicle_readout, current.gear ?: "—", percent, range)
-            text.textAlign = Paint.Align.LEFT; text.color = Color.argb(230,255,255,255)
-            text.textSize = minOf(backgroundHeight * .034f * scale, w * .033f)
-            fun footer() = StaticLayout.Builder.obtain(value,0,value.length,text,(w*.85f).toInt().coerceAtLeast(1))
-                .setAlignment(Layout.Alignment.ALIGN_NORMAL).setMaxLines(2).setIncludePad(false)
-                .setEllipsize(TextUtils.TruncateAt.END).build()
-            var layout = footer()
-            if (layout.height > h * .095f) {
-                text.textSize *= h * .095f / layout.height
-                layout = footer()
+            val footerSize = minOf(backgroundHeight * .034f * scale, w * .033f)
+            val footerWidth = (w*.85f).toInt().coerceAtLeast(1)
+            if (cachedFooter == null || value != cachedFooterValue || footerWidth != cachedFooterWidth || footerSize != cachedFooterSize) {
+                cachedFooterValue = value; cachedFooterWidth = footerWidth; cachedFooterSize = footerSize
+                footerPaint.textSize = footerSize
+                fun footer() = StaticLayout.Builder.obtain(value,0,value.length,footerPaint,footerWidth)
+                    .setAlignment(Layout.Alignment.ALIGN_NORMAL).setMaxLines(2).setIncludePad(false)
+                    .setEllipsize(TextUtils.TruncateAt.END).build()
+                var layout = footer()
+                if (layout.height > h * .095f) { footerPaint.textSize *= h * .095f / layout.height; layout = footer() }
+                cachedFooter = layout
             }
+            val layout = cachedFooter!!
             val save = canvas.save(); canvas.translate(w*.075f,h*.90f)
             layout.draw(canvas); canvas.restoreToCount(save)
         }
         canvas.restoreToCount(foreground)
-        main.removeCallbacks(frame)
-        // 20 fps for slow gradients, no animation or progress polling while paused/hidden.
-        if ((snapshot.info.playing || coverProgress < 1f || background.isTransitioning(now)) && isShown && windowVisibility == VISIBLE) main.postDelayed(frame, 50)
+        main.removeCallbacks(frame); removeCallbacks(frame)
+        if (outputVisible && isShown && windowVisibility == VISIBLE) {
+            // Match the map artwork's display-synchronized fade, not the 20 fps drift ticker.
+            if (coverProgress < 1f || background.isTransitioning(now)) postOnAnimation(frame)
+            else if (snapshot.info.playing) main.postDelayed(frame, if (motion) 50 else 1_000)
+        }
     }
 
     private fun line(canvas: Canvas, value: String, x: Float, y: Float, available: Float, size: Float, alpha: Int) {

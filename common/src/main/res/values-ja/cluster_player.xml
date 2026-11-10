@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="settings_cluster_player_mode">表示</string>
-    <string name="settings_cluster_player_map">地図 · 現在の設定</string>
+    <string name="settings_cluster_player_map">地図</string>
     <string name="settings_cluster_player">プレーヤー（実験的機能）</string>
-    <string name="settings_cluster_player_description">プレーヤー用に車両の全画面投影を要求します。表示結果はファームウェアに依存し、元の警告灯や通知は車両が制御します。即座に切り替わり、地図映像と中央画面のコピーを一時停止します。</string>
+    <string name="settings_cluster_player_description">保存された表示形式で地図とプレーヤーを即座に切り替えます。プレーヤーは地図と中央画面のコピーを停止し、メーター内の右左折案内は表示しません。純正表示は車両が制御します。</string>
     <string name="settings_cluster_player_speed">プレーヤーに速度を表示</string>
     <string name="settings_cluster_player_speed_description">枠なしで車速をkm/h表示。ADBでの車両読み取りが必要です。最新データがなければ — を表示します。</string>
     <string name="settings_cluster_player_idle">再生していません</string>

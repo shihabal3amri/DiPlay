@@ -5,7 +5,7 @@ import android.view.View
 import android.widget.FrameLayout
 import com.shilapi.xcertplay.airplay.ClusterPlayerSettings
 
-/** Switches entire pages. GONE releases the map surface; the controller also stops iPhone video. */
+/** Switches entire pages. SurfaceView releases its surface when GONE; TextureView retains it. The host reattaches on return. */
 internal class ClusterDashboardView(context: Context, private val map: View,
     playerParams: LayoutParams = LayoutParams(-1, -1), private val onPlayerShown: () -> Unit = {},
     private val legacyBounds: Boolean = false,
@@ -30,7 +30,7 @@ internal class ClusterDashboardView(context: Context, private val map: View,
         stopSettings = ClusterPlayerSettings.observe(context) { refresh() }
         refresh()
     }
-    fun setOutputVisible(visible: Boolean) { outputVisible = visible; refresh() }
+    fun setOutputVisible(visible: Boolean) { outputVisible = visible; player.setOutputVisible(visible); refresh() }
     private fun refresh() {
         val selected = ClusterPlayerSettings.enabled(context)
         visibility = if (selected && !outputVisible) INVISIBLE else VISIBLE
