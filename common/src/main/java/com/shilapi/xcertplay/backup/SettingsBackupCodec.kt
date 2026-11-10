@@ -39,6 +39,7 @@ object SettingsBackupCodec {
         "display_physical_size_basis", "right_hand_drive", "hide_top_bar", "hide_bottom_bar",
         "temporary_system_bars",
         "harman_fullscreen", "carplay_same_task", "safe_area_draw_outside", "main_display_disable_safe_area",
+        "declare_automatic_appearance",
         "black_corner_radius_dp",
         "adapt_pip_resolution", "auto_start_on_boot", "bt_suspend_during_carplay", "hide_byd_call_popup",
         "launcher_bubble", "launcher_bubble_size",
