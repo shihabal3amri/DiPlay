@@ -315,6 +315,12 @@ class AndroidMediaSink(
         } catch (_: java.util.concurrent.RejectedExecutionException) { recoveryPending.set(false) }
     }
 
+    override fun hasVideoOutput(type: Int): Boolean = synchronized(videoOwnershipLock) {
+        // The surface a new decoder of this stream would take (see videoDecoder), or a mirror of it.
+        !videoClosed && ((surfaces[type] ?: defaultSurface) != null ||
+            synchronized(mirrorLock) { mirrorSurfaces.keys.any { it.first == type } })
+    }
+
     fun setSurface(type: Int, surface: Surface) {
         synchronized(videoOwnershipLock) {
             if (videoClosed) return

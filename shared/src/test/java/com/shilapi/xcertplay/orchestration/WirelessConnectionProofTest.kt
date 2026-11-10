@@ -91,4 +91,59 @@ class WirelessConnectionProofTest {
         proof.authenticated(1)
         assertEquals(1, saves)
     }
+
+    @Test fun audioProvesAHiddenSessionButNotOneBehindAScreen() {
+        val session = Any()
+        val proof = WirelessConnectionProof<Any>()
+        proof.begin(1) {}
+        proof.activate(1, session)
+        assertFalse(proof.isUsable(1, session, audioReceived = true, screenAttached = true))
+        assertTrue(proof.isUsable(1, session, audioReceived = true, screenAttached = false))
+    }
+
+    @Test fun aSessionWithoutFrameOrAudioIsNeverUsable() {
+        val session = Any()
+        val proof = WirelessConnectionProof<Any>()
+        proof.begin(1) {}
+        proof.activate(1, session)
+        proof.authenticated(1)
+        assertFalse(proof.isUsable(1, session, audioReceived = false, screenAttached = false))
+        assertFalse(proof.isUsable(1, session, audioReceived = false, screenAttached = true))
+    }
+
+    @Test fun aRenderedFrameIsEnoughWithOrWithoutAScreen() {
+        val session = Any()
+        val proof = WirelessConnectionProof<Any>()
+        proof.begin(1) {}
+        proof.activate(1, session)
+        proof.rendered(1, session)
+        assertTrue(proof.isUsable(1, session, audioReceived = false, screenAttached = true))
+        assertTrue(proof.isUsable(1, session, audioReceived = false, screenAttached = false))
+    }
+
+    @Test fun anAcceptedSessionStaysAcceptedWhenItsScreenComesBack() {
+        val session = Any()
+        val proof = WirelessConnectionProof<Any>()
+        proof.begin(1) {}
+        proof.activate(1, session)
+        assertTrue(proof.isUsable(1, session, audioReceived = true, screenAttached = false))
+        assertTrue(proof.isUsable(1, session, audioReceived = true, screenAttached = true))
+    }
+
+    @Test fun acceptanceBelongsToOneSessionAndGeneration() {
+        val first = Any()
+        val second = Any()
+        val proof = WirelessConnectionProof<Any>()
+        proof.begin(1) {}
+        proof.activate(1, first)
+        assertFalse(proof.isUsable(2, first, audioReceived = true, screenAttached = false))
+        assertFalse(proof.isUsable(1, second, audioReceived = true, screenAttached = false))
+        assertTrue(proof.isUsable(1, first, audioReceived = true, screenAttached = false))
+        proof.activate(1, second)
+        assertFalse(proof.isUsable(1, second, audioReceived = false, screenAttached = true))
+        proof.end(1, second)
+        assertFalse(proof.isUsable(1, second, audioReceived = true, screenAttached = false))
+        proof.begin(2) {}
+        assertFalse(proof.isUsable(1, first, audioReceived = true, screenAttached = false))
+    }
 }

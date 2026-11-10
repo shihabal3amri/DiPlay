@@ -41,6 +41,8 @@ class WirelessHandoffWatchdogTest {
     private var hotspotCloses = 0
     private var confirmations = 0
     private lateinit var proof: Any
+    // Whether a surface is attached for the main screen; false while CarPlay is hidden.
+    @Volatile private var screenAttached = true
 
     @Before fun setUp() {
         val config = AirPlayConfig("test", "test", "", "1", AirPlayDisplayConfig(800, 480))
@@ -54,7 +56,9 @@ class WirelessHandoffWatchdogTest {
         }, CarPlayRuntimeConfig(mfiTarget = MfiTarget.LOCAL, transport = CarPlayTransport.WIRELESS,
             identification = Iap2IdentificationConfig(name = "test", modelIdentifier = "test", manufacturer = "test",
                 serialNumber = "test", firmwareVersion = "1", hardwareVersion = "1", carPlayUsbInterfaceNumber = 3)),
-            config, identity, PairingStore(), listener, object : AirPlayMediaHandler {}, statuses::add)
+            config, identity, PairingStore(), listener, object : AirPlayMediaHandler {
+                override fun hasMainScreenOutput(): Boolean = screenAttached
+            }, statuses::add)
         session = AirPlaySession(Socket(), config, identity, PairingStore(), null, listener, object : AirPlayMediaHandler {})
         val phase = controller.javaClass.getDeclaredField("phase").apply { isAccessible = true }
         phase.set(controller, phase.type.enumConstants.first { it.toString() == "WIRELESS" })
@@ -211,6 +215,59 @@ class WirelessHandoffWatchdogTest {
         assertEquals(0, hotspotCloses)
         verify(bootstrap, never()).close()
     }
+
+    @Test fun hiddenSessionPlayingAudioIsKeptWithItsBluetoothControl() {
+        // #1215: CarPlay hidden (no SurfaceView), music playing, tunnel iAP2 never ready.
+        screenAttached = false
+        audioReceived()
+        timeout()
+        timeout()
+        assertTrue(flag("wirelessActiveReported").get())
+        assertEquals(0, hotspotCloses)
+        assertSame(session, ReflectionHelpers.getField(controller, "activeSession"))
+        assertEquals(listOf(CarPlayStatus.WirelessActiveFallback), statuses)
+        verify(bootstrap, never()).close()
+        assertTrue(diagnostics.any { it.contains("handoff fallback after iPhone audio while CarPlay is hidden") })
+        assertTrue(keepControlAlive(0))
+        // Opening CarPlay later must not drop the only iAP2 channel of a session already kept.
+        screenAttached = true
+        assertTrue(keepControlAlive(0))
+        assertEquals(0, confirmations)
+    }
+
+    @Test fun hiddenSessionWithoutFramesOrAudioStillFailsAndCleansUp() {
+        screenAttached = false
+        assertFalse(keepControlAlive(0))
+        timeout()
+        assertFalse(flag("wirelessActiveReported").get())
+        assertEquals(1, hotspotCloses)
+        assertTrue(statuses.single() is CarPlayStatus.Failed)
+        verify(bootstrap).close()
+        assertTrue(diagnostics.any {
+            it.contains("handoff found no working session") && it.contains("renderedFrame=false audio=false screenAttached=false")
+        })
+    }
+
+    @Test fun audioBehindAVisibleScreenWithoutAFrameStillFails() {
+        audioReceived()
+        assertFalse(keepControlAlive(0))
+        timeout()
+        assertFalse(flag("wirelessActiveReported").get())
+        assertEquals(1, hotspotCloses)
+        assertTrue(statuses.single() is CarPlayStatus.Failed)
+        verify(bootstrap).close()
+    }
+
+    @Test fun audioFromAnEndedSessionCannotKeepTheHandoff() {
+        screenAttached = false
+        audioReceived()
+        session.close()
+        timeout()
+        assertTrue(statuses.single() is CarPlayStatus.Failed)
+        assertEquals(1, hotspotCloses)
+    }
+
+    private fun audioReceived() = ReflectionHelpers.setField(session, "audioReceived", true)
 
     private fun timeout() {
         controller.javaClass.getDeclaredMethod("handleWirelessHandoffTimeout", Int::class.javaPrimitiveType)
