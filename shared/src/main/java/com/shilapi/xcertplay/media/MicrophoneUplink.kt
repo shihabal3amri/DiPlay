@@ -441,6 +441,7 @@ internal class MicrophoneUplink(
             if (next == null) {
                 if (running.get()) stats.restartFailed(attempt, reason, newRecorder = true, state = null)
                 rebuildFailed()
+                leaveRejectedRecognitionSource()
                 continue
             }
             if (!install(next)) {
@@ -471,6 +472,17 @@ internal class MicrophoneUplink(
 
     private fun rebuildFailed() {
         if (source == MediaRecorder.AudioSource.VOICE_COMMUNICATION) failedCommunicationRecorders++
+    }
+
+    /**
+     * As in [start]: a unit that cannot even build a VOICE_RECOGNITION recorder won't on the next try either,
+     * so the remaining attempts go back to VOICE_COMMUNICATION instead of spending the budget on that source.
+     */
+    private fun leaveRejectedRecognitionSource() {
+        if (source != MediaRecorder.AudioSource.VOICE_RECOGNITION) return
+        recognitionRejected = true
+        source = MediaRecorder.AudioSource.VOICE_COMMUNICATION
+        stats.useSource(source)
     }
 
     /**

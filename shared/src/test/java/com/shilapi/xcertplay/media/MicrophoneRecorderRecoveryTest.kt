@@ -171,6 +171,28 @@ class MicrophoneRecorderRecoveryTest {
         assertTrue(diagnostics.none { it.startsWith("Microphone: capture stopped") })
     }
 
+    @Test fun aFallbackSourceTheUnitCannotBuildSendsTheRestOfTheCallBackToVoiceCommunication() {
+        // The call starts on VOICE_COMMUNICATION, two rebuilt recorders fail, and the fallback to VOICE_RECOGNITION
+        // throws at build() on this unit: the next attempt must use VOICE_COMMUNICATION again, and it works.
+        start(behaviour = { index ->
+            when (index) {
+                0 -> Behaviour(starts = { attempt -> attempt == 1 }, reads = { AudioRecord.ERROR_INVALID_OPERATION })
+                1, 2 -> Behaviour(starts = { false })
+                else -> Behaviour()
+            }
+        }, rejects = { source -> source == RECOGNITION })
+
+        awaitTrue { built.size == 4 && built[3].dataReads.get() > 5 }
+
+        assertEquals(listOf(COMMUNICATION, COMMUNICATION, COMMUNICATION, COMMUNICATION), built.map { it.source })
+        assertEquals("VOICE_RECOGNITION is asked for once", 1, rejectedBuilds.get())
+        assertTrue(line("Microphone: source fallback").contains("to=VOICE_RECOGNITION"))
+        val restarted = line("Microphone: recording restarted")
+        assertTrue(restarted, restarted.contains("type=telephony source=VOICE_COMMUNICATION"))
+        assertTrue(restarted, restarted.contains("attempt=5 reason=read-error"))
+        assertTrue(diagnostics.none { it.startsWith("Microphone: capture stopped") })
+    }
+
     @Test fun aStreamThatClosesDuringAStalledStartReportsNoFailedRestart() {
         // #1214: a rebuilt recorder's startRecording() stalls; the call ends meanwhile, and close() stops the recorder,
         // which waits for that start like AudioRecord.stop() does, so the start ends up stopped.
