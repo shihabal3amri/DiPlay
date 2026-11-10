@@ -428,12 +428,14 @@ class CarPlayHostDisplaySizeTest {
         applySize(1920, 1032)
         CarPlayVideo.onPlayerGone()
         invoke("onResume")
-        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(100))
+        // The screen is closed after the resume's own check, while the window still has the player's size.
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(600))
+        assertNull(getField("pendingDisplaySize"))
 
         invoke("onDestroy")
         shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(2_500))
 
-        assertEquals(0, ShadowLog.getLogsForTag("xcertplay-usb").count { it.msg.contains("checking the window again") })
+        assertNull(getField("pendingDisplaySize"))
         assertSame(display, getField("sessionDisplay"))
         assertEquals(0, getField("restartGeneration"))
         assertFalse(getField("videoPlayerSettling") as Boolean)
