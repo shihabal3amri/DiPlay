@@ -175,9 +175,13 @@ internal class ClusterMusicView(context: Context) : View(context) {
         val layout = StaticLayout.Builder.obtain(title, 0, title.length, textPaint, available)
             .setMaxLines(2).setEllipsize(TextUtils.TruncateAt.END).setIncludePad(false).build()
         val bandBottom = artRect.top + layout.height + side * .13f + pad * 3
-        paint.shader = LinearGradient(0f, artRect.top, 0f, bandBottom,
-            Color.argb(240, 12, 14, 18), Color.argb(160, 12, 14, 18), Shader.TileMode.CLAMP)
-        canvas.drawRect(artRect.left, artRect.top, artRect.right, bandBottom, paint)
+        val fadeBottom = minOf(artRect.bottom, bandBottom + side * .18f)
+        val hold = ((bandBottom - side * .06f - artRect.top) / (fadeBottom - artRect.top)).coerceIn(0f, .9f)
+        paint.shader = LinearGradient(0f, artRect.top, 0f, fadeBottom,
+            intArrayOf(Color.argb(240, 12, 14, 18), Color.argb(180, 12, 14, 18),
+                Color.argb(70, 12, 14, 18), Color.argb(0, 12, 14, 18)),
+            floatArrayOf(0f, hold, hold + (1f - hold) * .55f, 1f), Shader.TileMode.CLAMP)
+        canvas.drawRect(artRect.left, artRect.top, artRect.right, fadeBottom, paint)
         paint.shader = null
         val translated = canvas.save()
         canvas.translate(textLeft, artRect.top + pad)

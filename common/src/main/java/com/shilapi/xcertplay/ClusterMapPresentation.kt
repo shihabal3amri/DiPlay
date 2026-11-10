@@ -215,6 +215,7 @@ internal class ClusterMapPresentation(
 
     /** Window alpha hides the pixels without destroying the TextureView/decoder surface. */
     fun setMapVisible(visible: Boolean) {
+        ClusterOutputVisibility.update(window?.decorView, visible)
         mapVisible = visible
         window?.let { window ->
             val alpha = if (visible) 1f else 0f

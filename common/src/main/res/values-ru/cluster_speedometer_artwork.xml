@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_cluster_speedometer_artwork">Градиентный фон обложки</string>
+    <string name="settings_cluster_speedometer_artwork_description">Отдельная опция. Заменяет однотонный фон, сохраняя размер и непрозрачность. Выключение возвращает цвет альбома или чёрный. Движение включается отдельно.</string>
+</resources>

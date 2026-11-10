@@ -226,7 +226,7 @@ class ClusterSpeedometerSettingsTest {
             card.measure(View.MeasureSpec.makeMeasureSpec(px, View.MeasureSpec.EXACTLY),
                 View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED))
             card.layout(0, 0, card.measuredWidth, card.measuredHeight)
-            assertEquals(6, card.childCount)
+            assertEquals(7, card.childCount)
             for (i in 0 until card.childCount) assertTrue(card.getChildAt(i).height > 0)
             val bitmap = Bitmap.createBitmap(card.width, card.height, Bitmap.Config.ARGB_8888)
             card.draw(Canvas(bitmap))

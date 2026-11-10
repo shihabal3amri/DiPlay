@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_cluster_speedometer_artwork">Градієнтне тло обкладинки</string>
+    <string name="settings_cluster_speedometer_artwork_description">Окрема опція. Замінює одноколірне тло зі збереженням розміру й непрозорості. Вимкнення повертає колір альбому або чорний. Рух вмикається окремо.</string>
+</resources>

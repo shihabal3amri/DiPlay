@@ -22,9 +22,18 @@ internal class ClusterSpeedometerView(
     private val observeSpeed: ((Int?) -> Unit) -> (() -> Unit) = { changed ->
         com.shilapi.xcertplay.hud.BydClusterSpeedReader.observe(context, changed)
     },
-) : View(context) {
+) : View(context), ClusterOutputVisibility {
 
     private var speedKmh: Int? = null
+    private var stopArtworkSettings: (() -> Unit)? = null
+    private var stopMotionSettings: (() -> Unit)? = null
+    private var animatedBackground = false
+    private var motion = false
+    private var playing = false
+    private var outputVisible = true
+    private val artworkBackground = ClusterArtworkBackground()
+    private val backgroundClip = android.graphics.Path()
+    private val frame = Runnable { invalidate() }
     private var stopObservingSettings: (() -> Unit)? = null
     private var stopObservingSpeed: (() -> Unit)? = null
     private var stopObservingArtwork: (() -> Unit)? = null
@@ -43,17 +52,21 @@ internal class ClusterSpeedometerView(
         readingGeneration++
         stopObservingSpeed?.invoke()
         stopObservingSpeed = null
-        main.removeCallbacksAndMessages(null)
+        main.removeCallbacksAndMessages(null); removeCallbacks(frame)
         setSpeedKmh(null)
     }
 
     override fun onAttachedToWindow() {
         super.onAttachedToWindow()
+        stopArtworkSettings = com.shilapi.xcertplay.airplay.ClusterSpeedometerArtworkSettings.observe(context) { applySettings() }
+        stopMotionSettings = com.shilapi.xcertplay.airplay.ClusterBackgroundSettings.observe(context) { applySettings() }
         stopObservingSettings = AirPlayPersistence.observeClusterSpeedometer(context) { applySettings() }
         applySettings()
     }
 
     override fun onDetachedFromWindow() {
+        stopArtworkSettings?.invoke(); stopArtworkSettings = null
+        stopMotionSettings?.invoke(); stopMotionSettings = null
         stopObservingSettings?.invoke()
         stopObservingSettings = null
         stopSpeed()
@@ -61,20 +74,45 @@ internal class ClusterSpeedometerView(
         super.onDetachedFromWindow()
     }
 
+    override fun setOutputVisible(visible: Boolean) {
+        outputVisible = visible
+        main.removeCallbacks(frame); removeCallbacks(frame)
+        invalidate()
+    }
+
+    override fun onVisibilityChanged(changedView: View, visibility: Int) {
+        super.onVisibilityChanged(changedView, visibility)
+        if (isAttachedToWindow) { main.removeCallbacks(frame); removeCallbacks(frame) }
+    }
+
+    override fun onWindowVisibilityChanged(visibility: Int) {
+        super.onWindowVisibilityChanged(visibility)
+        if (isAttachedToWindow) { main.removeCallbacks(frame); removeCallbacks(frame) }
+    }
+
     private fun applySettings() {
+        animatedBackground = com.shilapi.xcertplay.airplay.ClusterSpeedometerArtworkSettings.enabled(context)
+        motion = com.shilapi.xcertplay.airplay.ClusterBackgroundSettings.motion(context)
+        main.removeCallbacks(frame); removeCallbacks(frame)
         setLayout(AirPlayPersistence.loadClusterSpeedometerX(context),
             AirPlayPersistence.loadClusterSpeedometerY(context), AirPlayPersistence.loadClusterSpeedometerSize(context))
         setOpacity(AirPlayPersistence.loadClusterSpeedometerOpacity(context))
         useAlbumColor = AirPlayPersistence.loadClusterSpeedometerAlbumColor(context)
         val enabled = AirPlayPersistence.loadClusterSpeedometerEnabled(context)
-        if (enabled && useAlbumColor) {
+        if (enabled && (useAlbumColor || animatedBackground)) {
             if (stopObservingArtwork == null) {
                 stopObservingArtwork = ClusterMusicState.observe { snapshot ->
                     if (albumArtwork !== snapshot.artwork) {
                         albumArtwork = snapshot.artwork
+                        artworkBackground.setArtwork(albumArtwork)
                         albumColor = snapshot.artwork?.takeUnless { it.isRecycled }
                             ?.let { ClusterMusicView.coverFrameColor(it) }
                         updateBackgroundTarget()
+                    }
+                    if (playing != snapshot.info.playing) {
+                        playing = snapshot.info.playing
+                        main.removeCallbacks(frame); removeCallbacks(frame)
+                        invalidate()
                     }
                 }
             }
@@ -82,6 +120,7 @@ internal class ClusterSpeedometerView(
             stopArtwork()
         }
         updateBackgroundTarget()
+        invalidate()
         if (!enabled) {
             stopSpeed()
         } else if (stopObservingSpeed == null) {
@@ -160,6 +199,9 @@ internal class ClusterSpeedometerView(
         stopObservingArtwork = null
         albumArtwork = null
         albumColor = null
+        playing = false
+        main.removeCallbacks(frame); removeCallbacks(frame)
+        artworkBackground.setArtwork(null)
     }
 
     private fun backgroundColor(now: Long): Int = colorEvaluator.evaluate(
@@ -218,15 +260,28 @@ internal class ClusterSpeedometerView(
         val color = backgroundColor(now)
         backgroundPaint.color = Color.argb((opacityPercent * 255 / 100).coerceIn(51, 255),
             Color.red(color), Color.green(color), Color.blue(color))
-        if (ClusterMusicView.progress(now, backgroundChangedAt) < 1f) postInvalidateOnAnimation()
+        main.removeCallbacks(frame); removeCallbacks(frame)
         val radius = h * 0.22f
-        canvas.drawRoundRect(rect, radius, radius, backgroundPaint)
+        val artworkMode = animatedBackground && albumArtwork?.isRecycled == false
+        if (artworkMode) {
+            val save = canvas.saveLayerAlpha(rect,(opacityPercent * 255 / 100).coerceIn(51,255))
+            backgroundClip.reset()
+            backgroundClip.addRoundRect(rect,radius,radius,android.graphics.Path.Direction.CW)
+            canvas.clipPath(backgroundClip); canvas.translate(rect.left,rect.top)
+            artworkBackground.drawWideCrop(canvas,w,h,now,motion)
+            canvas.restoreToCount(save)
+        } else canvas.drawRoundRect(rect, radius, radius, backgroundPaint)
+        if (outputVisible && isShown && windowVisibility == VISIBLE) {
+            if ((artworkMode && artworkBackground.isTransitioning(now)) ||
+                (!artworkMode && ClusterMusicView.progress(now, backgroundChangedAt) < 1f)) postOnAnimation(frame)
+            else if (artworkMode && motion && playing) main.postDelayed(frame,50)
+        }
         canvas.drawRoundRect(rect, radius, radius, strokePaint)
 
         // Use the displayed (interpolated) album color, not the final fade target.
         // Never fade the text through low-contrast gray. The map behind this translucent
         // view is a separate surface, so contrast is measured against the card RGB.
-        if (useAlbumColor) {
+        if (useAlbumColor && !artworkMode) {
             val luminance = ColorUtils.calculateLuminance(color)
             val blackContrast = (luminance + 0.05) / 0.05
             val whiteContrast = 1.05 / (luminance + 0.05)
