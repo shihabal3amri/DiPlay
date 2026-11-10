@@ -943,9 +943,9 @@
     <string name="settings_adas_scene_description">Mientras el mapa de CarPlay está en el cuadro de instrumentos, el coche puede abrir su escena ADAS grande en el centro, sobre el mapa. Con esto activado, DiPlay mueve la escena al recuadro vacío que BYD reserva a la derecha del cuadro, ajustada a su tamaño. No se oculta, cierra ni envía nada al coche: la escena y sus avisos siguen a la vista. DiPlay lo hace añadiendo su propio archivo al tema del cuadro, creado en la unidad a partir de los archivos del propio coche. El cuadro se recarga una vez al instalar o quitar el archivo. Sin el mapa de DiPlay, el cuadro muestra el diseño propio de BYD, pero sigue usando el archivo de DiPlay hasta que se quite; usa «Quitar del cuadro» antes de desinstalar DiPlay. Necesita el ADB de red del coche.</string>
     <string name="settings_adas_scene_status_checking">Comprobando el cuadro…</string>
     <string name="settings_adas_scene_status_not_installed">Aún no instalado en el cuadro.</string>
-    <string name="settings_adas_scene_status_retired">El archivo de DiPlay ya no coincidía con el software del coche, así que DiPlay lo dejó y el cuadro usa el diseño propio de BYD. Activa el ajuste para instalarlo de nuevo.</string>
+    <string name="settings_adas_scene_status_retired">El archivo de DiPlay en el cuadro estaba desactualizado o faltaba, así que DiPlay lo dejó y el cuadro usa el diseño propio de BYD. Activa el ajuste para instalarlo de nuevo.</string>
     <string name="settings_adas_scene_status_installed">Instalado en el cuadro.</string>
-    <string name="settings_adas_scene_status_stale">El software del coche cambió después de crear el archivo de DiPlay. Reinstálalo o quítalo.</string>
+    <string name="settings_adas_scene_status_stale">El archivo de DiPlay en el cuadro está desactualizado o falta. Reinstálalo o quítalo.</string>
     <string name="settings_adas_scene_status_other">Se está usando el tema del cuadro de otra aplicación. Quítalo primero.</string>
     <string name="settings_adas_scene_status_unsupported">Los archivos de este cuadro no coinciden con lo que DiPlay espera (%1$s), por eso no se ofrece.</string>
     <string name="settings_adas_scene_status_no_adb">Necesita el ADB de red del coche.</string>

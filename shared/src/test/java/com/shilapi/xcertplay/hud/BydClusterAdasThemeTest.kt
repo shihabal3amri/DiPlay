@@ -23,23 +23,50 @@ class BydClusterAdasThemeTest {
     private val clusterQml = "\uFEFFimport QtQuick 2.12\r\nItem {\r\n    Image {\r\n        id: adas2dNaviWindowBg\r\n    }\r\n" +
         "    Center {\r\n        id:centerContainerId\r\n    }\r\n    //\u52a8\u6548 end\r\n}\r\n"
     private val centerQml = "Item {\n    property CenterChild adasUi: null\n    property CenterChild adas3r1vUi: null\n}\n"
+
+    /** Stand-ins for the car's scene files, in the order of [BydClusterAdasQml.SCENE_FILES]; the real ones are BYD's. */
+    private val scenes = listOf(
+        "import QtQuick 2.15\nItem { Image { source: \"car.png\" } }\n",
+        "import QtQuick 2.0\nItem { Image { source: \"door.png\" } }\n",
+        "import QtQuick 2.15\nItem { Image { source: \"lanes.png\" } }\n",
+    )
+    private val sampled = setOf(BydClusterAdasQml.scenesDigest(scenes.map { it.toByteArray() }))
     private val englishQm = ByteArray(300) { ((it % 7) + 65).toByte() }
     private val arabicQm = ByteArray(64) { ((it * 197 + 13) % 251).toByte() }
 
+    /** A cluster that can be told to lose a reply, to refuse the car's own resource, or to stop answering. */
     private class FakeChannel(var active: BydClusterThemeChannel.Active?) : BydClusterThemeChannel {
         val calls = mutableListOf<String>()
         var confirm = true
         var followsSelection = true
 
-        override fun active() = active
+        /** A selection takes effect but its reply is lost, so [select] answers false. */
+        var replyLost = false
+
+        /** The cluster does not take the car's own resource back. */
+        var refusesDefault = false
+
+        /** The cluster stops answering questions once it was asked to select something. */
+        var silentAfterSelect = false
+        private var asked = false
+
+        override fun active() = if (silentAfterSelect && asked) null else active
 
         override fun select(name: String?): Boolean {
             calls += "select ${name ?: "default"}"
-            if (!confirm) return false
-            if (followsSelection) {
-                active = BydClusterThemeChannel.Active(2, if (name == null) DEFAULT else "$TRANSLATE/$name")
+            asked = true
+            if (name == null && refusesDefault) return false
+            if (replyLost) {
+                apply(name)
+                return false
             }
+            if (!confirm) return false
+            if (followsSelection) apply(name)
             return true
+        }
+
+        private fun apply(name: String?) {
+            active = BydClusterThemeChannel.Active(2, if (name == null) DEFAULT else "$TRANSLATE/$name")
         }
 
         override fun refresh(code: Int): Boolean {
@@ -54,11 +81,17 @@ class BydClusterAdasThemeTest {
         translate = File(temp.root, "translate")
     }
 
-    private fun theme(cluster: String, center: String, extra: Boolean = true): ByteArray = QtResource.write(
+    private fun theme(
+        cluster: String,
+        center: String,
+        extra: Boolean = true,
+        sceneFiles: List<String> = scenes,
+    ): ByteArray = QtResource.write(
         listOf(
             QtResource.item("/qml/cluster.qml", cluster.toByteArray(), 1L),
             QtResource.item("/qml/Center.qml", center.toByteArray(), 2L),
-        ) + if (extra) listOf(QtResource.item("/images/night_bg.png", ByteArray(500) { (it % 5).toByte() })) else emptyList(),
+        ) + BydClusterAdasQml.SCENE_FILES.zip(sceneFiles).map { (path, text) -> QtResource.item(path, text.toByteArray(), 6L) } +
+            if (extra) listOf(QtResource.item("/images/night_bg.png", ByteArray(500) { (it % 5).toByte() })) else emptyList(),
         version = 3,
     )
 
@@ -70,8 +103,8 @@ class BydClusterAdasThemeTest {
         ),
     )
 
-    private fun tool(channel: BydClusterThemeChannel) =
-        BydClusterAdasTheme(themeFile, languageFile, translate, channel, { 1_700_000_000_000L }, { pauses += it })
+    private fun tool(channel: BydClusterThemeChannel, sampledScenes: Set<String> = sampled) =
+        BydClusterAdasTheme(themeFile, languageFile, translate, channel, { 1_700_000_000_000L }, { pauses += it }, sampledScenes)
 
     private fun car(path: String? = DEFAULT) = FakeChannel(path?.let { BydClusterThemeChannel.Active(0, it) })
 
@@ -100,6 +133,10 @@ class BydClusterAdasThemeTest {
 
     @Test fun aProbeTellsWhichResourceIsInUse() {
         val expected = tool(car()).probe()["expected"]!!
+        // A selected file that is not in the folder is not "in use", whatever its name says.
+        assertEquals("STALE", tool(car("$TRANSLATE/$expected")).probe()["state"])
+        translate.mkdirs()
+        File(translate, expected).writeBytes(ByteArray(10))
         assertEquals("CURRENT", tool(car("$TRANSLATE/$expected")).probe()["state"])
         val older = BydClusterAdasTheme.packName("0123456789abcdef")
         assertEquals("STALE", tool(car("$TRANSLATE/$older")).probe()["state"])
@@ -132,6 +169,98 @@ class BydClusterAdasThemeTest {
     @Test fun aProbeRefusesAFileThatAlreadyMovesTheScenes() {
         themeFile.writeBytes(theme(clusterQml, centerQml.replace("}\n", "    transform: []\n}\n")))
         assertEquals("transform-used", tool(car()).probe()["code"])
+    }
+
+    @Test fun scenesNobodyHasSampledAreRefusedWithACodeOfTheirOwn() {
+        val unsampled = tool(car(), sampledScenes = setOf("0".repeat(64)))
+        val probe = unsampled.probe()
+        assertEquals(Status.UNSUPPORTED, probe.status)
+        assertEquals("scenes-unchecked", probe["code"])
+        assertEquals("NONE", probe["state"])
+        val install = unsampled.install(30)
+        assertEquals(Status.UNSUPPORTED, install.status)
+        assertEquals("scenes-unchecked", install["code"])
+        assertFalse(translate.exists())
+    }
+
+    @Test fun everyOneOfTheSceneFilesCountsAndTheOrderDoesNot() {
+        for (index in scenes.indices) {
+            val changed = scenes.toMutableList().also { it[index] += "// changed\n" }
+            themeFile.writeBytes(theme(clusterQml, centerQml, sceneFiles = changed))
+            assertEquals(BydClusterAdasQml.SCENE_FILES[index], "scenes-unchecked", tool(car()).probe()["code"])
+        }
+        // The files are looked up by name, so the order they sit in the resource does not matter.
+        themeFile.writeBytes(QtResource.write(
+            BydClusterAdasQml.SCENE_FILES.zip(scenes).reversed().map { (path, text) -> QtResource.item(path, text.toByteArray()) } +
+                listOf(QtResource.item("/qml/Center.qml", centerQml.toByteArray()), QtResource.item("/qml/cluster.qml", clusterQml.toByteArray())),
+        ))
+        assertEquals(Status.READY, tool(car()).probe().status)
+    }
+
+    @Test fun aMissingSceneFileIsRefused() {
+        for (path in BydClusterAdasQml.SCENE_FILES) {
+            themeFile.writeBytes(QtResource.write(
+                listOf(QtResource.item("/qml/cluster.qml", clusterQml.toByteArray()), QtResource.item("/qml/Center.qml", centerQml.toByteArray())) +
+                    BydClusterAdasQml.SCENE_FILES.zip(scenes).filter { it.first != path }.map { (p, text) -> QtResource.item(p, text.toByteArray()) },
+            ))
+            assertEquals(path, "no-scenes", tool(car()).probe()["code"])
+        }
+    }
+
+    @Test fun aSceneThatSetsTransformIsRefusedWhateverIsSampled() {
+        for (index in scenes.indices) {
+            val changed = scenes.toMutableList().also { it[index] += "Item { transform: [] }\n" }
+            themeFile.writeBytes(theme(clusterQml, centerQml, sceneFiles = changed))
+            val sampledWithIt = setOf(BydClusterAdasQml.scenesDigest(changed.map { it.toByteArray() }))
+            assertEquals("transform-used", tool(car(), sampledWithIt).probe()["code"])
+            assertEquals("transform-used", tool(car(), sampledWithIt).install(30)["code"])
+        }
+    }
+
+    @Test fun aSceneUpdateMakesAnInstalledFileStaleAndStopsAnyNewInstall() {
+        val channel = car()
+        val name = tool(channel).install(30)["pack"]!!
+        themeFile.writeBytes(theme(clusterQml, centerQml, sceneFiles = scenes.map { "$it// new\n" }))
+        val probe = tool(car("$TRANSLATE/$name")).probe()
+        assertEquals(Status.UNSUPPORTED, probe.status)
+        assertEquals("scenes-unchecked", probe["code"])
+        assertEquals("STALE", probe["state"])
+        assertEquals(Status.UNSUPPORTED, tool(channel).install(30).status)
+    }
+
+    @Test fun aSelectedFileThatIsNoLongerInTheFolderIsStale() {
+        val channel = car()
+        val name = tool(channel).install(30)["pack"]!!
+        assertEquals("CURRENT", tool(channel).probe()["state"])
+        File(translate, name).delete()
+        assertEquals("STALE", tool(channel).probe()["state"])
+        // Putting it back is an install, which writes the missing file again instead of calling it installed already.
+        channel.calls.clear()
+        assertEquals(Status.INSTALLED, tool(channel).install(30).status)
+        assertTrue(File(translate, name).isFile)
+        assertEquals("CURRENT", tool(channel).probe()["state"])
+    }
+
+    @Test fun removingASelectedFileThatIsMissingStillGivesTheCarsOwnBack() {
+        val channel = car()
+        val name = tool(channel).install(30)["pack"]!!
+        File(translate, name).delete()
+        channel.calls.clear()
+        val result = tool(channel).remove(30)
+        assertEquals(Status.REMOVED, result.status)
+        assertEquals(listOf("select default", "refresh 30"), channel.calls)
+        assertEquals(DEFAULT, channel.active!!.path)
+    }
+
+    @Test fun aNameWithMoreThanOneRevisionDigitIsStillOneOfDiPlays() {
+        val prefix = BydClusterAdasTheme.PACK_PREFIX
+        for (name in listOf("DiPlay1a1b2c3d4", "DiPlay3381b36ef", "DiPlay10a1b2c3d4", "DiPlay123a1b2c3d4")) {
+            assertTrue(name, BydClusterAdasTheme.OWN_PACK.matches("$prefix$name.rcc"))
+        }
+        for (name in listOf("DiPlaya1b2c3d4", "DiPlay1a1b2c3d", "DiPlay19p10", "Other1a1b2c3d4", "DiPlay1a1b2c3d4x")) {
+            assertFalse(name, BydClusterAdasTheme.OWN_PACK.matches("$prefix$name.rcc"))
+        }
+        assertTrue(BydClusterAdasTheme.OWN_PACK.matches(BydClusterAdasTheme.packName("0123456789abcdef")))
     }
 
     @Test fun theNameAProbeReportsIsTheOneAnInstallWrites() {
@@ -219,6 +348,67 @@ class BydClusterAdasThemeTest {
         assertEquals(Status.FAILED, result.status)
         assertEquals(emptyList<String>(), translate.list()!!.toList())
         assertTrue(channel.calls.none { it.startsWith("refresh") })
+    }
+
+    @Test fun aSelectionWhoseReplyWasLostIsUndoneAndTheFileGoesOnceTheCarsOwnIsBack() {
+        val channel = car().apply { replyLost = true }
+        val result = tool(channel).install(30)
+        assertEquals(Status.FAILED, result.status)
+        assertEquals("select", result["code"])
+        assertEquals(DEFAULT, channel.active!!.path)
+        assertEquals(emptyList<String>(), translate.list()!!.toList())
+        assertEquals(2, channel.calls.size)
+        assertEquals("select default", channel.calls.last())
+    }
+
+    @Test fun aFileTheClusterMayStillSelectIsNeverDeleted() {
+        // The first selection took effect, only its reply was lost, and the cluster will not take the car's own back.
+        val channel = car().apply { replyLost = true; refusesDefault = true }
+        val result = tool(channel).install(30)
+        assertEquals(Status.FAILED, result.status)
+        assertEquals("rollback", result["code"])
+        val name = installedName(channel)
+        assertEquals("$TRANSLATE/$name", channel.active!!.path)
+        assertTrue(File(translate, name).isFile)
+        assertTrue(channel.calls.none { it.startsWith("refresh") })
+    }
+
+    @Test fun aClusterThatStopsAnsweringAfterTheSelectionKeepsTheFile() {
+        val channel = car().apply { replyLost = true; silentAfterSelect = true }
+        val result = tool(channel).install(30)
+        assertEquals(Status.FAILED, result.status)
+        assertEquals("rollback", result["code"])
+        assertTrue(File(translate, installedName(channel)).isFile)
+    }
+
+    @Test fun aFailedInstallNeverLeavesTheClusterSelectingAFileThatIsGone() {
+        for (confirm in listOf(true, false)) for (follows in listOf(true, false)) for (lost in listOf(true, false)) {
+            for (refuses in listOf(true, false)) for (silent in listOf(true, false)) {
+                val channel = car().apply {
+                    this.confirm = confirm
+                    followsSelection = follows
+                    replyLost = lost
+                    refusesDefault = refuses
+                    silentAfterSelect = silent
+                }
+                translate.deleteRecursively()
+                tool(channel).install(30)
+                val selected = channel.active?.path?.substringAfterLast('/')?.takeIf { BydClusterAdasTheme.OWN_PACK.matches(it) }
+                val label = "confirm=$confirm follows=$follows lost=$lost refuses=$refuses silent=$silent"
+                if (selected != null) assertTrue(label, File(translate, selected).isFile)
+            }
+        }
+    }
+
+    @Test fun aReplacedOlderFileStaysWhenTheNewSelectionFails() {
+        translate.mkdirs()
+        val older = BydClusterAdasTheme.packName("0123456789abcdef")
+        File(translate, older).writeBytes(ByteArray(10))
+        val channel = car("$TRANSLATE/$older").apply { replyLost = true }
+        val result = tool(channel).install(30)
+        assertEquals("select", result["code"])
+        assertTrue(File(translate, older).isFile)
+        assertEquals(setOf(older), translate.list()!!.toSet())
     }
 
     @Test fun anOlderResourceOfDiPlayIsReplacedAndOtherFilesStay() {

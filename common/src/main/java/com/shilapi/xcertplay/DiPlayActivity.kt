@@ -2179,11 +2179,6 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
                     else getString(R.string.center_map_overlay_missing, packageName), 14, if (overlay) MUTED else WARNING))
             }
         }
-        // The large ADAS scene, moved beside the CarPlay map by a file DiPlay installs in the cluster's theme.
-        if (BydOutputSettings.projectionShapeAvailable(this)) filteredSection(content, SettingsSection.CLUSTER_ADAS_SCENE,
-            getString(R.string.settings_adas_scene_title), R.drawable.ic_dp_dashboard) { card ->
-            clusterAdasSceneControls(card)
-        }
         // Cluster video does not require a BYD navigation broadcast receiver.
         filteredSection(content, SettingsSection.CLUSTER_MAP,
             getString(R.string.carplay_map_on_instrument_cluster_experimental), R.drawable.ic_dp_dashboard) { card ->
@@ -2504,6 +2499,12 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
                     }
                 }
             }
+        }
+        // The large ADAS scene, moved beside the CarPlay map by a file DiPlay installs in the cluster's theme. It only
+        // does anything while the map above is on the cluster, so it follows that card.
+        if (BydOutputSettings.projectionShapeAvailable(this)) filteredSection(content, SettingsSection.CLUSTER_ADAS_SCENE,
+            getString(R.string.settings_adas_scene_title), R.drawable.ic_dp_dashboard) { card ->
+            clusterAdasSceneControls(card)
         }
         // FCE head units show this card for their cluster's navigation view, which has its own opt-in.
         val bydNavigation = BydOutputSettings.available(this)

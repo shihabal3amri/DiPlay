@@ -122,6 +122,15 @@ class ClusterAdasSceneSettingsTest {
         assertFalse(screen.getString(R.string.settings_adas_scene_title) in texts(screen))
     }
 
+    @Test fun theCardFollowsTheClusterMapCardItDependsOn() {
+        installDiLink3Adapter()
+        val screen = advancedSettings()
+        val all = texts(screen)
+        val map = all.indexOf(screen.getString(R.string.carplay_map_on_instrument_cluster_experimental))
+        val adas = all.indexOf(screen.getString(R.string.settings_adas_scene_title))
+        assertTrue(all.toString(), map >= 0 && adas > map)
+    }
+
     @Test fun theCardDescribesWhatItDoesAndIsOffByDefault() {
         installDiLink3Adapter()
         val screen = advancedSettings()

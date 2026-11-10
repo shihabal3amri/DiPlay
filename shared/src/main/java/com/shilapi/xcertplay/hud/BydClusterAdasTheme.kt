@@ -34,6 +34,7 @@ internal class BydClusterAdasTheme(
     private val channel: BydClusterThemeChannel,
     private val nowMillis: () -> Long = System::currentTimeMillis,
     private val pause: (Long) -> Unit = { Thread.sleep(it) },
+    private val sampledScenes: Set<String> = BydClusterAdasQml.SAMPLED_SCENES,
 ) {
     enum class Status { READY, UNSUPPORTED, INSTALLED, ALREADY, REMOVED, OTHER_ACTIVE, NO_CLUSTER, FAILED }
 
@@ -63,19 +64,21 @@ internal class BydClusterAdasTheme(
     }
 
     /**
-     * Read-only: whether the car's files fit, and which of DiPlay's resources is in use. Only the car's two QML files
-     * are read and hashed; nothing is built. A resource of DiPlay's that is in use while the car's files do not fit,
-     * or while it was made from other files, is reported as `STALE`.
+     * Read-only: whether the car's files fit, and which of DiPlay's resources is in use. Only the car's QML files are
+     * read and hashed (`cluster.qml`, `Center.qml` and the two ADAS scenes); nothing is built. A resource of DiPlay's
+     * that is selected is reported as `STALE` when the car's files do not fit it any more, when it was made from other
+     * files, and when its file is no longer in the folder.
      */
     fun probe(): Result {
         val inspection = inspect()
         val fitted = (inspection as? Inspection.Fits)?.fitted
         val active = channel.active()
+        val selected = active?.let { ownName(it.path) }
         val state = when {
             active == null -> "UNKNOWN"
             isDefault(active.path) -> "NONE"
-            ownName(active.path) == null -> "OTHER"
-            ownName(active.path) == fitted?.name -> "CURRENT"
+            selected == null -> "OTHER"
+            selected == fitted?.name && File(translateDir, selected).isFile -> "CURRENT"
             else -> "STALE"
         }
         return when (inspection) {
@@ -112,15 +115,24 @@ internal class BydClusterAdasTheme(
             return Result(Status.FAILED, mapOf("code" to "write"))
         }
         if (!channel.select(built.name) || ownName(channel.active()?.path.orEmpty()) != built.name) {
-            // Back to the car's own resource, with nothing of DiPlay's left behind.
-            channel.select(null)
-            File(translateDir, built.name).delete()
-            return Result(Status.FAILED, mapOf("code" to "select"))
+            return rollBack(built)
         }
         ownPacks().filter { it.name != built.name }.forEach { it.delete() }
         pause(RELOAD_DELAY_MILLIS)
         channel.refresh(refreshCode)
         return Result(Status.INSTALLED, mapOf("pack" to built.name))
+    }
+
+    /**
+     * Back to the car's own resource after a selection that was not confirmed. The reply to a selection can be lost
+     * after the cluster applied it, so the file is deleted only once the cluster shows the car's own resource again;
+     * otherwise it stays, because a selected file that is gone is worse than one that is not needed.
+     */
+    private fun rollBack(built: Built): Result {
+        channel.select(null)
+        if (channel.active()?.path?.let(::isDefault) != true) return Result(Status.FAILED, mapOf("code" to "rollback"))
+        File(translateDir, built.name).delete()
+        return Result(Status.FAILED, mapOf("code" to "select"))
     }
 
     /**
@@ -179,6 +191,10 @@ internal class BydClusterAdasTheme(
             is BydClusterAdasQml.Result.Refused -> return Inspection.Unsupported(result.code)
             is BydClusterAdasQml.Result.Patched -> result.qml
         }
+        val scenes = BydClusterAdasQml.SCENE_FILES.map { path ->
+            theme.find(path)?.let(theme::content) ?: return Inspection.Unsupported("no-scenes")
+        }
+        BydClusterAdasQml.refuseScenes(scenes, sampledScenes)?.let { return Inspection.Unsupported(it) }
         if (languages.entries.none { it.path.startsWith(LANGUAGE_DIR) && it.path.endsWith(".qm") }) {
             return Inspection.Unsupported("no-languages")
         }
@@ -267,6 +283,6 @@ internal class BydClusterAdasTheme(
         /** The file name for a car whose `cluster.qml` and `Center.qml` hash to [digest]; the token is letters and digits. */
         fun packName(digest: String): String = PACK_PREFIX + "DiPlay" + PATCH_REVISION + digest.take(8) + ".rcc"
 
-        val OWN_PACK = Regex("^" + PACK_PREFIX + "DiPlay[0-9][0-9a-f]{8}\\.rcc$")
+        val OWN_PACK = Regex("^" + PACK_PREFIX + "DiPlay[0-9]+[0-9a-f]{8}\\.rcc$")
     }
 }

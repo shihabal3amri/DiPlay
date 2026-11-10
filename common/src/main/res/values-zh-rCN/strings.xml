@@ -1003,9 +1003,9 @@
     <string name="settings_adas_scene_description">CarPlay 地图显示在仪表上时，车辆可能在中央、地图之上打开大 ADAS 画面。开启后，DiPlay 会把该画面缩放并移入 BYD 在仪表右侧预留的空白框中。不会隐藏、关闭任何内容，也不会向车辆发送任何内容：画面及其警告始终可见。DiPlay 的做法是在仪表主题中加入自己的文件，该文件由车机根据车辆自身的文件生成。安装或移除该文件时仪表会重新加载一次。没有 DiPlay 地图时，仪表显示 BYD 原有布局，但在移除文件之前仪表仍会使用 DiPlay 的文件，因此卸载 DiPlay 之前请先使用“从仪表移除”。需要车辆的网络 ADB。</string>
     <string name="settings_adas_scene_status_checking">正在检查仪表…</string>
     <string name="settings_adas_scene_status_not_installed">尚未安装到仪表。</string>
-    <string name="settings_adas_scene_status_retired">DiPlay 的文件已与车辆软件不匹配，因此 DiPlay 放弃了它，仪表使用 BYD 原有布局。如需再次安装，请开启此设置。</string>
+    <string name="settings_adas_scene_status_retired">仪表上的 DiPlay 文件已过时或丢失，因此 DiPlay 放弃了它，仪表使用 BYD 原有布局。如需再次安装，请开启此设置。</string>
     <string name="settings_adas_scene_status_installed">已安装到仪表。</string>
-    <string name="settings_adas_scene_status_stale">DiPlay 的文件生成后，车辆软件已变更。请重新安装或将其移除。</string>
+    <string name="settings_adas_scene_status_stale">仪表上的 DiPlay 文件已过时或丢失。请重新安装或将其移除。</string>
     <string name="settings_adas_scene_status_other">正在使用其他应用的仪表主题。请先移除它。</string>
     <string name="settings_adas_scene_status_unsupported">此仪表的文件与 DiPlay 预期的不符（%1$s），因此不提供此功能。</string>
     <string name="settings_adas_scene_status_no_adb">需要车辆的网络 ADB。</string>

@@ -1017,9 +1017,9 @@
     <string name="settings_adas_scene_description">Mentre la mappa CarPlay è sul quadro strumenti, l\'auto può aprire la sua grande scena ADAS al centro, sopra la mappa. Con questa opzione attiva, DiPlay sposta la scena nel riquadro vuoto che BYD tiene a destra del quadro, ridimensionata per adattarla. Nulla viene nascosto, chiuso o inviato all\'auto: la scena e i suoi avvisi restano visibili. DiPlay lo fa aggiungendo un proprio file al tema del quadro, creato sull\'unità dai file dell\'auto stessa. Il quadro si ricarica una volta quando il file viene installato o rimosso. Senza la mappa di DiPlay il quadro mostra il layout originale BYD, ma continua a usare il file di DiPlay finché non lo rimuovi: usa «Rimuovi dal quadro» prima di disinstallare DiPlay. Richiede l\'ADB di rete dell\'auto.</string>
     <string name="settings_adas_scene_status_checking">Controllo del quadro…</string>
     <string name="settings_adas_scene_status_not_installed">Non ancora installato sul quadro.</string>
-    <string name="settings_adas_scene_status_retired">Il file di DiPlay non corrispondeva più al software dell\'auto, quindi DiPlay lo ha abbandonato e il quadro usa il layout originale BYD. Attiva l\'impostazione per installarlo di nuovo.</string>
+    <string name="settings_adas_scene_status_retired">Il file di DiPlay sul quadro era obsoleto o mancava, quindi DiPlay lo ha abbandonato e il quadro usa il layout originale BYD. Attiva l\'impostazione per installarlo di nuovo.</string>
     <string name="settings_adas_scene_status_installed">Installato sul quadro.</string>
-    <string name="settings_adas_scene_status_stale">Il software dell\'auto è cambiato dopo la creazione del file di DiPlay. Reinstallalo oppure rimuovilo.</string>
+    <string name="settings_adas_scene_status_stale">Il file di DiPlay sul quadro è obsoleto o manca. Reinstallalo oppure rimuovilo.</string>
     <string name="settings_adas_scene_status_other">È in uso il tema del quadro di un\'altra app. Rimuovilo prima.</string>
     <string name="settings_adas_scene_status_unsupported">I file di questo quadro non corrispondono a quelli che DiPlay si aspetta (%1$s), quindi non viene proposto.</string>
     <string name="settings_adas_scene_status_no_adb">Richiede l\'ADB di rete dell\'auto.</string>

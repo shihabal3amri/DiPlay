@@ -1046,9 +1046,9 @@
     <string name="settings_adas_scene_description">While the CarPlay map is on the cluster, the car can open its large ADAS scene in the middle, over the map. With this on, DiPlay moves the scene into the empty box BYD keeps on the right of the cluster, scaled to fit it. Nothing is hidden, closed or sent to the car: the scene and its warnings stay in view. DiPlay does this by adding its own file to the cluster\'s theme, built on the head unit from the car\'s own files. The cluster reloads once when the file is installed or removed. Without DiPlay\'s map the cluster shows BYD\'s own layout, but it keeps using DiPlay\'s file until the file is removed, so use Remove from the cluster before uninstalling DiPlay. Needs the car\'s network ADB.</string>
     <string name="settings_adas_scene_status_checking">Checking the cluster…</string>
     <string name="settings_adas_scene_status_not_installed">Not installed on the cluster yet.</string>
-    <string name="settings_adas_scene_status_retired">DiPlay\'s file no longer matched the car\'s software, so DiPlay gave it up and the cluster uses BYD\'s own layout. Switch the setting on to install it again.</string>
+    <string name="settings_adas_scene_status_retired">DiPlay\'s file on the cluster was out of date or missing, so DiPlay gave it up and the cluster uses BYD\'s own layout. Switch the setting on to install it again.</string>
     <string name="settings_adas_scene_status_installed">Installed on the cluster.</string>
-    <string name="settings_adas_scene_status_stale">The car\'s software changed after DiPlay\'s file was built. Reinstall it, or remove it.</string>
+    <string name="settings_adas_scene_status_stale">DiPlay\'s file on the cluster is out of date or missing. Reinstall it, or remove it.</string>
     <string name="settings_adas_scene_status_other">Another app\'s cluster theme is in use. Remove that one first.</string>
     <string name="settings_adas_scene_status_unsupported">This cluster\'s files do not match what DiPlay expects (%1$s), so it is not offered.</string>
     <string name="settings_adas_scene_status_no_adb">Needs the car\'s network ADB.</string>

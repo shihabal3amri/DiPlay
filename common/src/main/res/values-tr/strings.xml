@@ -1047,9 +1047,9 @@
     <string name="settings_adas_scene_description">CarPlay haritası gösterge panelindeyken araç, büyük ADAS sahnesini ortada haritanın üzerinde açabilir. Bu açıkken DiPlay sahneyi, BYD\'nin gösterge panelinin sağında boş bıraktığı kutuya sığacak şekilde küçülterek taşır. Hiçbir şey gizlenmez, kapatılmaz veya araca gönderilmez: sahne ve uyarıları görünür kalır. DiPlay bunu, aracın kendi dosyalarından ana ünitede oluşturduğu kendi dosyasını gösterge panelinin temasına ekleyerek yapar. Dosya kurulurken veya kaldırılırken gösterge paneli bir kez yeniden yüklenir. DiPlay haritası yokken gösterge paneli BYD\'nin kendi düzenini gösterir, ancak dosya kaldırılana kadar DiPlay\'in dosyasını kullanmaya devam eder; DiPlay\'i kaldırmadan önce “Gösterge panelinden kaldır” düğmesini kullanın. Aracın ağ ADB\'sini gerektirir.</string>
     <string name="settings_adas_scene_status_checking">Gösterge paneli kontrol ediliyor…</string>
     <string name="settings_adas_scene_status_not_installed">Gösterge paneline henüz kurulmadı.</string>
-    <string name="settings_adas_scene_status_retired">DiPlay\'in dosyası aracın yazılımıyla artık uyuşmuyordu; DiPlay onu bıraktı ve gösterge paneli BYD\'nin kendi düzenini kullanıyor. Yeniden kurmak için ayarı açın.</string>
+    <string name="settings_adas_scene_status_retired">DiPlay\'in gösterge panelindeki dosyası eskiydi veya eksikti; DiPlay onu bıraktı ve gösterge paneli BYD\'nin kendi düzenini kullanıyor. Yeniden kurmak için ayarı açın.</string>
     <string name="settings_adas_scene_status_installed">Gösterge paneline kuruldu.</string>
-    <string name="settings_adas_scene_status_stale">DiPlay dosyası oluşturulduktan sonra aracın yazılımı değişti. Yeniden kurun veya kaldırın.</string>
+    <string name="settings_adas_scene_status_stale">DiPlay\'in gösterge panelindeki dosyası eski veya eksik. Yeniden kurun veya kaldırın.</string>
     <string name="settings_adas_scene_status_other">Başka bir uygulamanın gösterge paneli teması kullanılıyor. Önce onu kaldırın.</string>
     <string name="settings_adas_scene_status_unsupported">Bu gösterge panelinin dosyaları DiPlay\'in beklediğiyle eşleşmiyor (%1$s), bu yüzden sunulmuyor.</string>
     <string name="settings_adas_scene_status_no_adb">Aracın ağ ADB\'sini gerektirir.</string>

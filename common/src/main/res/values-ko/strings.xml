@@ -1055,9 +1055,9 @@
     <string name="settings_adas_scene_description">CarPlay 지도가 계기판에 표시되는 동안 차량이 큰 ADAS 화면을 가운데 지도 위에 열 수 있습니다. 이 옵션을 켜면 DiPlay가 BYD가 계기판 오른쪽에 비워 둔 상자에 맞게 화면을 줄여 옮깁니다. 숨기거나 닫거나 차량에 보내는 것은 없으며 화면과 경고는 계속 보입니다. DiPlay는 차량 자체 파일을 바탕으로 헤드 유닛에서 만든 전용 파일을 계기판 테마에 추가하는 방식으로 이를 수행합니다. 파일을 설치하거나 제거할 때 계기판이 한 번 다시 로드됩니다. DiPlay 지도가 없을 때는 BYD 기본 레이아웃을 표시하지만, 파일을 제거할 때까지 계기판은 DiPlay의 파일을 계속 사용하므로 DiPlay를 삭제하기 전에 “계기판에서 제거”를 사용하세요. 차량의 네트워크 ADB가 필요합니다.</string>
     <string name="settings_adas_scene_status_checking">계기판 확인 중…</string>
     <string name="settings_adas_scene_status_not_installed">아직 계기판에 설치되지 않았습니다.</string>
-    <string name="settings_adas_scene_status_retired">DiPlay의 파일이 차량 소프트웨어와 더 이상 맞지 않아 DiPlay가 이를 포기했으며, 계기판은 BYD 기본 레이아웃을 사용합니다. 다시 설치하려면 설정을 켜세요.</string>
+    <string name="settings_adas_scene_status_retired">계기판의 DiPlay 파일이 오래되었거나 없어서 DiPlay가 이를 포기했으며, 계기판은 BYD 기본 레이아웃을 사용합니다. 다시 설치하려면 설정을 켜세요.</string>
     <string name="settings_adas_scene_status_installed">계기판에 설치되었습니다.</string>
-    <string name="settings_adas_scene_status_stale">DiPlay 파일을 만든 뒤 차량 소프트웨어가 변경되었습니다. 다시 설치하거나 제거하세요.</string>
+    <string name="settings_adas_scene_status_stale">계기판의 DiPlay 파일이 오래되었거나 없습니다. 다시 설치하거나 제거하세요.</string>
     <string name="settings_adas_scene_status_other">다른 앱의 계기판 테마가 사용 중입니다. 먼저 그것을 제거하세요.</string>
     <string name="settings_adas_scene_status_unsupported">이 계기판의 파일이 DiPlay가 예상하는 것과 일치하지 않아(%1$s) 제공되지 않습니다.</string>
     <string name="settings_adas_scene_status_no_adb">차량의 네트워크 ADB가 필요합니다.</string>

@@ -992,9 +992,9 @@
     <string name="settings_adas_scene_description">عندما تكون خريطة CarPlay على لوحة العدادات، قد تفتح السيارة مشهد ADAS الكبير في الوسط فوق الخريطة. عند تفعيل هذا الخيار، ينقل DiPlay المشهد إلى المربع الفارغ الذي تحتفظ به BYD على يمين لوحة العدادات ويصغّره ليناسبه. لا يتم إخفاء أي شيء أو إغلاقه أو إرسال أي شيء إلى السيارة: يبقى المشهد وتنبيهاته ظاهرين. يفعل DiPlay ذلك بإضافة ملفه الخاص إلى سمة لوحة العدادات، ويُنشأ على الوحدة الرئيسية من ملفات السيارة نفسها. تُعاد تحميل لوحة العدادات مرة واحدة عند تثبيت الملف أو إزالته. من دون خريطة DiPlay تعرض لوحة العدادات تصميم BYD الأصلي، لكنها تواصل استخدام ملف DiPlay حتى تتم إزالته، لذا استخدم «إزالة من لوحة العدادات» قبل إلغاء تثبيت DiPlay. يتطلب ADB الشبكي للسيارة.</string>
     <string name="settings_adas_scene_status_checking">جارٍ فحص لوحة العدادات…</string>
     <string name="settings_adas_scene_status_not_installed">لم يتم التثبيت على لوحة العدادات بعد.</string>
-    <string name="settings_adas_scene_status_retired">لم يعد ملف DiPlay متوافقًا مع برنامج السيارة، فتخلّى DiPlay عنه وأصبحت لوحة العدادات تستخدم تصميم BYD الأصلي. فعّل الإعداد لتثبيته مرة أخرى.</string>
+    <string name="settings_adas_scene_status_retired">كان ملف DiPlay على لوحة العدادات قديمًا أو مفقودًا، فتخلّى DiPlay عنه وأصبحت لوحة العدادات تستخدم تصميم BYD الأصلي. فعّل الإعداد لتثبيته مرة أخرى.</string>
     <string name="settings_adas_scene_status_installed">مثبّت على لوحة العدادات.</string>
-    <string name="settings_adas_scene_status_stale">تغيّر برنامج السيارة بعد إنشاء ملف DiPlay. أعد تثبيته أو أزله.</string>
+    <string name="settings_adas_scene_status_stale">ملف DiPlay على لوحة العدادات قديم أو مفقود. أعد تثبيته أو أزله.</string>
     <string name="settings_adas_scene_status_other">سمة لوحة عدادات من تطبيق آخر قيد الاستخدام. أزلها أولًا.</string>
     <string name="settings_adas_scene_status_unsupported">ملفات لوحة العدادات هذه لا تطابق ما يتوقعه DiPlay (%1$s)، لذلك لا يُعرض الخيار.</string>
     <string name="settings_adas_scene_status_no_adb">يتطلب ADB الشبكي للسيارة.</string>

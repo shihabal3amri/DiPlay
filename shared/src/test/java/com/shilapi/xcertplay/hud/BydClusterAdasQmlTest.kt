@@ -1,5 +1,6 @@
 package com.shilapi.xcertplay.hud
 
+import java.io.File
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -102,6 +103,51 @@ class BydClusterAdasQmlTest {
 
     @Test fun theBlockReadsTheFileMoreSlowlyWhileThereIsNoHeartbeat() {
         assertTrue("interval: diplayAdasId.alive ? 250 : 1000" in BydClusterAdasQml.BLOCK)
+    }
+
+    private val scenes = listOf("scene one\n", "door warning\n", "scene two\n").map { it.toByteArray() }
+    private val sampled = setOf(BydClusterAdasQml.scenesDigest(scenes))
+
+    @Test fun scenesAreMovedOnlyWhenTheyAreTheOnesThatWereSampled() {
+        assertEquals(null, BydClusterAdasQml.refuseScenes(scenes, sampled))
+        assertEquals("scenes-unchecked", BydClusterAdasQml.refuseScenes(scenes, setOf("0".repeat(64))))
+        assertEquals("scenes-unchecked", BydClusterAdasQml.refuseScenes(scenes, emptySet()))
+        for (index in scenes.indices) {
+            val changed = scenes.toMutableList().also { it[index] = it[index] + "x".toByteArray() }
+            assertEquals("scenes-unchecked", BydClusterAdasQml.refuseScenes(changed, sampled))
+        }
+        assertEquals("scenes-unchecked", BydClusterAdasQml.refuseScenes(scenes.reversed(), sampled))
+        assertEquals("scenes-unchecked", BydClusterAdasQml.refuseScenes(scenes.dropLast(1), sampled))
+    }
+
+    @Test fun aSceneThatSetsTransformIsRefusedBeforeAnythingElseAndAllowsTransformOrigin() {
+        for (index in scenes.indices) {
+            val changed = scenes.toMutableList().also { it[index] = "Item { transform: [] }\n".toByteArray() }
+            val listed = setOf(BydClusterAdasQml.scenesDigest(changed))
+            assertEquals("transform-used", BydClusterAdasQml.refuseScenes(changed, listed))
+            assertEquals("transform-used", BydClusterAdasQml.refuseScenes(changed, sampled))
+        }
+        val origin = scenes.toMutableList().also { it[0] = "Item { transformOrigin: Item.TopLeft }\n".toByteArray() }
+        assertEquals(null, BydClusterAdasQml.refuseScenes(origin, setOf(BydClusterAdasQml.scenesDigest(origin))))
+    }
+
+    @Test fun theSampledScenesAreNamedByDigestAndTheirFilesAreTheOnesCenterQmlCreates() {
+        assertTrue(BydClusterAdasQml.SAMPLED_SCENES.isNotEmpty())
+        for (digest in BydClusterAdasQml.SAMPLED_SCENES) assertTrue(digest, Regex("[0-9a-f]{64}").matches(digest))
+        assertEquals(
+            listOf("/qml/adas2d/Adas.qml", "/qml/adas2d/AdasDowWarning.qml", "/qml/adas2d/Adas3R1V.qml"),
+            BydClusterAdasQml.SCENE_FILES,
+        )
+    }
+
+    @Test fun anOptionalCheckOfTheShippedDigestAgainstTheCarsOwnThemeFile() {
+        // DIPLAY_THEME_RCC is a car's own cluster_theme1.rcc; CI leaves it unset because BYD's file is not kept here.
+        val path = System.getenv("DIPLAY_THEME_RCC") ?: return
+        QtResource.open(QtResource.FileSource(File(path))).use { theme ->
+            val files = BydClusterAdasQml.SCENE_FILES.map { name -> theme.content(requireNotNull(theme.find(name)) { name }) }
+            println("scenes digest of $path: ${BydClusterAdasQml.scenesDigest(files)}")
+            assertEquals(null, BydClusterAdasQml.refuseScenes(files))
+        }
     }
 
     private companion object {

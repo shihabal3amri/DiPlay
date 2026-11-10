@@ -6,7 +6,8 @@ import java.nio.charset.CodingErrorAction
 import java.security.MessageDigest
 
 /**
- * The QML DiPlay adds to the car's own `cluster.qml`, and the checks that decide whether it fits that file.
+ * The QML DiPlay adds to the car's own `cluster.qml`, and the checks that decide whether it fits that file and may move
+ * the car's ADAS scenes.
  *
  * While DiPlay's CarPlay map is on the cluster, BYD draws the large ADAS scene in the middle of the screen, over the
  * map, and leaves its own "navigation window" box on the right empty. The block moves the scene into that box, scaled
@@ -26,6 +27,22 @@ internal object BydClusterAdasQml {
 
     /** The block sets `transform` on the two scenes, which replaces any list BYD sets; none of BYD's own QML uses it. */
     private val TRANSFORM = Regex("""\btransform\b""")
+
+    /**
+     * The files of the two ADAS scenes, in the order [scenesDigest] takes them: the 2D scene and the door warning it
+     * holds, then the 3R1V scene. `Center.qml` creates each scene at x 0, y 0 with a size of 608x290, and both draw
+     * in the coordinates of the 1920x720 screen.
+     */
+    val SCENE_FILES = listOf("/qml/adas2d/Adas.qml", "/qml/adas2d/AdasDowWarning.qml", "/qml/adas2d/Adas3R1V.qml")
+
+    /**
+     * Digests, see [scenesDigest], of the scenes of the software whose scenes were sampled: every state those scenes
+     * can be put in was mapped through the block's move (the paint centre 960,409 and 95 %), and nothing they draw
+     * ends up off the screen. The block moves no other scenes. Software is added here once its scenes are sampled.
+     */
+    val SAMPLED_SCENES: Set<String> = setOf(
+        "381b36ef0c23db5b326ebf76e388d8f30252538c337a3bf75a0501c46ab6bbc3", // BYD Han, DiLink 3.0, eng.build.20260204.025317
+    )
 
     sealed class Result {
         class Patched(val qml: ByteArray) : Result()
@@ -66,6 +83,19 @@ internal object BydClusterAdasQml {
     /** Lower-case SHA-256 of [bytes], used to tell whether the car's own file changed since DiPlay built from it. */
     fun digest(bytes: ByteArray): String =
         MessageDigest.getInstance("SHA-256").digest(bytes).joinToString("") { "%02x".format(it) }
+
+    /** The digest of the car's scene files [scenes], given in the order of [SCENE_FILES], one after the other. */
+    fun scenesDigest(scenes: List<ByteArray>): String = digest(scenes.fold(ByteArray(0)) { all, scene -> all + scene })
+
+    /**
+     * Why the block must not move the car's [scenes] (in the order of [SCENE_FILES]), or null when it may: one of them
+     * sets `transform`, which the block would replace, or they are not the scenes of any software in [sampled].
+     */
+    fun refuseScenes(scenes: List<ByteArray>, sampled: Set<String> = SAMPLED_SCENES): String? = when {
+        scenes.any { TRANSFORM.containsMatchIn(String(it, Charsets.UTF_8)) } -> "transform-used"
+        scenesDigest(scenes) !in sampled -> "scenes-unchecked"
+        else -> null
+    }
 
     private fun decode(bytes: ByteArray): String? = try {
         Charsets.UTF_8.newDecoder()
