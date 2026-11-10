@@ -32,9 +32,13 @@ object BydNavigationOutputs {
     private val cluster = NavigationOutputWorker("diplay-cluster-output", BydClusterBridge::clear)
     private val fceCluster = NavigationOutputWorker("diplay-fce-cluster-output", FceClusterBridge::clear)
 
-    /** The host reports whether its CarPlay map window is on the cluster (see [BydClusterMapPause]). */
-    fun setClusterMapShown(shown: Boolean) {
-        BydClusterMapPause.clusterMapShown = shown
+    /**
+     * The host reports whether its CarPlay map window is on the cluster, and whether a centre-screen
+     * copy (the centre card or an embedded launcher map) also draws that stream. A copy only stops
+     * the stream pause ([BydClusterMapPause]); the cluster keeps its projection mode.
+     */
+    fun setClusterMapShown(shown: Boolean, mirrored: Boolean = false) {
+        BydClusterMapPause.clusterMapShown = shown && !mirrored
         BydClusterBridge.setMapShown(shown)
     }
 

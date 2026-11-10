@@ -33,7 +33,8 @@ internal object BydClusterBridge {
     private var guidanceLogged = false
 
     private var guidanceActive = false
-    private var mapShown = false
+    internal var mapShown = false
+        private set
 
     fun initialize(appContext: Context) = synchronized(lock) {
         if (context != null) return@synchronized
