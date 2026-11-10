@@ -52,6 +52,8 @@ internal class MicrophoneUplink(
     /** The pause before each new recorder that [recover] builds; its size is how many it builds per failure. */
     private val rebuildBackoffMillis: List<Long> = REBUILD_BACKOFF_MILLIS,
     private val geelyHeadUnit: () -> Boolean = { GeelyHeadUnit.detected },
+    /** Whether the car's phone audio state handles CarPlay calls; see [PhoneAudioRoute.carPlayCallsUseCarAudio]. */
+    private val carPhoneState: () -> Boolean = { PhoneAudioRoute.carPlayCallsUseCarAudio() },
 ) : Closeable {
     private val running = AtomicBoolean(false)
     private val stats = MicrophoneCaptureStats(config, report = { message ->
@@ -73,6 +75,8 @@ internal class MicrophoneUplink(
     private var recoveryAttempts = 0
     /** New VOICE_COMMUNICATION recorders in a row that did not record; see [fallBackFromCommunicationSource]. */
     private var failedCommunicationRecorders = 0
+    /** This unit refused to build a VOICE_RECOGNITION recorder in [start], so a call never falls back to it. */
+    private var recognitionRejected = false
 
     fun start(): Boolean {
         if (!running.compareAndSet(false, true)) return true
@@ -97,7 +101,7 @@ internal class MicrophoneUplink(
         val source = when {
             config.audioType == TELEPHONY -> telephonyMicrophoneSource(
                 speakerphoneCall = speakerphoneCall,
-                carPhoneState = PhoneAudioRoute.carPlayCallsUseCarAudio(),
+                carPhoneState = carPhoneState(),
                 geelyHeadUnit = geelyHeadUnit(),
             )
             // The Geely/Lynk head unit only opens the microphone for the voice-communication
@@ -134,6 +138,7 @@ internal class MicrophoneUplink(
         // Some head units throw on VOICE_RECOGNITION at build(); VOICE_COMMUNICATION works there.
         val nextRecorder = createRecorder(source)
             ?: if (source == MediaRecorder.AudioSource.VOICE_RECOGNITION) {
+                recognitionRejected = true
                 this.source = MediaRecorder.AudioSource.VOICE_COMMUNICATION
                 stats.useSource(MediaRecorder.AudioSource.VOICE_COMMUNICATION)
                 createRecorder(MediaRecorder.AudioSource.VOICE_COMMUNICATION)
@@ -223,7 +228,7 @@ internal class MicrophoneUplink(
     }
 
     private fun voiceEffects(sessionId: Int): List<AudioEffect> {
-        if (PhoneAudioRoute.carPlayCallsUseCarAudio()) {
+        if (carPhoneState()) {
             // In the car's phone audio state its own processing handles echo and noise, and was only measured
             // with the platform effects off.
             Log.i(TAG, "microphone effects left to the car's phone audio state")
@@ -423,7 +428,8 @@ internal class MicrophoneUplink(
                 stats.restarted(attempt, reason, failed.routedDeviceType())
                 return failed
             }
-            stats.restartFailed(attempt, reason, newRecorder = false, state = failed.recordingState)
+            // A stream that closed during a stalled start was stopped by close(); that is not a failure.
+            if (running.get()) stats.restartFailed(attempt, reason, newRecorder = false, state = failed.recordingState)
         }
         retire(failed)
         for (pause in rebuildBackoffMillis) {
@@ -433,7 +439,7 @@ internal class MicrophoneUplink(
             val attempt = ++recoveryAttempts
             val next = createRecorder(source)
             if (next == null) {
-                stats.restartFailed(attempt, reason, newRecorder = true, state = null)
+                if (running.get()) stats.restartFailed(attempt, reason, newRecorder = true, state = null)
                 rebuildFailed()
                 continue
             }
@@ -451,10 +457,11 @@ internal class MicrophoneUplink(
             if (state == AudioRecord.RECORDSTATE_RECORDING) {
                 failedCommunicationRecorders = 0
                 stats.restarted(attempt, reason, next.routedDeviceType(), newRecorder = true,
-                    platformEffects = enabledEffectNames())
+                    platformEffects = enabledEffectNames(),
+                    diplayEchoCanceller = if (config.audioType == TELEPHONY) echoCanceller != null else null)
                 return next
             }
-            stats.restartFailed(attempt, reason, newRecorder = true, state = state)
+            if (running.get()) stats.restartFailed(attempt, reason, newRecorder = true, state = state)
             rebuildFailed()
             retire(next)
         }
@@ -469,19 +476,19 @@ internal class MicrophoneUplink(
     /**
      * After [FALLBACK_AFTER_FAILED_RECORDERS] new VOICE_COMMUNICATION recorders in a row fail on a call, the rest
      * are built from VOICE_RECOGNITION, which recorded Siri on the #1214 head unit. That source gets no platform
-     * echo canceller by default, so the far end may hear some echo; that is chosen over a call it cannot hear,
-     * and the report line says which canceller is left. Geely/Lynk units record silence on VOICE_RECOGNITION
-     * (see [telephonyMicrophoneSource]), so they keep VOICE_COMMUNICATION.
+     * echo canceller by default, so the far end may hear some echo; that is chosen over a call it cannot hear.
+     * The 'recording restarted' line of the new recorder says which effects and canceller it got once they were
+     * attached. Geely/Lynk units record silence on VOICE_RECOGNITION (see [telephonyMicrophoneSource]), and a
+     * unit that refused to build VOICE_RECOGNITION in [start] would refuse it again, so both keep VOICE_COMMUNICATION.
      */
     private fun fallBackFromCommunicationSource() {
         if (config.audioType != TELEPHONY || source != MediaRecorder.AudioSource.VOICE_COMMUNICATION) return
-        if (failedCommunicationRecorders < FALLBACK_AFTER_FAILED_RECORDERS || geelyHeadUnit()) return
+        if (failedCommunicationRecorders < FALLBACK_AFTER_FAILED_RECORDERS || geelyHeadUnit() || recognitionRejected) return
         Log.w(TAG, "microphone call source falls back to VOICE_RECOGNITION after $failedCommunicationRecorders failed recorders")
         stats.sourceFallback(
             from = source,
             to = MediaRecorder.AudioSource.VOICE_RECOGNITION,
             failedRecorders = failedCommunicationRecorders,
-            diplayEchoCanceller = echoCanceller != null,
         )
         source = MediaRecorder.AudioSource.VOICE_RECOGNITION
         stats.useSource(source)

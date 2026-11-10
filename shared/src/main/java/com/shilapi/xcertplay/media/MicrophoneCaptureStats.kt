@@ -86,7 +86,7 @@ internal class MicrophoneCaptureStats(
 
     /**
      * Recording works again. [newRecorder] says whether the failed recorder was replaced; a new one also names
-     * the platform effects now enabled on its session.
+     * the platform effects now enabled on its session and, on a call, whether DiPlay's echo canceller still runs.
      */
     fun restarted(
         attempt: Int,
@@ -94,10 +94,12 @@ internal class MicrophoneCaptureStats(
         routeType: Int?,
         newRecorder: Boolean = false,
         platformEffects: String? = null,
+        diplayEchoCanceller: Boolean? = null,
     ) {
         emit("Microphone: recording restarted $metadata attempt=$attempt reason=$reason " +
             "routedDeviceType=${routeType ?: "unknown"} recorder=${recorderKind(newRecorder)}" +
-            (platformEffects?.let { " platformEffects=$it" } ?: ""))
+            (platformEffects?.let { " platformEffects=$it" } ?: "") +
+            (diplayEchoCanceller?.let { " diplayEchoCanceller=${if (it) "on" else "off"}" } ?: ""))
     }
 
     /** One attempt to record again did not work; [state] is the recorder's recordingState, null when none was built. */
@@ -111,11 +113,13 @@ internal class MicrophoneCaptureStats(
         emit("Microphone: capture stopped $metadata reason=recording-failed attempts=$attempts")
     }
 
-    /** A call's recorder source changed after the first one kept failing; see MicrophoneUplink. */
-    fun sourceFallback(from: Int, to: Int, failedRecorders: Int, diplayEchoCanceller: Boolean) {
+    /**
+     * A call's recorder source changed after the first one kept failing; see MicrophoneUplink. The effects the
+     * new recorder gets are on its 'recording restarted' line, since they are only known once it is built.
+     */
+    fun sourceFallback(from: Int, to: Int, failedRecorders: Int) {
         emit("Microphone: source fallback type=$type from=${sourceName(from)} to=${sourceName(to)} " +
-            "failedRecorders=$failedRecorders defaultPlatformAec=none " +
-            "diplayEchoCanceller=${if (diplayEchoCanceller) "on" else "off"}")
+            "failedRecorders=$failedRecorders")
     }
 
     private fun recorderKind(newRecorder: Boolean) = if (newRecorder) "new" else "same"
