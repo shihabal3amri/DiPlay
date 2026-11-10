@@ -27,11 +27,11 @@ class EcarxWheelSpeedTest {
         assertNull(EcarxWheelSpeed.metersPerSecond(500f))
     }
 
-    @Test fun aSensorThatAnsweredNoIsAskedAgainAfterHalfAMinute() {
+    @Test fun aSensorThatAnsweredNoIsAskedAgainAfterFiveSeconds() {
         assertFalse(ecarxStillDenied(null, 1_000L)) // never asked
         assertTrue(ecarxStillDenied(1_000L, 1_000L))
-        assertTrue(ecarxStillDenied(1_000L, 30_999L))
-        assertFalse(ecarxStillDenied(1_000L, 31_000L))
+        assertTrue(ecarxStillDenied(1_000L, 5_999L))
+        assertFalse(ecarxStillDenied(1_000L, 6_000L))
     }
 
     @Test fun theSensorManagerIsLookedUpAgainOnlyWhenNothingHasAnsweredThroughItForHalfAMinute() {

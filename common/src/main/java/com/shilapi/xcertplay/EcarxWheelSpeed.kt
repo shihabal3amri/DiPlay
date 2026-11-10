@@ -47,8 +47,8 @@ internal object EcarxWheelSpeed : VehicleSpeedSource {
     @Volatile private var speedSupported = false
     @Volatile private var speedDeniedAt: Long? = null
     private var speedStatusLogged: String? = null // poll thread
-    @Volatile private var lastAttemptAt = 0L
-    @Volatile private var lastSuccessAt = 0L // a lookup or a call that answered
+    private var lastAttemptAt = 0L // guarded by sensorLock
+    private var lastSuccessAt = 0L // guarded by sensorLock: a lookup or a call that answered
     private var failures = 0 // guarded by sensorLock: calls in a row that threw
     private var executor: ScheduledExecutorService? = null
     private val samples = ArrayList<VehicleSpeedSample>()
@@ -218,6 +218,7 @@ internal object EcarxWheelSpeed : VehicleSpeedSource {
         failures = 0
         lastAttemptAt = 0L
         failureLogged = false
+        speedStatusLogged = null // the new manager's answer is logged
         // The new manager is asked again, and nothing read through the old one is sent with its readings.
         speedSupported = false
         speedDeniedAt = null
@@ -228,8 +229,11 @@ internal object EcarxWheelSpeed : VehicleSpeedSource {
     }
 }
 
-/** The framework may answer "no" while it is still coming up, so a no is asked again after this. */
-private const val ECARX_ASK_AGAIN_MILLIS = 30_000L
+/**
+ * The framework may answer "no" while it is still coming up, so a no is asked again after this. Asking
+ * is one call through a manager already held, and each answer keeps the manager from being looked up again.
+ */
+private const val ECARX_ASK_AGAIN_MILLIS = 5_000L
 /** Calls in a row that throw before the sensor manager is looked up again. */
 private const val ECARX_FAILURES_BEFORE_RECONNECT = 3
 /** How long nothing must have answered through a sensor manager before it is looked up again. */
