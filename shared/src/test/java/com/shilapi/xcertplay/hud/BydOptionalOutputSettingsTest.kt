@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.ContextWrapper
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageInfo
+import com.shilapi.xcertplay.DiLink51Firmware
 import org.junit.Assert.*
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -46,4 +47,13 @@ class BydOptionalOutputSettingsTest {
         assertTrue(BydStandaloneHudOutput.diagnostics(knownApp).contains("standaloneHudAvailable=false"))
     }
 
+    @Test fun knownDiLink51FirmwareStillRequiresTheVerifiedReceiver() {
+        val app = RuntimeEnvironment.getApplication()
+        val knownApp = object : ContextWrapper(app) {
+            override fun getPackageName(): String = "com.shihab.diplay"
+        }
+        ShadowBuild.setFingerprint(DiLink51Firmware.TANG_L_FINGERPRINT)
+        assertFalse(BydStandaloneHudOutput.available(knownApp))
+        assertTrue(BydStandaloneHudOutput.diagnostics(knownApp).contains("standaloneHudAvailable=false"))
+    }
 }

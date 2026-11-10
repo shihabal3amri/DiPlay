@@ -15,6 +15,7 @@ import android.util.Log
 import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.TextView
+import com.shilapi.xcertplay.DiLink51Firmware
 import java.security.MessageDigest
 
 /** Parked, finite probe of stock IPC. No shell, socket, SDK privilege or helper. */
@@ -83,8 +84,8 @@ class StandaloneHudDemoActivity : Activity() {
     private fun validateTarget() {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.P) error("This test is restricted to the inspected firmware")
         check(packageName == "com.shihab.diplay.hudtest" && Process.myUid() >= 10000)
-        check(Build.FINGERPRINT == "BYD-AUTO/IVI/IVI:13/TP1A.220624.014/eng.build20260722.221155:user/release-keys") {
-            "This test is restricted to the inspected firmware"
+        check(DiLink51Firmware.supported()) {
+            "This test is restricted to the known DiLink 5.1 firmware"
         }
         val info = packageManager.getPackageInfo(target.packageName, PackageManager.GET_SIGNING_CERTIFICATES)
         check(info.longVersionCode == 10601004L) { "Different stock receiver version" }
