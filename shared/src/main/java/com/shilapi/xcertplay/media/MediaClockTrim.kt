@@ -57,8 +57,9 @@ internal class MediaClockTrim(
         // rate; do not teach the *next* music stream an artificial clock correction.
         compressedBacklog = compressedFrames > targetFrames
         val buffered = queuedFrames.coerceAtLeast(0L) +
-            compressedFrames.coerceIn(0L, sampleRate.toLong() * 16L)
-        val elapsedNs = nowNs - lastSampleNs
+            compressedFrames.coerceIn(0L, (sampleRate.toLong() * 16L).coerceAtLeast(0L))
+        // A clock that jumps backwards is not a negative interval.
+        val elapsedNs = (nowNs - lastSampleNs).coerceAtLeast(0L)
         // Samples come only after writes, and over Wi-Fi the writes come in bursts 0.4 s apart: the level
         // just after one is its peak. Average what was queued over the time since the last write, while
         // the track drained it, or a 300 ms target reads as overfull and the trim plays fast (#807).
@@ -110,7 +111,10 @@ internal class MediaClockTrim(
     /** The playback rate to set now, or null to keep the current one. */
     fun rateDue(nowNs: Long): Int? {
         if (measuring != null) {
-            val learned = (sampleRate * (1.0 + integral)).roundToInt()
+            // The measuring phase returns before the PI branch clamps `integral`, so a bad
+            // learned trim (or a NaN) would otherwise reach roundToInt / setPlaybackRate.
+            val bounded = if (integral.isFinite()) integral.coerceIn(-MAX_TRIM, MAX_TRIM) else 0.0
+            val learned = (sampleRate * (1.0 + bounded)).roundToInt()
             if (learned == rate) return null
             rate = learned
             return learned
