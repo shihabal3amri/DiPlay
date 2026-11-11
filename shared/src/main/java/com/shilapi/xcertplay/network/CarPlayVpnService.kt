@@ -15,6 +15,7 @@ import com.shilapi.xcertplay.airplay.AirPlayIdentity
 import com.shilapi.xcertplay.airplay.AirPlayMediaHandler
 import com.shilapi.xcertplay.airplay.AirPlaySession
 import com.shilapi.xcertplay.airplay.AirPlaySessionListener
+import com.shilapi.xcertplay.airplay.ControlBodyBudget
 import com.shilapi.xcertplay.airplay.PairingStore
 import com.shilapi.xcertplay.mfi.MfiAuthenticator
 import com.shilapi.xcertplay.transport.NcmUsbBridge
@@ -58,6 +59,7 @@ class CarPlayVpnService : VpnService() {
 
     private val binder = LocalBinder()
     private val active = AtomicBoolean(false)
+    internal var controlBodyBudget = ControlBodyBudget.shared
     private val sessionsLock = Any()
     private val sessions = mutableSetOf<AirPlaySession>()
     @Volatile private var attachment: AirPlayAttachment? = null
@@ -286,6 +288,12 @@ class CarPlayVpnService : VpnService() {
                         pairings = current.pairings,
                         mfi = current.mfi,
                         listener = object : AirPlaySessionListener by current.listener {
+                            override fun allowsLargeVideoResources(session: AirPlaySession): Boolean =
+                                current.listener.allowsLargeVideoResources(session)
+
+                            override fun onVideoResourceRejected(session: AirPlaySession, streamId: Long, reason: String, bodyBytes: Int) =
+                                current.listener.onVideoResourceRejected(session, streamId, reason, bodyBytes)
+
                             override fun onSessionActive(session: AirPlaySession) {
                                 if (current.listenerIdentity == null || !internalPeer) current.listener.onSessionActive(session)
                             }
@@ -308,7 +316,10 @@ class CarPlayVpnService : VpnService() {
                             }
                         },
                         media = current.media,
-                    ).also(::addSession)
+                    ).also {
+                        it.controlBodyBudget = controlBodyBudget
+                        addSession(it)
+                    }
                 }
                 session.start()
             }

@@ -2025,6 +2025,11 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
                 AirPlayPersistence.saveLowLatencyDecoder(this, it)
                 markReconnectNeeded()
             }
+            toggle(card, getString(R.string.settings_video_use_iphone_network),
+                getString(R.string.settings_video_use_iphone_network_description),
+                AirPlayPersistence.loadVideoUseIphoneNetwork(this)) {
+                AirPlayPersistence.saveVideoUseIphoneNetwork(this, it)
+            }
             toggle(card, getString(R.string.call_echo_cancellation), getString(R.string.call_echo_cancellation_description),
                 AirPlayPersistence.loadCallEchoCancellation(this)) {
                 AirPlayPersistence.saveCallEchoCancellation(this, it)

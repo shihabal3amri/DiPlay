@@ -1057,4 +1057,6 @@
     <string name="cluster_projection_shape_description">Half screen keeps the speed and status readouts the cluster normally shows beside the map; full screen lets the map fill the cluster. DiPlay sets the shape whenever the CarPlay map appears, which otherwise overrides the shape picked on the car. Needs ADB over network on the head unit.</string>
     <string name="settings_cluster_speedometer_album_color">Use album color for speedometer background</string>
     <string name="settings_cluster_speedometer_album_color_description">Match the album frame color with smooth transitions. Keeps the selected opacity.</string>
+    <string name="settings_video_use_iphone_network">Use iPhone network for video traffic (experimental)</string>
+    <string name="settings_video_use_iphone_network_description">Loads supported streaming video over the iPhone’s internet connection and may use mobile data. Videos provided as a single file still load over the head unit’s internet connection, while streams that read different parts of the same file require turning off the relay to play. Changes apply the next time you open a video.</string>
 </resources>

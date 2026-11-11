@@ -10,7 +10,29 @@ package com.shilapi.xcertplay.airplay
 object BplistCodec {
     private val magic = "bplist00".toByteArray(Charsets.US_ASCII)
 
-    fun decode(bytes: ByteArray): Any? {
+    fun decode(bytes: ByteArray): Any? = decode(bytes, MAX_PAYLOAD_BYTES)
+
+    /** Only for a negotiated video resource on the authenticated control channel. */
+    internal fun decodeVideoResource(bytes: ByteArray): Any? {
+        require(bytes.size <= VideoInCar.MAX_RESOURCE_COMMAND_BYTES) { "bplist: video response too large" }
+        return decode(bytes, minOf(bytes.size.toLong() + 64 * 1024, VideoInCar.MAX_RESOURCE_COMMAND_BYTES.toLong()))
+    }
+
+    private fun decode(bytes: ByteArray, maxPayloadBytes: Long): Any? {
+        val allowance = bytes.size.toLong() * WORK_PER_BYTE + WORK_BASE
+        return decodeInput(Input(bytes), Limits(minOf(allowance, MAX_READS), minOf(allowance, maxPayloadBytes)))
+    }
+
+    /** Two nested plists share the original wire bytes and one metadata/work budget. */
+    internal fun decodeVideoResourceView(bytes: ByteArray): Any? {
+        require(bytes.size <= VideoInCar.MAX_RESOURCE_COMMAND_BYTES) { "bplist: video response too large" }
+        return decodeInput(Input(bytes), Limits(MAX_READS, 64 * 1024, true))
+    }
+
+    internal fun decodeVideoResourceView(data: DataSlice): Any? =
+        decodeInput(Input(data.source, data.offset, data.size), data.limits)
+
+    private fun decodeInput(bytes: Input, limits: Limits): Any? {
         require(bytes.size >= 40) { "bplist: too short" }
         require(bytes.copyOfRange(0, magic.size).contentEquals(magic)) { "bplist: bad magic" }
 
@@ -23,9 +45,14 @@ object BplistCodec {
         val offsetTable = readBigEndianLong(bytes, (trailer + 24).toLong(), 8)
         // The peer chooses these numbers. Each object is at least one byte of the data, so no count above its length is real.
         require(declaredObjects in 1..trailer.toLong() && topObject in 0 until declaredObjects) { "bplist: bad object count" }
+        require(declaredObjects <= MAX_READS) { "bplist: too many object offsets" }
         require(offsetTable in magic.size.toLong()..trailer.toLong() &&
             offsetTable + declaredObjects * offsetSize <= trailer) { "bplist: bad offset table" }
         val numObjects = declaredObjects.toInt()
+        if (limits.dataViews) {
+            limits.offsetEntries -= declaredObjects
+            require(limits.offsetEntries >= 0) { "bplist: nested offset budget exceeded" }
+        }
 
         val offsets = LongArray(numObjects)
         for (index in offsets.indices) {
@@ -35,8 +62,6 @@ object BplistCodec {
         }
         // Each object read in a plain tree uses at least one reference byte, so reads rarely exceed the size. The caps
         // keep the memory of the result bounded however large the body is.
-        val allowance = bytes.size.toLong() * WORK_PER_BYTE + WORK_BASE
-        val limits = Limits(minOf(allowance, MAX_READS), minOf(allowance, MAX_PAYLOAD_BYTES))
         return readObject(bytes, offsets, refSize, topObject.toInt(), 0, limits)
     }
 
@@ -121,7 +146,7 @@ object BplistCodec {
         return concatBytes(*parts.toTypedArray())
     }
 
-    private fun readObject(bytes: ByteArray, offsets: LongArray, refSize: Int, index: Int, depth: Int, limits: Limits): Any? {
+    private fun readObject(bytes: Input, offsets: LongArray, refSize: Int, index: Int, depth: Int, limits: Limits): Any? {
         require(depth <= MAX_DEPTH) { "bplist: nested too deep" }
         require(--limits.reads >= 0) { "bplist: expands to more objects than its size allows" }
         require(index in offsets.indices) { "bplist: reference out of range" }
@@ -132,7 +157,10 @@ object BplistCodec {
         position++
 
         fun readCount(): Int {
-            if (nibble != 0x0f) return nibble
+            if (nibble != 0x0f) {
+                require(nibble <= bytes.size - position) { "bplist: count larger than the data" }
+                return nibble
+            }
             val sizeMarker = bytes[position].toInt() and 0xff
             position++
             val intBytes = 1 shl (sizeMarker and 0x0f)
@@ -170,8 +198,11 @@ object BplistCodec {
             )
             0x4 -> {
                 val count = readCount()
-                charge(limits, count.toLong())
-                bytes.copyOfRange(position, position + count)
+                if (limits.dataViews) DataSlice(bytes.source, bytes.offset + position, count, limits)
+                else {
+                    charge(limits, count.toLong())
+                    bytes.copyOfRange(position, position + count)
+                }
             }
             // UID (keyed archives): its integer value.
             0x8 -> {
@@ -181,13 +212,13 @@ object BplistCodec {
             0x5 -> {
                 val count = readCount()
                 charge(limits, count.toLong())
-                String(bytes, position, count, Charsets.US_ASCII)
+                bytes.string(position, count, Charsets.US_ASCII)
             }
             0x6 -> {
                 val count = readCount()
                 require(count.toLong() * 2 <= bytes.size - position) { "bplist: string longer than the data" }
                 charge(limits, count.toLong() * 2)
-                String(bytes, position, count * 2, Charsets.UTF_16BE)
+                bytes.string(position, count * 2, Charsets.UTF_16BE)
             }
             0xa, 0xc -> {
                 val count = readCount()
@@ -202,6 +233,7 @@ object BplistCodec {
             }
             0xd -> {
                 val count = readCount()
+                require(count.toLong() * 2 <= limits.reads) { "bplist: too many dictionary entries" }
                 require(count.toLong() * 2 * refSize <= bytes.size - position) { "bplist: dictionary larger than the data" }
                 val dict = LinkedHashMap<String, Any?>(count)
                 for (i in 0 until count) {
@@ -295,7 +327,7 @@ object BplistCodec {
         }
     }
 
-    private fun readReference(bytes: ByteArray, offset: Long, size: Int): Int {
+    private fun readReference(bytes: Input, offset: Long, size: Int): Int {
         val reference = readBigEndianLong(bytes, offset, size)
         require(reference in 0..Int.MAX_VALUE.toLong()) { "bplist: reference out of range" }
         return reference.toInt()
@@ -304,12 +336,12 @@ object BplistCodec {
     /** Payload that is copied on every read of an object costs as much of the budget as it is long. */
     private fun charge(limits: Limits, size: Long) {
         // A short string costs one read like any object. Equal keys are stored once, so dictionaries read them often.
-        if (size <= SMALL_PAYLOAD_BYTES) return
+        if (!limits.dataViews && size <= SMALL_PAYLOAD_BYTES) return
         limits.payload -= size
         require(limits.payload >= 0) { "bplist: shared data is read more often than its size allows" }
     }
 
-    private fun readBigEndianLong(bytes: ByteArray, offset: Long, size: Int): Long {
+    private fun readBigEndianLong(bytes: Input, offset: Long, size: Int): Long {
         require(offset >= 0 && offset + size <= bytes.size) { "bplist: value runs past the data" }
         var value = 0L
         var base = offset.toInt()
@@ -319,7 +351,33 @@ object BplistCodec {
         return value
     }
 
-    private class Limits(var reads: Long, var payload: Long)
+    internal class Limits(var reads: Long, var payload: Long, val dataViews: Boolean = false,
+        var offsetEntries: Long = MAX_READS)
+
+    internal class DataSlice internal constructor(val source: ByteArray, val offset: Int, val size: Int,
+        internal val limits: Limits) {
+        init { require(offset >= 0 && size >= 0 && offset <= source.size - size) }
+        fun copySmallBytes(): ByteArray {
+            require(size <= 256 * 1024) { "bplist: large data must be spooled without copying" }
+            return source.copyOfRange(offset, offset + size)
+        }
+    }
+
+    private class Input(val source: ByteArray, val offset: Int = 0, val size: Int = source.size - offset) {
+        init { require(offset >= 0 && size >= 0 && offset <= source.size - size) }
+        operator fun get(index: Int): Byte {
+            require(index in 0 until size) { "bplist: index outside input" }
+            return source[offset + index]
+        }
+        fun copyOfRange(from: Int, to: Int): ByteArray {
+            require(from >= 0 && to >= from && to <= size)
+            return source.copyOfRange(offset + from, offset + to)
+        }
+        fun string(start: Int, length: Int, charset: java.nio.charset.Charset): String {
+            require(start >= 0 && length >= 0 && start <= size - length)
+            return String(source, offset + start, length, charset)
+        }
+    }
 
     private sealed class Node
     private class Leaf(val body: ByteArray) : Node()
