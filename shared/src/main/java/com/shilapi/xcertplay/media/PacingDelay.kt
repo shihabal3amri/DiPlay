@@ -24,6 +24,13 @@ internal class PacingDelay(
     private val risePerFrame: Long = 1_000_000L,
     private val fallPerFrame: Long = 500_000L,
 ) {
+    init {
+        require(window > 0) { "window must be positive" }
+        require(percentile in 0..100) { "percentile must be in 0..100" }
+        require(refreshEvery > 0) { "refreshEvery must be positive" }
+        require(minNanos <= maxNanos) { "minNanos must not exceed maxNanos" }
+    }
+
     private val needs = LongArray(window)
     private var count = 0
     private var next = 0
@@ -40,7 +47,7 @@ internal class PacingDelay(
         if (count < window) count++
         if (++frames % refreshEvery == 0) {
             val sorted = needs.copyOf(count).also { it.sort() }
-            goal = (sorted[(count - 1) * percentile / 100] + marginNanos).coerceIn(minNanos, maxNanos)
+            goal = (sorted[((count - 1).toLong() * percentile / 100).toInt()] + marginNanos).coerceIn(minNanos, maxNanos)
         }
         nanos += (goal - nanos).coerceIn(-fallPerFrame, risePerFrame)
     }

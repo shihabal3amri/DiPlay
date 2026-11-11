@@ -55,4 +55,20 @@ class PacingDelayTest {
         assertEquals(30 * ms, low.nanos)
         assertEquals(200 * ms, PacingDelay(500 * ms).nanos)
     }
+
+@Test fun invalidTuningParametersAreRejectedAtConstruction() {
+        assertTrue(runCatching { PacingDelay(90 * ms, window = 0) }.exceptionOrNull() is IllegalArgumentException)
+        assertTrue(runCatching { PacingDelay(90 * ms, window = -1) }.exceptionOrNull() is IllegalArgumentException)
+        assertTrue(runCatching { PacingDelay(90 * ms, percentile = -1) }.exceptionOrNull() is IllegalArgumentException)
+        assertTrue(runCatching { PacingDelay(90 * ms, percentile = 101) }.exceptionOrNull() is IllegalArgumentException)
+        assertTrue(runCatching { PacingDelay(90 * ms, refreshEvery = 0) }.exceptionOrNull() is IllegalArgumentException)
+        assertTrue(runCatching { PacingDelay(90 * ms, minNanos = 200 * ms, maxNanos = 30 * ms) }
+            .exceptionOrNull() is IllegalArgumentException)
+    }
+
+    @Test fun theHighestValidPercentileStillPicksALegalIndex() {
+        val delay = PacingDelay(90 * ms, window = 20, percentile = 100, refreshEvery = 1)
+        repeat(20) { delay.onFrame(150 * ms) }
+        assertTrue(delay.nanos in 30 * ms..200 * ms)
+    }
 }
