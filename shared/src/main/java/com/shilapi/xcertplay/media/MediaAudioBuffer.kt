@@ -34,8 +34,12 @@ object MediaAudioBuffer {
         )
         if (!isMedia) return lowLatency
         val bytesPerSecond = sampleRate.toLong() * channels.coerceIn(1, 2) * 2
-        val start = (bytesPerSecond * sanitize(mediaMillis) / 1000).toInt()
-        val capacity = (bytesPerSecond * (sanitize(mediaMillis) + HEADROOM_MILLIS) / 1000).toInt()
+        // Long.toInt() wraps on an absurd sample rate, which can put the capacity below the
+        // start level and leave play() waiting for a buffer that can never fill.
+        val start = (bytesPerSecond * sanitize(mediaMillis) / 1000)
+            .coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
+        val capacity = (bytesPerSecond * (sanitize(mediaMillis) + HEADROOM_MILLIS) / 1000)
+            .coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
         return Plan(
             trackBufferBytes = maxOf(capacity, lowLatency.trackBufferBytes),
             startBytes = maxOf(start, lowLatency.startBytes),
@@ -48,6 +52,8 @@ object MediaAudioBuffer {
      */
     fun startBytesFor(plannedStartBytes: Int, actualCapacityBytes: Int, writeChunkBytes: Int): Int {
         if (actualCapacityBytes <= 0) return plannedStartBytes
-        return minOf(plannedStartBytes, actualCapacityBytes - writeChunkBytes).coerceAtLeast(writeChunkBytes)
+        val ceiling = (actualCapacityBytes - writeChunkBytes).coerceAtLeast(0)
+        return minOf(plannedStartBytes, ceiling)
+            .coerceAtLeast(minOf(writeChunkBytes, actualCapacityBytes))
     }
 }

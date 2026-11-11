@@ -1,6 +1,7 @@
 package com.shilapi.xcertplay.media
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class MediaAudioBufferTest {
@@ -76,5 +77,17 @@ class MediaAudioBufferTest {
         assertEquals(98_000, MediaAudioBuffer.startBytesFor(192_000, 100_000, 2_048 - 48))
         assertEquals(57_600, MediaAudioBuffer.startBytesFor(57_600, 134_400, 2_048))
         assertEquals(57_600, MediaAudioBuffer.startBytesFor(57_600, 0, 2_048))
+    }
+
+@Test
+    fun `an absurd sample rate cannot wrap the capacity below the start level`() {
+        val plan = MediaAudioBuffer.plan(true, 458_333_333, 2, 0, 1000)
+        assertTrue("capacity=${plan.trackBufferBytes} start=${plan.startBytes}",
+            plan.trackBufferBytes >= plan.startBytes)
+    }
+
+    @Test
+    fun `a write chunk larger than the granted buffer cannot push the start above it`() {
+        assertTrue(MediaAudioBuffer.startBytesFor(1000, 100, 200) <= 100)
     }
 }
