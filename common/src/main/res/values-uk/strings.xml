@@ -966,6 +966,5 @@
     <string name="cluster_projection_shape_description">На пів екрана швидкість і стан, які панель зазвичай показує, залишаються поруч із картою; на весь екран карта займає всю панель. DiPlay задає цей вигляд щоразу, коли з&#8217;являється карта CarPlay, інакше він перекриває вигляд, вибраний в автомобілі. Потрібен ADB через мережу на головному пристрої.</string>
     <string name="settings_cluster_speedometer_album_color">Колір альбому для тла спідометра</string>
     <string name="settings_cluster_speedometer_album_color_description">Плавно змінює тло на колір рамки альбому. Зберігає вибрану непрозорість.</string>
-    <string name="wired_teardown_pending">Завершення роботи USB ще триває. Від’єднайте iPhone, зачекайте та натисніть «Повторити підключення».</string>
-    <string name="wired_teardown_failed">Не вдалося завершити роботу USB. Від’єднайте iPhone і перезапустіть головний пристрій перед повторним підключенням.</string>
+    <string name="wired_teardown_pending">Завершення роботи USB ще триває. Від’єднайте iPhone, зачекайте та натисніть «%1$s».</string>
 </resources>

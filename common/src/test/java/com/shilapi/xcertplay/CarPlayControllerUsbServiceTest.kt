@@ -13,9 +13,10 @@ import android.hardware.usb.UsbManager
 import android.os.Looper
 import com.shilapi.xcertplay.airplay.*
 import com.shilapi.xcertplay.hud.BydNavigationOutputs
+import com.shilapi.xcertplay.iap2.session.Iap2Session
+import com.shilapi.xcertplay.network.ManualHotspotManager
 import com.shilapi.xcertplay.orchestration.*
 import com.shilapi.xcertplay.transport.Iap2IdentificationConfig
-import com.shilapi.xcertplay.transport.Iap2UsbMuxHost
 import com.shilapi.xcertplay.transport.UsbDeviceId
 import org.junit.After
 import org.junit.Assert.*
@@ -89,17 +90,32 @@ class CarPlayControllerUsbServiceTest {
         assertTrue(controller.awaitClosed(0))
     }
 
-    @Test fun wiredCloseFailureNeverReportsSafeToRestart() {
-        val controller = controller(UsbContext(true), CarPlayTransport.WIRED, MfiTarget.LOCAL)
-        val mux = org.mockito.Mockito.mock(Iap2UsbMuxHost::class.java)
-        org.mockito.Mockito.doThrow(IllegalStateException("close failed")).`when`(mux).close()
-        ReflectionHelpers.setField(controller, "mux", mux)
+    @Test fun wiredCloseExceptionIsLoggedAndDoesNotBlockRestart() {
+        val logs = mutableListOf<String>()
+        val controller = controller(UsbContext(true), CarPlayTransport.WIRED, MfiTarget.LOCAL, logs)
+        val csm = org.mockito.Mockito.mock(Iap2Session::class.java)
+        org.mockito.Mockito.doThrow(IllegalStateException("close failed")).`when`(csm).close()
+        ReflectionHelpers.setField(controller, "csm", csm)
         controller.close()
-        val completed = ReflectionHelpers.getField<CountDownLatch>(controller, "teardownComplete")
-        assertTrue(completed.await(2, TimeUnit.SECONDS))
-        assertFalse("a failed USB close is not a safe handoff", controller.awaitClosed(0))
-        assertTrue(controller.wiredTeardownFailed())
-        controllers.remove(controller)
+        assertTrue(controller.awaitClosed(2_000))
+        assertTrue(logs.any { it.contains("teardown resource=CSM completed=false") })
+    }
+
+    @Test fun wiredCloseSetupExceptionDoesNotSkipRemainingCleanup() {
+        val context = UsbContext(true)
+        val logs = mutableListOf<String>()
+        val controller = controller(context, CarPlayTransport.WIRED, MfiTarget.LOCAL, logs)
+        controller.start()
+        assertEquals(2, context.receivers.size)
+        val hotspot = org.mockito.Mockito.mock(ManualHotspotManager::class.java)
+        org.mockito.Mockito.doThrow(IllegalStateException("close failed")).`when`(hotspot).close()
+        ReflectionHelpers.setField(controller, "hotspot", hotspot)
+
+        controller.close()
+
+        assertTrue(controller.awaitClosed(2_000))
+        assertEquals(0, context.receivers.size)
+        assertTrue(logs.any { it.contains("teardown resource=manual hotspot completed=false") })
     }
 
     @Test fun wirelessLocalCanBeCreatedAndReachMfiWithoutAUsbService() {

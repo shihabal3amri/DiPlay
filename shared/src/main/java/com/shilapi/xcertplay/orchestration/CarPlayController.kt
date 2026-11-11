@@ -189,7 +189,7 @@ class CarPlayController(
     private enum class Phase { IDLE, MFI, WIRELESS, IPHONE, REENUMERATION, DATAPATHS, CONTROL }
 
     private val appContext = context.applicationContext
-    private val diagnosticAttempt = diagnosticAttempts.incrementAndGet()
+    val diagnosticAttempt = diagnosticAttempts.incrementAndGet()
     private val diagnosticRun = AtomicInteger()
     private val usbManager: UsbManager? = context.getSystemService(UsbManager::class.java)
     private fun currentBluetoothAdapter(): BluetoothAdapter? =
@@ -324,7 +324,6 @@ class CarPlayController(
     private var vpnLatch = CountDownLatch(1)
     private val teardownComplete = CountDownLatch(1)
     internal var wiredCloseTimeoutMillis = WIRED_EXECUTOR_CLOSE_TIMEOUT_MILLIS
-    @Volatile private var wiredResourcesClosed = false
 
     private val serviceConnection = object : ServiceConnection {
         override fun onServiceConnected(name: ComponentName, binder: IBinder) {
@@ -725,50 +724,57 @@ class CarPlayController(
             wirelessGeneration.incrementAndGet()
             dashboardMapOutputVisible = false
         }
-        firstTcpWatchdog?.terminate()
-        wiredStartWatchdog?.terminate()
-        BydBluetoothSuspend.resume(appContext, this) { debugLog(it) }
-        startupTimer.shutdownNow()
-        (hotspot as? ManualHotspotManager)?.close()
+        // A wired setup step can fail after disconnect. Still run the remaining cleanup.
+        fun closeSetupStep(name: String, close: () -> Unit) {
+            try {
+                close()
+            } catch (error: Throwable) {
+                if (!isWiredTransport) throw error
+                debugLog("$name teardown failed", error)
+                connectionDiagnostic("teardown resource=$name completed=false")
+            }
+        }
+
+        closeSetupStep("TCP watchdog") { firstTcpWatchdog?.terminate() }
+        closeSetupStep("wired startup watchdog") { wiredStartWatchdog?.terminate() }
+        closeSetupStep("BYD Bluetooth") { BydBluetoothSuspend.resume(appContext, this) { debugLog(it) } }
+        closeSetupStep("startup timer") { startupTimer.shutdownNow() }
+        closeSetupStep("manual hotspot") { (hotspot as? ManualHotspotManager)?.close() }
         val teardownStarted = System.nanoTime()
         connectionDiagnostic("teardown begin transport=${config.transport}")
-        videoGate?.close()
-        BydNavigationOutputs.endNow()
-        com.shilapi.xcertplay.glance.CarPlayGlance.setConnected(false)
-        BydNavigationOutputs.clearClusterStreamControl(::applyClusterUi)
-        closeReceivers()
+        closeSetupStep("video gate") { videoGate?.close() }
+        closeSetupStep("BYD navigation") { BydNavigationOutputs.endNow() }
+        closeSetupStep("CarPlay glance") { com.shilapi.xcertplay.glance.CarPlayGlance.setConnected(false) }
+        closeSetupStep("cluster stream") { BydNavigationOutputs.clearClusterStreamControl(::applyClusterUi) }
+        closeSetupStep("USB receivers") { closeReceivers() }
         availabilityPollGeneration.incrementAndGet()
         permissionPollGeneration += 1
-        touchExecutor.shutdownNow()
-        tunnelExecutor.shutdownNow()
+        closeSetupStep("touch executor") { touchExecutor.shutdownNow() }
+        closeSetupStep("tunnel executor") { tunnelExecutor.shutdownNow() }
         val service = vpnService
-        unbindVpn()
+        closeSetupStep("VPN binding") { unbindVpn() }
         Thread(
             {
-                var wiredCleanupSucceeded = true
                 try {
                     if (config.transport == CarPlayTransport.WIRELESS) {
                         closeBestEffort("wireless stack") { closeWirelessStack(service) }
                         closeBestEffort("Wi-Fi scan pause") { wifiScanPause?.close() }
                         wifiScanPause = null
                     } else {
-                        wiredCleanupSucceeded = closeBestEffort("CSM") { csm?.close() } && wiredCleanupSucceeded
+                        closeBestEffort("CSM") { csm?.close() }
                         csm = null
                     }
-                    val muxClosed = closeBestEffort("USBMUX") { mux?.close() }
-                    if (isWiredTransport) wiredCleanupSucceeded = muxClosed && wiredCleanupSucceeded
+                    closeBestEffort("USBMUX") { mux?.close() }
                     mux = null
                     if (config.transport == CarPlayTransport.WIRED) {
-                        wiredCleanupSucceeded = closeBestEffort("VPN/NCM") { service?.detach() } && wiredCleanupSucceeded
+                        closeBestEffort("VPN/NCM") { service?.detach() }
                     }
-                    val mfiClosed = closeBestEffort("MFi") { mfiSession?.close() }
-                    if (isWiredTransport) wiredCleanupSucceeded = mfiClosed && wiredCleanupSucceeded
+                    closeBestEffort("MFi") { mfiSession?.close() }
                     mfiSession = null
                     wirelessRuntimeIdentification = null
                     wirelessAirPlayEndpoint = null
                     closeBestEffort("location provider") { locationProvider?.close() }
                 } finally {
-                    wiredResourcesClosed = wiredCleanupSucceeded
                     executor.shutdownNow()
                     val executorTerminated = try {
                         executor.awaitTermination(
@@ -873,16 +879,12 @@ class CarPlayController(
         require(timeoutMillis >= 0) { "timeoutMillis must not be negative" }
         return try {
             teardownComplete.await(timeoutMillis, TimeUnit.MILLISECONDS) &&
-                (!isWiredTransport || (wiredResourcesClosed && executor.isTerminated))
+                (!isWiredTransport || executor.isTerminated)
         } catch (_: InterruptedException) {
             Thread.currentThread().interrupt()
             false
         }
     }
-
-    /** Cleanup failed rather than merely still running; retrying cannot make this owner safe. */
-    fun wiredTeardownFailed(): Boolean =
-        isWiredTransport && teardownComplete.count == 0L && !wiredResourcesClosed
 
     // HUD (SOME/IP) and cluster (AMap broadcast) keep separate state so one failing cannot stall the other.
     private fun onRouteFrame(frame: com.shilapi.xcertplay.iap2.wire.Iap2Frame) {
@@ -2962,7 +2964,7 @@ class CarPlayController(
         return text
     }
 
-    private fun closeBestEffort(name: String, close: () -> Unit): Boolean {
+    private fun closeBestEffort(name: String, close: () -> Unit) {
         val started = System.nanoTime()
         var completed = false
         try {
@@ -2973,7 +2975,6 @@ class CarPlayController(
         } finally {
             connectionDiagnostic("teardown resource=$name completed=$completed elapsedMs=${elapsedMillis(started)}")
         }
-        return completed
     }
 
     private fun controlLoopTimeoutMillis(): Long = when {
