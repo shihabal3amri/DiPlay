@@ -685,9 +685,9 @@
     <string name="side_panel_show">اللوحة الجانبية</string>
     <string name="side_panel_full_screen">⤢ ملء الشاشة</string>
     <string name="main_buffered_audio">موسيقى مخزّنة مسبقًا (تجريبي)</string>
-    <string name="main_buffered_audio_description">التطبيقات التي تدعم ذلك، مثل Apple Music، ترسل الموسيقى مسبقًا لمدة دقيقتين تقريبًا، فلا تُسمع الانقطاعات القصيرة في Wi-Fi. تعمل التطبيقات الأخرى كما كانت. يعيد توصيل CarPlay.</string>
+    <string name="main_buffered_audio_description">التطبيقات التي تدعم ذلك، مثل Apple Music، ترسل الموسيقى مسبقًا لمدة دقيقتين تقريبًا، فلا تُسمع الانقطاعات القصيرة في Wi-Fi. تعمل التطبيقات الأخرى كما كانت. يُطبَّق عند الاتصال التالي.</string>
     <string name="settings_car_bluetooth_audio">صوت CarPlay عبر بلوتوث السيارة (تجريبي)</string>
-    <string name="settings_car_bluetooth_audio_description">لا يقدّم DiPlay صوت CarPlay إلى iPhone، لذا يُفترض أن تمر الموسيقى والملاحة والمكالمات عبر اتصال البلوتوث بين iPhone والسيارة. أبقِ iPhone مقترنًا بالسيارة واختر البلوتوث مصدرًا للصوت في السيارة. إذا خرج الصوت من iPhone بدلًا من ذلك، فأوقف هذا الخيار. يعيد توصيل CarPlay.</string>
+    <string name="settings_car_bluetooth_audio_description">لا يقدّم DiPlay صوت CarPlay إلى iPhone، لذا يُفترض أن تمر الموسيقى والملاحة والمكالمات عبر اتصال البلوتوث بين iPhone والسيارة. أبقِ iPhone مقترنًا بالسيارة واختر البلوتوث مصدرًا للصوت في السيارة. إذا خرج الصوت من iPhone بدلًا من ذلك، فأوقف هذا الخيار. أثناء الجلسة النشطة، يؤدي تطبيق هذا التغيير إلى إعادة اتصال CarPlay.</string>
     <string name="call_echo_cancellation">إلغاء صدى المكالمات (تجريبي)</string>
     <string name="call_echo_cancellation_description">يحاول تقليل صدى السماعات المرسل إلى الطرف الآخر أثناء مكالمات CarPlay. تعتمد النتيجة على وحدة السيارة. يُطبَّق عند الاتصال التالي بـ CarPlay.</string>
     <string name="call_voice_filter">أصوات مكالمات أوضح (تجريبي)</string>
@@ -697,11 +697,11 @@
     <string name="phone_audio_route_apps">صوت الهاتف في السيارة لمكالمات VoIP في التطبيقات الأخرى (تجريبي)</string>
     <string name="phone_audio_route_apps_description">يفعل الشيء نفسه أثناء مكالمة صوتية أو مرئية في تطبيق آخر مثل WhatsApp أو Telegram أو Zoom. لا تتأثر الرسائل الصوتية والتسجيلات العادية لأن السيارة تكتم الميكروفون العادي في هذا الوضع. يتطلب تشغيل DiPlay، لذا يفعّل أيضاً خدمة إمكانية الوصول لأزرار المقود. متوقف افتراضياً.</string>
     <string name="smooth_video">فيديو سلس (تجريبي)</string>
-    <string name="smooth_video_description">يعرض كل إطار من الشاشة الرئيسية لـ CarPlay في الوقت الذي وسمه به iPhone مع تأخير قصير، بدلًا من عرضه فور فك ترميزه. يضبط التأخير نفسه تلقائيًا حتى يُفك ترميز معظم الإطارات في الوقت المناسب، وتُعرض الإطارات غير الجاهزة في وقتها رغم ذلك فورًا. قد يبدو التمرير أكثر انتظامًا، لكن الاستجابة للمس تتأخر. لا تنطبق إعدادات الصورة. يعيد توصيل CarPlay.</string>
+    <string name="smooth_video_description">يعرض كل إطار من الشاشة الرئيسية لـ CarPlay في الوقت الذي وسمه به iPhone مع تأخير قصير، بدلًا من عرضه فور فك ترميزه. يضبط التأخير نفسه تلقائيًا حتى يُفك ترميز معظم الإطارات في الوقت المناسب، وتُعرض الإطارات غير الجاهزة في وقتها رغم ذلك فورًا. قد يبدو التمرير أكثر انتظامًا، لكن الاستجابة للمس تتأخر. لا تنطبق إعدادات الصورة. يُطبَّق عند الاتصال التالي.</string>
     <string name="settings_mtk_decoder_tuning">زمن استجابة منخفض لوحدة فك ترميز MTK (تجريبي)</string>
     <string name="settings_mtk_decoder_tuning_description">تم اكتشاف %1$s لتنسيق الفيديو المحدد. يستخدم مفكك MTK مخصصًا لزمن الاستجابة المنخفض عند توفره. أما مفككات OMX القديمة فتجرّب أولًا عدم إعادة الترتيب مع زمن استجابة منخفض، ثم زمن الاستجابة المنخفض وحده. يعود تلقائيًا إذا رفض المفكك الإعداد أو فشل. قد يقل تأخر الفيديو، لكن بعض البرامج الثابتة قد تتلعثم أو تفشل. يُطبّق عند اتصال CarPlay التالي.</string>
     <string name="settings_direct_video_output">إخراج الفيديو المباشر (تجريبي)</string>
-    <string name="settings_direct_video_output_description">يرسل صورة CarPlay مباشرة إلى مُركِّب شاشة الوحدة الرئيسية بدلًا من رسمها داخل نافذة DiPlay. قد يقلل التأخير بمقدار تحديث شاشة واحد تقريبًا. لا تنطبق تعديلات الصورة. يعيد الاتصال بـ CarPlay.</string>
+    <string name="settings_direct_video_output_description">يرسل صورة CarPlay مباشرة إلى مُركِّب شاشة الوحدة الرئيسية بدلًا من رسمها داخل نافذة DiPlay. قد يقلل التأخير بمقدار تحديث شاشة واحد تقريبًا. لا تنطبق تعديلات الصورة. يُطبَّق عند الاتصال التالي.</string>
     <string name="settings_low_latency_decoder">فك ترميز منخفض التأخير (تجريبي)</string>
     <string name="settings_low_latency_decoder_description">يطلب من أجهزة فك ترميز الفيديو من Qualcomm إخراج كل إطار فور فك ترميزه بدلًا من الاحتفاظ بالإطارات التالية، ويعرض كل إطار مفكوك من سلسلة معالجة مخصصة دون انتظار وصول الإطار التالي. قد يقلل التأخير بعشرات المللي ثانية. أوقفه إذا ظهرت تشوهات في الصورة أو تجمّدت. يُطبَّق عند الاتصال التالي.</string>
     <string name="settings_fps_counter">عداد الإطارات في الثانية</string>
@@ -866,7 +866,7 @@
     <string name="settings_carplay_same_task_description">لواجهات الشاشة الرئيسية التي تعرض DiPlay داخل بطاقة أو نافذة صورة داخل صورة، مثل سطح مكتب DiYou من BYD. يُفتح CarPlay في نافذة DiPlay نفسها كما في الإصدار 0.2.11 وما قبله، بدلاً من نافذة منفصلة بملء الشاشة. يُطبّق عند فتح CarPlay في المرة التالية دون قطع الاتصال.</string>
     <string name="settings_hotspot_name_non_english">قد يتوقف CarPlay عند «جارٍ تجهيز CarPlay…» إذا احتوى الاسم على أحرف صينية أو أحرف غير إنجليزية، لأن بعض وحدات السيارة تبث هذا الاسم بصيغة لا يجدها iPhone. إذا حدث ذلك، فأعد تسمية نقطة اتصال السيارة بأحرف إنجليزية وأرقام.</string>
     <string name="settings_speech_without_low_rates">صوت ملاحة أوضح عبر USB (تجريبي)</string>
-    <string name="settings_speech_without_low_rates_description">عبر USB قد يرسل iPhone تعليمات الملاحة وردود Siri المنطوقة بجودة هاتفية 8 كيلوهرتز. يوقف هذا الخيار عرض 8 و16 كيلوهرتز لهذا الصوت ليختار iPhone معدلاً أعلى. إذا اختفت التعليمات الصوتية، فأوقفه. يعيد توصيل CarPlay.</string>
+    <string name="settings_speech_without_low_rates_description">عبر USB قد يرسل iPhone تعليمات الملاحة وردود Siri المنطوقة بجودة هاتفية 8 كيلوهرتز. يوقف هذا الخيار عرض 8 و16 كيلوهرتز لهذا الصوت ليختار iPhone معدلاً أعلى. إذا اختفت التعليمات الصوتية، فأوقفه. يُطبَّق عند الاتصال التالي.</string>
     <string name="settings_call_at_call_rate">المكالمات بتردد المكالمة نفسه (تجريبي)</string>
     <string name="settings_call_at_call_rate_description">يعرض المكالمات بصيغة PCM بتردد المكالمة نفسه (8 أو 16 أو 24 أو 32 كيلوهرتز) بدلًا من Opus بتردد 48 كيلوهرتز، كما يفعل مستقبل CarPlay الأصلي. يسري عند الاتصال التالي. إذا لم يكن هناك صوت في المكالمة فأوقف هذا الخيار.</string>
     <string name="bluetooth_connections_not_real">يُبلغ بلوتوث Android في وحدة القيادة هذه عن اتصال، لكن لا شيء يصل إلى iPhone: حتى الاتصال بخدمة غير موجودة ينجح. البلوتوث هنا يديره مكوّن خاص بالشركة المصنّعة لا تستطيع التطبيقات استخدامه، لذلك لا يمكن أن يعمل CarPlay اللاسلكي على وحدة القيادة هذه. جرّب اتصال USB.</string>

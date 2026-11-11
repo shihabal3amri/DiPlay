@@ -785,9 +785,9 @@
     <string name="side_panel_show">サイドパネル</string>
     <string name="side_panel_full_screen">⤢ 全画面</string>
     <string name="main_buffered_audio">音楽の先読みバッファ（実験的機能）</string>
-    <string name="main_buffered_audio_description">Apple Musicなど対応アプリでは音楽を最大約2分先まで受信し、短時間のWi-Fi途切れでも音声が止まらないようにします。非対応アプリでは通常どおり動作します。CarPlayを再接続します。</string>
+    <string name="main_buffered_audio_description">Apple Musicなど対応アプリでは音楽を最大約2分先まで受信し、短時間のWi-Fi途切れでも音声が止まらないようにします。非対応アプリでは通常どおり動作します。次回の接続から反映されます。</string>
     <string name="settings_car_bluetooth_audio">車のBluetoothでCarPlay音声を再生（実験的機能）</string>
-    <string name="settings_car_bluetooth_audio_description">DiPlayがiPhoneにCarPlay音声の出力先を提供しないことで、音楽・ナビ・通話を車とiPhoneのBluetooth接続で再生します。iPhoneを車とペアリングしたまま、車の音声入力をBluetoothにしてください。音がiPhone本体から出る場合はオフにしてください。CarPlayを再接続します。</string>
+    <string name="settings_car_bluetooth_audio_description">DiPlayがiPhoneにCarPlay音声の出力先を提供しないことで、音楽・ナビ・通話を車とiPhoneのBluetooth接続で再生します。iPhoneを車とペアリングしたまま、車の音声入力をBluetoothにしてください。音がiPhone本体から出る場合はオフにしてください。セッション中にこの変更を適用すると、CarPlay を再接続します。</string>
     <string name="call_echo_cancellation">通話のエコーキャンセル（実験的機能）</string>
     <string name="call_echo_cancellation_description">CarPlay通話時に相手へ届くスピーカーの反響音を軽減します。効果は車載端末によって異なります。次回接続から有効です。</string>
     <string name="call_voice_filter">通話音声を聞き取りやすくする（実験的機能）</string>
@@ -797,11 +797,11 @@
     <string name="phone_audio_route_apps">他アプリのVoIP通話を車の電話音声で出力（実験的機能）</string>
     <string name="phone_audio_route_apps_description">WhatsApp、Telegram、Zoomなどの音声・ビデオ通話でも、車の電話音声モードを使用します。このモードでは車の通常マイクがミュートされるため、音声メモや通常の録音には適用しません。DiPlayの常時動作が必要なため、ステアリングスイッチ用のユーザー補助サービスも有効になります。初期状態ではオフです。</string>
     <string name="smooth_video">映像を滑らかにする（実験的機能）</string>
-    <string name="smooth_video_description">CarPlayのフレームをデコード直後ではなく、iPhoneが記録した時刻に短い遅延を加えた時刻に表示します。ほとんどのフレームが間に合うよう遅延を自動調整し、予定時刻までに処理できなかったフレームは準備ができ次第表示します。スクロールが滑らかになる場合がありますが、タッチへの反応は遅くなります。映像調整は適用されません。CarPlayの再接続で反映されます。</string>
+    <string name="smooth_video_description">CarPlayのフレームをデコード直後ではなく、iPhoneが記録した時刻に短い遅延を加えた時刻に表示します。ほとんどのフレームが間に合うよう遅延を自動調整し、予定時刻までに処理できなかったフレームは準備ができ次第表示します。スクロールが滑らかになる場合がありますが、タッチへの反応は遅くなります。映像調整は適用されません。次回の接続から反映されます。</string>
     <string name="settings_mtk_decoder_tuning">MTKデコーダーの低遅延化（実験的機能）</string>
     <string name="settings_mtk_decoder_tuning_description">選択した映像形式の検出結果：%1$s。利用可能な場合はMTK専用の低遅延デコーダーを使用します。旧OMXデコーダーではフレーム並べ替えなし＋低遅延を試し、次に低遅延のみを試します。デコーダーが拒否または失敗した場合は自動で通常方式に戻ります。映像遅延を減らせる可能性がありますが、車載端末によっては映像が途切れたり表示できなかったりします。次回のCarPlay接続から反映されます。</string>
     <string name="settings_direct_video_output">映像の直接出力（実験的機能）</string>
-    <string name="settings_direct_video_output_description">DiPlay画面内に描画せず、車載端末のコンポジターへCarPlay映像を直接送ります。画面更新1回分ほどの遅延を減らせる場合があります。画質調整は適用されません。CarPlayを再接続します。</string>
+    <string name="settings_direct_video_output_description">DiPlay画面内に描画せず、車載端末のコンポジターへCarPlay映像を直接送ります。画面更新1回分ほどの遅延を減らせる場合があります。画質調整は適用されません。次回の接続から反映されます。</string>
     <string name="settings_low_latency_decoder">低遅延デコード（実験的機能）</string>
     <string name="settings_low_latency_decoder_description">Qualcomm製の映像デコーダーに対し、フレームを保持せずデコード直後に出力するよう要求します。専用スレッドで次のフレームの到着を待たずに表示し、数十ミリ秒の遅延を減らせる場合があります。映像が乱れたり停止したりする場合はオフにしてください。次回の接続から反映されます。</string>
     <string name="settings_fps_counter">FPSカウンター</string>
@@ -968,7 +968,7 @@
     <string name="settings_carplay_same_task_description">DiPlayをカードやピクチャーインピクチャーのウィンドウで表示するランチャー（BYDのDiYouデスクトップなど）向けです。CarPlayを別の全画面ではなく、0.2.11以前と同じくDiPlay自身のウィンドウで開きます。次にCarPlayを開いたときに反映され、接続は切れません。</string>
     <string name="settings_hotspot_name_non_english">中国語など英数字以外の文字を含むホットスポット名では、CarPlayが「準備中」のままになる場合があります。一部の車載端末がiPhoneから検出できない形式で送信するためです。その場合はホットスポット名を英数字に変更してください。</string>
     <string name="settings_speech_without_low_rates">USBナビ案内の音声を明瞭にする（実験的機能）</string>
-    <string name="settings_speech_without_low_rates_description">USBではiPhoneのナビ案内やSiriの応答が電話品質の8 kHz音声で送信される場合があります。8 kHzと16 kHzを使用候補から外し、より高い音質を選ばせます。案内音声が出なくなったらオフにしてください。CarPlayを再接続します。</string>
+    <string name="settings_speech_without_low_rates_description">USBではiPhoneのナビ案内やSiriの応答が電話品質の8 kHz音声で送信される場合があります。8 kHzと16 kHzを使用候補から外し、より高い音質を選ばせます。案内音声が出なくなったらオフにしてください。次回の接続から反映されます。</string>
     <string name="settings_call_at_call_rate">通話を通話本来のレートで再生（試験的）</string>
     <string name="settings_call_at_call_rate_description">通話を48 kHzのOpusではなく、通話本来のレート（8・16・24・32 kHz）のPCMとして提示します。純正のCarPlayレシーバーと同じ方式です。次回の接続から有効になります。通話に音が出ない場合はオフにしてください。</string>
     <string name="bluetooth_connections_not_real">この車載端末のAndroid Bluetoothは接続中と報告しますが、iPhoneには実際の通信が届きません。存在しないサービスへの接続さえ成功と表示されます。メーカー独自のBluetoothモジュールをアプリが利用できないため、この端末ではワイヤレスCarPlayを使用できません。USB接続をお試しください。</string>

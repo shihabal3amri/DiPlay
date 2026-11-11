@@ -745,9 +745,9 @@
     <string name="side_panel_show">侧边面板</string>
     <string name="side_panel_full_screen">⤢ 全屏</string>
     <string name="main_buffered_audio">缓冲音乐（实验性）</string>
-    <string name="main_buffered_audio_description">支持此功能的应用（如 Apple Music）会提前发送约两分钟的音乐，因此短暂的 Wi-Fi 中断不会被听到。其他应用保持原样。会重新连接 CarPlay。</string>
+    <string name="main_buffered_audio_description">支持此功能的应用（如 Apple Music）会提前发送约两分钟的音乐，因此短暂的 Wi-Fi 中断不会被听到。其他应用保持原样。下次连接时生效。</string>
     <string name="settings_car_bluetooth_audio">通过车辆蓝牙播放 CarPlay 音频（实验性）</string>
-    <string name="settings_car_bluetooth_audio_description">DiPlay 不向 iPhone 提供 CarPlay 音频，因此音乐、导航和通话应通过 iPhone 与车辆的蓝牙连接传输。请保持 iPhone 与车辆配对，并将车辆音源设为蓝牙。如果声音改从 iPhone 播放，请关闭此选项。会重新连接 CarPlay。</string>
+    <string name="settings_car_bluetooth_audio_description">DiPlay 不向 iPhone 提供 CarPlay 音频，因此音乐、导航和通话应通过 iPhone 与车辆的蓝牙连接传输。请保持 iPhone 与车辆配对，并将车辆音源设为蓝牙。如果声音改从 iPhone 播放，请关闭此选项。在会话期间应用此更改会重新连接 CarPlay。</string>
     <string name="call_echo_cancellation">通话回声消除（实验性）</string>
     <string name="call_echo_cancellation_description">尝试减少 CarPlay 通话中发送给对方的扬声器回声。效果取决于车载主机。下次连接 CarPlay 时生效。</string>
     <string name="call_voice_filter">更清晰的通话人声（实验性）</string>
@@ -757,11 +757,11 @@
     <string name="phone_audio_route_apps">其他应用的 VoIP 通话使用车机电话音频（实验性）</string>
     <string name="phone_audio_route_apps_description">当 WhatsApp、Telegram、Zoom 等其他应用处于语音或视频通话时执行同样操作。语音留言和普通录音不受影响，因为车机在此状态下会静音普通麦克风。需要 DiPlay 保持运行，因此同时会开启方向盘按键无障碍服务。默认关闭。</string>
     <string name="smooth_video">流畅视频（实验性）</string>
-    <string name="smooth_video_description">按 iPhone 为每一帧标记的时间加上一段短延迟显示 CarPlay 主画面，而不是解码后立即显示。延迟会自动调整，让大多数帧能及时解码；仍未按时准备好的帧会立即显示。滚动可能更均匀，但触控响应会变慢。画面调整不适用。会重新连接 CarPlay。</string>
+    <string name="smooth_video_description">按 iPhone 为每一帧标记的时间加上一段短延迟显示 CarPlay 主画面，而不是解码后立即显示。延迟会自动调整，让大多数帧能及时解码；仍未按时准备好的帧会立即显示。滚动可能更均匀，但触控响应会变慢。画面调整不适用。下次连接时生效。</string>
     <string name="settings_mtk_decoder_tuning">MTK 解码器低延迟（实验性）</string>
     <string name="settings_mtk_decoder_tuning_description">检测到所选视频格式可使用 %1$s。有专用 MTK 低延迟解码器时优先使用；旧版 OMX 解码器则先尝试无重排加低延迟，再尝试仅低延迟。解码器拒绝配置或运行失败时会自动回退。它可能降低画面延迟，但某些固件可能卡顿或解码失败。下次连接 CarPlay 时生效。</string>
     <string name="settings_direct_video_output">直接视频输出（实验性）</string>
-    <string name="settings_direct_video_output_description">将 CarPlay 画面直接交给车机的系统合成器，而不是在 DiPlay 窗口内绘制。可将延迟降低约一次屏幕刷新。画面调整不适用。会重新连接 CarPlay。</string>
+    <string name="settings_direct_video_output_description">将 CarPlay 画面直接交给车机的系统合成器，而不是在 DiPlay 窗口内绘制。可将延迟降低约一次屏幕刷新。画面调整不适用。下次连接时生效。</string>
     <string name="settings_low_latency_decoder">低延迟解码（实验性）</string>
     <string name="settings_low_latency_decoder_description">要求高通视频解码器在每一帧解码后立即输出，而不是保留后续帧，并由专用线程立即显示每个已解码的帧，无需等待下一帧到达。可将延迟降低数十毫秒。如果画面出现花屏或卡住，请关闭。下次连接时生效。</string>
     <string name="settings_fps_counter">FPS 计数器</string>
@@ -926,7 +926,7 @@
     <string name="settings_carplay_same_task_description">适用于在卡片或画中画窗口中显示 DiPlay 的桌面，例如迪友桌面卡片、嘟嘟桌面画中画。CarPlay 会像 0.2.11 及更早版本一样在 DiPlay 自己的窗口中打开，不再单独全屏打开。下次打开 CarPlay 时生效，不会断开连接。</string>
     <string name="settings_hotspot_name_non_english">热点名称含中文或其他非英文字符时，部分车机广播的名称 iPhone 找不到，CarPlay 会停在「正在准备 CarPlay…」。如出现这种情况，请把车机热点改为英文字母和数字的名称。</string>
     <string name="settings_speech_without_low_rates">USB 下更清晰的导航语音（实验性）</string>
-    <string name="settings_speech_without_low_rates_description">USB 连接时，iPhone 可能以 8 kHz 电话音质发送导航播报和 Siri 的语音回答。开启后不再为这类声音提供 8 和 16 kHz，让 iPhone 选择更高的采样率。如果播报没有声音，请关闭。会重新连接 CarPlay。</string>
+    <string name="settings_speech_without_low_rates_description">USB 连接时，iPhone 可能以 8 kHz 电话音质发送导航播报和 Siri 的语音回答。开启后不再为这类声音提供 8 和 16 kHz，让 iPhone 选择更高的采样率。如果播报没有声音，请关闭。下次连接时生效。</string>
     <string name="settings_call_at_call_rate">通话使用其自身采样率（实验性）</string>
     <string name="settings_call_at_call_rate_description">以通话自身的采样率（8、16、24 或 32 kHz）的 PCM 提供通话音频，而不是 48 kHz 的 Opus，与原厂 CarPlay 接收器一致。下次连接时生效。如果通话没有声音，请关闭此项。</string>
     <string name="bluetooth_connections_not_real">此车机的系统蓝牙回报“已连接”，但实际上没有连到 iPhone：连一个不存在的服务也回报成功。这里的蓝牙由厂商自己的模块处理，应用无法使用，所以此车机无法使用无线 CarPlay。请尝试 USB 连接。</string>
