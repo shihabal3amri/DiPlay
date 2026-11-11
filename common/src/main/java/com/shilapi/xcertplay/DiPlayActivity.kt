@@ -5637,7 +5637,9 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
                 carButtonSaved()
             }
         }, settingsButtonLayout())
-        if (custom != null || badge != CarBrandBadge.DEFAULT) parent.addView(
+        if (custom != null || badge != CarBrandBadge.DEFAULT ||
+            name != AirPlayPersistence.DEFAULT_OEM_LABEL
+        ) parent.addView(
             button(getString(R.string.settings_car_brand_reset), false) {
                 AirPlayPersistence.clearCustomAirPlayIcon(this)
                 AirPlayPersistence.saveCarBrand(this, CarBrandBadge.DEFAULT.key)

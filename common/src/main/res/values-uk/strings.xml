@@ -190,7 +190,7 @@
     <string name="could_not_save_image">Не вдалося зберегти зображення</string>
     <string name="could_not_save_the_report">Не вдалося зберегти звіт</string>
     <string name="could_not_start_carplay_return_to_diplay_and_check_app_per">Не вдалося запустити CarPlay. Поверніться до DiPlay та перевірте дозволи застосунку.</string>
-    <string name="custom_1_1_icon">Власний значок 1:1</string>
+    <string name="custom_1_1_icon">Власний</string>
     <string name="debug_logs">Журнали налагодження</string>
     <string name="default_icon">Типовий значок</string>
     <string name="default_placeholder_icon">Типовий значок-заповнювач</string>

@@ -190,7 +190,7 @@
     <string name="could_not_save_image">Impossibile salvare l’immagine</string>
     <string name="could_not_save_the_report">Impossibile salvare il report</string>
     <string name="could_not_start_carplay_return_to_diplay_and_check_app_per">Impossibile avviare CarPlay. Torna a DiPlay e controlla i permessi dell’app.</string>
-    <string name="custom_1_1_icon">Icona 1:1 personalizzata</string>
+    <string name="custom_1_1_icon">Personalizzato</string>
     <string name="debug_logs">Log di debug</string>
     <string name="default_icon">Icona predefinita</string>
     <string name="default_placeholder_icon">Icona segnaposto predefinita</string>

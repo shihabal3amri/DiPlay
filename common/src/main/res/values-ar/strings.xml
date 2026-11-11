@@ -186,7 +186,7 @@
     <string name="could_not_save_image">تعذّر حفظ الصورة</string>
     <string name="could_not_save_the_report">تعذّر حفظ التقرير</string>
     <string name="could_not_start_carplay_return_to_diplay_and_check_app_per">تعذّر بدء CarPlay. عد إلى DiPlay وتحقق من أذونات التطبيق.</string>
-    <string name="custom_1_1_icon">أيقونة مخصصة 1:1</string>
+    <string name="custom_1_1_icon">مخصص</string>
     <string name="debug_logs">سجلات تصحيح</string>
     <string name="default_icon">الأيقونة الافتراضية</string>
     <string name="default_placeholder_icon">أيقونة بديلة افتراضية</string>

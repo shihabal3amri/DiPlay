@@ -186,7 +186,7 @@
     <string name="could_not_save_image">No se pudo guardar la imagen</string>
     <string name="could_not_save_the_report">No se pudo guardar el informe</string>
     <string name="could_not_start_carplay_return_to_diplay_and_check_app_per">No se pudo iniciar CarPlay. Vuelve a DiPlay y comprueba los permisos de la aplicación.</string>
-    <string name="custom_1_1_icon">Icono personalizado 1:1</string>
+    <string name="custom_1_1_icon">Personalizado</string>
     <string name="debug_logs">Registros de depuración</string>
     <string name="default_icon">Icono predeterminado</string>
     <string name="default_placeholder_icon">Icono de marcador de posición predeterminado</string>

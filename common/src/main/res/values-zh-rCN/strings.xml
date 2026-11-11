@@ -186,7 +186,7 @@
     <string name="could_not_save_image">无法保存图片</string>
     <string name="could_not_save_the_report">无法保存报告</string>
     <string name="could_not_start_carplay_return_to_diplay_and_check_app_per">无法启动 CarPlay。请返回 DiPlay 检查应用权限。</string>
-    <string name="custom_1_1_icon">自定义 1:1 图标</string>
+    <string name="custom_1_1_icon">自定义</string>
     <string name="debug_logs">调试日志</string>
     <string name="default_icon">默认图标</string>
     <string name="default_placeholder_icon">默认占位图标</string>

@@ -186,7 +186,7 @@
     <string name="could_not_save_image">Не удалось сохранить изображение</string>
     <string name="could_not_save_the_report">Не удалось сохранить отчёт</string>
     <string name="could_not_start_carplay_return_to_diplay_and_check_app_per">Не удалось запустить CarPlay. Вернитесь в DiPlay и проверьте разрешения приложения.</string>
-    <string name="custom_1_1_icon">Пользовательский значок 1:1</string>
+    <string name="custom_1_1_icon">Пользовательский</string>
     <string name="debug_logs">Отладочные журналы</string>
     <string name="default_icon">Значок по умолчанию</string>
     <string name="default_placeholder_icon">Значок-заглушка по умолчанию</string>

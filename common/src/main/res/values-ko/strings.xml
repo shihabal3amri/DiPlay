@@ -192,7 +192,7 @@
     <string name="could_not_save_image">이미지를 저장할 수 없습니다.</string>
     <string name="could_not_save_the_report">보고서를 저장할 수 없습니다.</string>
     <string name="could_not_start_carplay_return_to_diplay_and_check_app_per">CarPlay를 시작할 수 없습니다. DiPlay로 돌아가 앱 권한을 확인하세요.</string>
-    <string name="custom_1_1_icon">사용자 지정 1:1 아이콘</string>
+    <string name="custom_1_1_icon">사용자 정의</string>
     <string name="debug_logs">디버그 로그</string>
     <string name="default_icon">기본 아이콘</string>
     <string name="default_placeholder_icon">기본 자리표시자 아이콘</string>

@@ -4075,7 +4075,10 @@ open class CarPlayHostActivity : ComponentActivity() {
                 ViewGroup.LayoutParams.WRAP_CONTENT,
             ).apply { topMargin = dp(10) },
         )
-        val status = menuText("", 14f, MENU_SECONDARY)
+        // Pin to the view's start edge (right in RTL) so Latin badge names line up under the icon too.
+        val status = menuText("", 14f, MENU_SECONDARY).apply {
+            textAlignment = View.TEXT_ALIGNMENT_VIEW_START
+        }
         section.addView(
             status,
             LinearLayout.LayoutParams(
