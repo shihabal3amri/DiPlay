@@ -80,7 +80,9 @@ internal class ClusterSongState {
         fun text(title: String?, artist: String?): String? {
             val name = title?.trim()?.takeIf { it.isNotEmpty() } ?: return null
             val full = artist?.trim()?.takeIf { it.isNotEmpty() }?.let { "$name — $it" } ?: name
-            var end = full.length
+            // Every UTF-16LE code unit costs two bytes, so only a couple of characters near the
+            // cap can fit. Keep the same surrogate handling by starting just above that bound.
+            var end = minOf(full.length, MAX_TEXT_BYTES / 2 + 2)
             while (full.substring(0, end).toByteArray(Charsets.UTF_16LE).size > MAX_TEXT_BYTES) {
                 end--
                 if (end > 0 && Character.isLowSurrogate(full[end])) end--

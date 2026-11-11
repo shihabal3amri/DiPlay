@@ -91,7 +91,9 @@ class CarPlayCallState(private val clock: () -> Long = System::currentTimeMillis
         const val MAX_NAME_BYTES = 60
 
         fun nameBytes(name: String): ByteArray {
-            var end = name.length
+            // Every UTF-16LE code unit costs two bytes, so only a couple of characters near the
+            // cap can fit. Keep the same surrogate handling by starting just above that bound.
+            var end = minOf(name.length, MAX_NAME_BYTES / 2 + 2)
             while (name.substring(0, end).toByteArray(Charsets.UTF_16LE).size > MAX_NAME_BYTES) {
                 end--
                 if (end > 0 && Character.isLowSurrogate(name[end])) end--
