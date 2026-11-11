@@ -9,12 +9,14 @@ import android.os.Binder
 import android.os.IBinder
 import android.os.Parcel
 import android.os.SystemClock
+import android.text.format.DateFormat
 import android.util.Log
 import com.shilapi.xcertplay.iap2.wire.Iap2Frame
+import java.util.TimeZone
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 
-/** Publishes CarPlay route arrows, distance and street to BYD's native windshield HUD. */
+/** Publishes CarPlay route arrows, distance and street (and the arrival time on the N9) to BYD's native windshield HUD. */
 internal object BydHudBridge {
     private const val TAG = "DiPlay-BYD-HUD"
     private const val SOMEIP_PACKAGE = "com.ts.car.someip.service"
@@ -46,6 +48,7 @@ internal object BydHudBridge {
     private var refusedBinds = 0
     private var transactionFailing = false
     private var nextBindAtMillis = 0L
+    private val arrivalEnabled by lazy { BydHudArrival.enabled() }
 
     // The gateway pings registered callbacks and drops registrations that do not answer like an AIDL stub.
     private val callback = object : Binder() {
@@ -129,16 +132,19 @@ internal object BydHudBridge {
             clearHudLocked()
             return
         }
+        val eta = arrivalFor(guidance)
         val payload = BydHudPayload.guidance(
             distanceMeters = guidance.distanceMeters,
             maneuver = guidance.maneuver,
             icon = iconFor(guidance.gaode),
             road = guidance.road,
+            eta = eta,
         )
         val accepted = sendLocked(payload)
         if (accepted && !guidanceSentLogged) {
             guidanceSentLogged = true
-            Log.i(TAG, "HUD profile (300ms repeat, fixed field2=2): gateway accepted guidance; rendering unconfirmed")
+            Log.i(TAG, "HUD profile (300ms repeat, fixed field2=2): gateway accepted guidance; rendering unconfirmed" +
+                if (arrivalEnabled) "; arrival field26=${eta.ifEmpty { "none" }}" else "")
             NavigationOutputLog.note(TAG, "hud.guidance", NavigationOutputLines.hudGuidanceAccepted(), logcat = false)
         }
         if (accepted) showing = true
@@ -150,6 +156,16 @@ internal object BydHudBridge {
         showing = false
         guidanceSentLogged = false
         NavigationOutputLog.note(TAG, "hud.guidance", NavigationOutputLines.hudGuidanceCleared())
+    }
+
+    // Field 26 stays empty except on the N9 (#301); see BydHudArrival.
+    private fun arrivalFor(guidance: BydHudGuidance): String {
+        if (!arrivalEnabled) return ""
+        val use24Hour = context?.let { DateFormat.is24HourFormat(it) } ?: true
+        return BydHudArrival.text(
+            System.currentTimeMillis(), guidance.arrivalEpochSeconds, guidance.remainingSeconds,
+            TimeZone.getDefault(), use24Hour,
+        )
     }
 
     // Arrow-less maneuvers (roundabouts, destination) are only visible through the field-8 icon.

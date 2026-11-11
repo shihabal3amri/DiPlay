@@ -8,6 +8,8 @@ internal data class BydHudGuidance(
     val gaode: Int = 0,
     val road: String = "",
     val arrivalEpochSeconds: Long? = null,
+    /** Route time left, for an arrival time when the iPhone sends no arrival epoch. */
+    val remainingSeconds: Long? = null,
 )
 
 internal data class BydAppleManeuver(
@@ -74,6 +76,7 @@ internal class BydHudRouteState(
             gaode = gaode,
             road = roadFor(maneuver),
             arrivalEpochSeconds = arrivalEpochSeconds,
+            remainingSeconds = remainingSeconds,
         )
     }
 

@@ -173,6 +173,24 @@ class BydHudRouteStateTest {
     }
 
     @Test
+    fun `guidance carries the arrival time and the time left for the HUD`() {
+        val state = BydHudRouteState()
+        state.accept(BydHudRouteState.ROUTE_GUIDANCE_MANEUVER_UPDATE, tlvs(tlv(0x01, 0, 0), tlv(0x03, 1)))
+        state.accept(
+            BydHudRouteState.ROUTE_GUIDANCE_UPDATE,
+            tlvs(
+                tlv(0x01, 1),
+                tlv(0x05, 0, 0, 0, 0, 0x6a, 0xf4, 0xa2, 0x50), // 1794417232
+                tlv(0x06, 0, 0, 0, 0, 0, 0, 0x07, 0x08), // 1800 s
+                tlv(0x0d, 0, 0),
+            ),
+        )
+        val guidance = state.current()!!
+        assertEquals(1_794_417_232L, guidance.arrivalEpochSeconds)
+        assertEquals(1_800L, guidance.remainingSeconds)
+    }
+
+    @Test
     fun `roundabout exit has blank arrow and exit icon`() {
         val state = BydHudRouteState()
         state.accept(BydHudRouteState.ROUTE_GUIDANCE_MANEUVER_UPDATE, tlvs(tlv(0x01, 0, 0), tlv(0x03, 29)))

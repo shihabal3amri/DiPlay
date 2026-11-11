@@ -83,19 +83,43 @@ class DiLink51ClusterLayoutTest {
         assertFalse(DiLink51ClusterLayout.supported(n9.replace("011226", "011227")))
     }
 
-    @Test fun theWideN9ClusterGetsTheMeasuredPlansScaledAcross() {
-        // Inferred from owner photos (#301): the stock side map sits in the right quarter, x=1760..2560.
+    @Test fun the1920ClustersKeepTheirMeasuredPlans() {
+        // The DiLink 5.1 and Leopard 5 clusters are 1920x720; the N9 side-map change must not reach them.
         for (theme in listOf(Theme.SCENARIO, Theme.SIMPLE)) {
-            assertEquals(Plan(1760, 0, 800, 720, false, 2560, 720), DiLink51ClusterLayout.plan(2560, 720, theme))
+            assertEquals(Plan(1320, 0, 600, 720, false, 1920, 720), DiLink51ClusterLayout.plan(1920, 720, theme))
         }
-        assertEquals(Plan(0, 144, 2560, 480, true, 2560, 720), DiLink51ClusterLayout.plan(2560, 720, Theme.MAP))
-        for (theme in Theme.entries) {
-            val measured = DiLink51ClusterLayout.plan(1920, 720, theme)!!
-            val wide = DiLink51ClusterLayout.plan(2560, 720, theme)!!
-            assertEquals(measured.left * 4, wide.left * 3)
-            assertEquals(measured.width * 4, wide.width * 3)
-            assertEquals(measured.top, wide.top)
-            assertEquals(measured.height, wide.height)
+        assertEquals(Plan(0, 144, 1920, 480, true, 1920, 720), DiLink51ClusterLayout.plan(1920, 720, Theme.MAP))
+    }
+
+    @Test fun theN9FullMapIsTheMeasuredOneScaledAcross() {
+        val measured = DiLink51ClusterLayout.plan(1920, 720, Theme.MAP)!!
+        val wide = DiLink51ClusterLayout.plan(2560, 720, Theme.MAP)!!
+        assertEquals(Plan(0, 144, 2560, 480, true, 2560, 720), wide)
+        assertEquals(measured.left * 4, wide.left * 3)
+        assertEquals(measured.width * 4, wide.width * 3)
+        assertEquals(measured.top, wide.top)
+        assertEquals(measured.height, wide.height)
+    }
+
+    @Test fun theN9SideMapClearsTheTopRightIconsAndTheBottomReadouts() {
+        // #301: the 4/3-scaled box (x=1760..2560, full height) ran under both rows. Positions on the
+        // 2560x720 cluster, read from the owner's photos.
+        val statusIcons = Box(1428, 15, 2010, 71) // car, temperature, P, seat belt, ..., lamp icons
+        val readouts = Box(1805, 651, 2354, 694) // power bar, P, trip distance
+        val stockNavigationCard = Box(2070, 274, 2245, 507) // arrow and road name, no map outside China
+        val clearance = 20
+        for (theme in listOf(Theme.SCENARIO, Theme.SIMPLE)) {
+            val plan = DiLink51ClusterLayout.plan(2560, 720, theme)!!
+            assertEquals(Plan(1760, 96, 800, 528, false, 2560, 720), plan)
+            val side = Box(plan.left, plan.top, plan.left + plan.width, plan.top + plan.height)
+            assertTrue(side.left >= 0 && side.right <= 2560 && side.top >= 0 && side.bottom <= 720)
+            assertFalse(side.overlaps(statusIcons.grow(clearance)))
+            assertFalse(side.overlaps(readouts.grow(clearance)))
+            assertTrue(side.contains(stockNavigationCard))
+            val cardCentre = (stockNavigationCard.left + stockNavigationCard.right) / 2
+            assertTrue(kotlin.math.abs((side.left + side.right) / 2 - cardCentre) <= 10)
+            // Smaller than the 4/3-scaled box it replaces.
+            assertTrue(plan.width * plan.height < 800 * 720)
         }
     }
 
@@ -132,9 +156,22 @@ class DiLink51ClusterLayoutTest {
         assertEquals(240, DiLink51ClusterLayout.plan(2560, 720, Theme.MAP)!!.sourceTop)
     }
 
+    @Test fun theN9SideCropIsCentredAndBottomAligned() {
+        val plan = DiLink51ClusterLayout.plan(2560, 720, Theme.SCENARIO)!!
+        assertEquals(880, plan.sourceLeft)
+        assertEquals(192, plan.sourceTop)
+        assertEquals(720, plan.sourceTop + plan.height)
+    }
+
     @Test fun unmeasuredPanelSizesAreNotGivenTheWrongReadoutMask() {
         assertNull(DiLink51ClusterLayout.plan(1280, 480, Theme.MAP))
         assertNull(DiLink51ClusterLayout.plan(2560, 1080, Theme.MAP))
         assertNull(DiLink51ClusterLayout.plan(2400, 720, Theme.SCENARIO))
+    }
+
+    private data class Box(val left: Int, val top: Int, val right: Int, val bottom: Int) {
+        fun grow(by: Int) = Box(left - by, top - by, right + by, bottom + by)
+        fun overlaps(other: Box) = left < other.right && other.left < right && top < other.bottom && other.top < bottom
+        fun contains(other: Box) = other.left >= left && other.right <= right && other.top >= top && other.bottom <= bottom
     }
 }
