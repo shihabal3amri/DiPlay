@@ -63,6 +63,17 @@ class MediaCodecSupportTest {
         assertEquals(0, MediaCodecSupport.hevcCodecSpecificData(truncated).size)
     }
 
+@Test
+    fun adtsFrameLengthDoesNotOverwriteTheReservedBits() {
+        val frameLength = 9_000 + 7
+        val header = MediaCodecSupport.adtsFrame(ByteArray(9_000), 48_000, 2).copyOf(7)
+        // Byte 3 holds channel_configuration in bits 6-7 and aac_frame_length bits 11-12 in
+        // bits 0-1. Bits 2-5 are fixed and must stay zero.
+        assertEquals(0, header[3].toInt() and 0x3c)
+        assertEquals((frameLength ushr 11) and 0x3, header[3].toInt() and 0x3)
+        assertEquals(((frameLength and 0x1fff) ushr 3) and 0xff, header[4].toInt() and 0xff)
+    }
+
     private fun hevcRecord(vararg parameterSets: ByteArray): ByteArray {
         var size = 23
         parameterSets.forEach { size += 5 + it.size }
