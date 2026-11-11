@@ -124,7 +124,8 @@ object MediaCodecSupport {
         header[0] = 0xff.toByte()
         header[1] = 0xf1.toByte()
         header[2] = ((1 shl 6) or (frequencyIndex shl 2) or (channelConfig ushr 2)).toByte()
-        header[3] = (((channelConfig and 0x3) shl 6) or (frameLength ushr 11)).toByte()
+        // aac_frame_length is 13 bits: only bits 11-12 belong in byte 3, bits 2-5 are reserved.
+        header[3] = (((channelConfig and 0x3) shl 6) or ((frameLength ushr 11) and 0x3)).toByte()
         header[4] = ((frameLength ushr 3) and 0xff).toByte()
         header[5] = (((frameLength and 0x7) shl 5) or 0x1f).toByte()
         header[6] = 0xfc.toByte()
