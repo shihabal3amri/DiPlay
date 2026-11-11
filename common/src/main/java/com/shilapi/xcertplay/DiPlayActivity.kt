@@ -5873,7 +5873,7 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
             else -> getString(R.string.ready_when_you_are)
         }
         homeLastProblem?.apply {
-            val line = if (CarPlayBackgroundSession.active) null else LastConnectionProblem.homeLine(this@DiPlayActivity)
+            val line = LastConnectionProblem.homeLine(this@DiPlayActivity, sessionActive = CarPlayBackgroundSession.active)
             visibility = if (line == null) View.GONE else View.VISIBLE
             if (line != null) text = line
         }

@@ -525,6 +525,7 @@
     <string name="wheel_speed_for_tunnels_description">عند تشغيل «إرسال الموقع إلى iPhone»، يرسل DiPlay أيضًا سرعة عجلات السيارة وناقل الحركة، لتواصل «خرائط Apple» تحريك موقعك في الأنفاق ومواقف السيارات. يعيد الاتصال بـ CarPlay. يتطلب ADB عبر الشبكة على وحدة القيادة.</string>
     <string name="video_while_parked">الفيديو أثناء التوقف</string>
     <string name="video_while_parked_description">iOS 27: يُعرض الفيديو الذي ترسله إلى CarPlay من iPhone على شاشة السيارة ما دامت السيارة على وضع P. يُغلق المشغل عند الخروج من P؛ وبدون ADB يبقى الفيديو متوقفًا ويشغّل iPhone الصوت فقط. يعمل فيديو HTTPS العادي (مثل Safari)؛ أما الفيديو المحمي بـ FairPlay مثل Apple TV+ فيحتاج إلى مستقبل مرخّص ولا يعمل هنا. يعيد الاتصال بـ CarPlay. يتطلب ADB عبر الشبكة على وحدة القيادة.</string>
+    <string name="video_off_gear_unreadable">الفيديو أثناء التوقف متوقف: لا يستطيع DiPlay قراءة وضع ناقل الحركة.</string>
     <string name="cluster_song">الأغنية على لوحة العدادات</string>
     <string name="cluster_song_description">يظهر اسم أغنية CarPlay والفنان في بطاقة الموسيقى على لوحة العدادات، مع التشغيل والإيقاف المؤقت. تظهر البطاقة كمصدر الموسيقى «آخر» من BYD، لأن لوحة العدادات لا تعرض مصدر CarPlay الخاص. يُطبَّق فورًا. يتطلب ADB عبر الشبكة على وحدة القيادة.</string>
     <string name="cluster_song_gate">تنشيط بطاقة الموسيقى تلقائياً</string>
