@@ -38,7 +38,8 @@ object PascdEncoder {
             append(reading.gear.letter).append(",0,").append(samples.size)
             for (sample in samples) {
                 append(',').append(format("%.2f", (sample.elapsedMillis - start) / 1000.0))
-                append(',').append(format("%.3f", sample.metersPerSecond.coerceAtLeast(0.0)))
+                // coerceAtLeast lets NaN through, and String.format writes it as "NaN".
+                append(',').append(format("%.3f", sample.metersPerSecond.takeIf { it.isFinite() && it > 0.0 } ?: 0.0))
             }
         }
         var checksum = 0
@@ -96,6 +97,8 @@ class VehicleSpeedLocationProvider(
     private fun record(hasFix: Boolean, reading: VehicleSpeedReading?) {
         val now = nowMillis()
         if (windowStart < 0) windowStart = now
+        // A backwards clock would otherwise make (now - windowStart) negative forever.
+        if (now < windowStart) windowStart = now
         updates++
         if (hasFix) withFix++
         if (!reading?.samples.isNullOrEmpty()) {

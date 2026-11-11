@@ -155,4 +155,30 @@ class VehicleSpeedNmeaTest {
         // Never shown: a minute with speed in it needs no explanation.
         override fun status() = "adb=READY speed=4/4 gear=D"
     }
+
+@Test
+    fun aNonFiniteSpeedIsSentAsZeroRatherThanNaN() {
+        val sentence = PascdEncoder.encode(
+            VehicleSpeedReading(VehicleGear.PARK, listOf(VehicleSpeedSample(0, Double.NaN)))
+        )!!
+        assertFalse(sentence.contains("NaN"))
+        assertTrue(sentence.contains(",0.000"))
+    }
+
+    @Test
+    fun aBackwardsClockStillRollsTheReportWindow() {
+        var now = 1_000L
+        val logs = mutableListOf<String>()
+        val provider = VehicleSpeedLocationProvider(FakePosition("\$GPGGA\r\n"), FakeSpeed(), logs::add, { now })
+        provider.onRequested(setOf(Iap2LocationMessages.VEHICLE_SPEED_DATA))
+        provider.latestNmea()
+        now += 60_000L
+        provider.latestNmea()
+        assertEquals(1, logs.size)
+        now = 10_000L // the clock jumps backwards
+        provider.latestNmea()
+        now = 80_000L
+        provider.latestNmea()
+        assertTrue("report window never rolled again: ${logs.size}", logs.size >= 2)
+    }
 }
