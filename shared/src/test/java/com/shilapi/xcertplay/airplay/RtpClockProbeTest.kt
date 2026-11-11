@@ -18,4 +18,10 @@ class RtpClockProbeTest {
         probe.observe(-24_000, 0L)
         assertEquals(48_000, probe.observe(24_000, 1_000_000_000L))
     }
+
+@Test fun aWrapSizedTickDeltaNeverReportsANegativeClock() {
+        val probe = RtpClockProbe(windowNs = 2_000_000_000L)
+        probe.observe(0, 0L)
+        assertEquals(Int.MAX_VALUE, probe.observe(-1, 2_000_000_000L))
+    }
 }

@@ -25,6 +25,9 @@ internal class RtpClockProbe(private val windowNs: Long = 2_000_000_000L) {
         if (elapsedNs < windowNs) return null
         done = true
         val ticks = (unsigned - firstSample) and 0xffff_ffffL
-        return Math.round(ticks * 1_000_000_000.0 / elapsedNs).toInt()
+        // A wrap-sized tick delta over the shortest window can exceed Int.MAX_VALUE;
+        // toInt() would then report a negative clock in the diagnostic report.
+        return Math.round(ticks * 1_000_000_000.0 / elapsedNs)
+            .coerceIn(0L, Int.MAX_VALUE.toLong()).toInt()
     }
 }
