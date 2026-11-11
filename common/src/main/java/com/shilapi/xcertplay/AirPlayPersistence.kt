@@ -42,6 +42,7 @@ object AirPlayPersistence {
     private const val KEY_DISPLAY_SCALE_TENTHS = "display_scale_tenths"
     private const val KEY_UI_SCALE_PERCENT = "ui_scale_percent"
     private const val KEY_HEVC_ENABLED = "hevc_enabled"
+    private const val KEY_VIDEO_USE_IPHONE_NETWORK = "video_use_iphone_network"
     private const val KEY_HEVC_SOFTWARE_DECODER = "hevc_software_decoder"
     private const val KEY_ADVANCED_AUDIO_CHANNEL_MAPPING = "advanced_audio_channel_mapping"
     private const val KEY_AUDIO_FOCUS_ENABLED = "audio_focus_enabled"
@@ -200,6 +201,15 @@ object AirPlayPersistence {
     fun loadHevcEnabled(context: Context): Boolean =
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
             .getBoolean(KEY_HEVC_ENABLED, false)
+
+    fun loadVideoUseIphoneNetwork(context: Context): Boolean =
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .getBoolean(KEY_VIDEO_USE_IPHONE_NETWORK, false)
+
+    fun saveVideoUseIphoneNetwork(context: Context, enabled: Boolean) {
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
+            .putBoolean(KEY_VIDEO_USE_IPHONE_NETWORK, enabled).apply()
+    }
 
     fun loadUiScalePercent(context: Context): Int = CarPlayUiScale.sanitize(
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)

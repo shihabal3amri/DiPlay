@@ -1042,4 +1042,6 @@
     <string name="wifi_direct_channel_unavailable">Wi-Fi Direct tercih edilen kanalı kullanamıyor</string>
     <string name="settings_existing_wifi_interface">Ağ arayüzü (isteğe bağlı)</string>
     <string name="settings_existing_wifi_interface_description">Yalnızca yerel ağ (LAN) bağlantısı Android\'in Wi-Fi olarak bildirmediği bir arayüzde (örneğin eth1 üzerindeki bir USB ağ kartı) çalışan üniteler içindir. Otomatik seçilmesi için boş bırakın.</string>
+    <string name="settings_video_use_iphone_network">Video trafiği için iPhone ağını kullan (deneysel)</string>
+    <string name="settings_video_use_iphone_network_description">Desteklenen video yayınlarını iPhone’un internet bağlantısıyla yükler ve mobil veri kullanabilir. Tek dosya olarak sunulan videolar yine araç multimedya ünitesinin internet bağlantısıyla yüklenir. Aynı dosyanın farklı bölümlerini okuyan yayınları oynatmak için aktarımı kapatmak gerekir. Değişiklikler bir sonraki video açıldığında geçerli olur.</string>
 </resources>

@@ -35,6 +35,9 @@ import com.shilapi.xcertplay.airplay.AirPlaySession
 import com.shilapi.xcertplay.airplay.AirPlaySessionListener
 import com.shilapi.xcertplay.airplay.PairingStore
 import com.shilapi.xcertplay.airplay.VideoInCar
+import com.shilapi.xcertplay.airplay.VideoResourceFile
+import com.shilapi.xcertplay.airplay.VideoResourceStore
+import com.shilapi.xcertplay.airplay.spoolVideoResource
 import com.shilapi.xcertplay.airplay.VideoPlaybackDelivery
 import com.shilapi.xcertplay.hud.BydBluetoothSuspend
 import com.shilapi.xcertplay.hud.BydNavigationOutputs
@@ -280,6 +283,9 @@ class CarPlayController(
     fun sendVideoMessage(streamId: Long, message: Map<String, Any?>): Boolean =
         activeSession?.sendRemoteControlMessage(streamId, message) ?: false
 
+    /** Fixed metadata from the player; never pass URLs, HTTP headers or exception messages. */
+    fun recordVideoDiagnostic(message: String) = debugLog("video playback ${message.take(512)}")
+
     @Volatile private var hotspot: WirelessHotspotManager? = null
     @Volatile private var wifiScanPause: WifiScanPause? = null
     @Volatile private var bonjour: CarPlayBonjour? = null
@@ -444,7 +450,31 @@ class CarPlayController(
         }
 
         override fun onRemoteControlMessage(session: AirPlaySession, streamId: Long, message: Map<String, Any?>) {
-            if (activeSession === session) videoListener?.onVideoMessage(streamId, message)
+            val receiver = videoListener
+            if (activeSession !== session || receiver == null) return
+            if (message["type"] == "unhandledURL") {
+                val response = message["response"] as? Map<*, *>
+                val id = (response?.get("FCUP_Response_RequestID") as? Number)?.toLong()
+                if (id == null || !receiver.claimVideoResourceResponse(streamId, id)) {
+                    debugLog("video resource response dropped stream=$streamId request=$id reason=not_pending")
+                    return
+                }
+            }
+            val next = spoolVideoResource(message) { VideoResourceStore.shared(appContext.cacheDir) }
+            if (next["type"] == "unhandledURL") {
+                val response = next["response"] as? Map<*, *>
+                val data = response?.get("FCUP_Response_Data")
+                val bytes = when (data) { is ByteArray -> data.size.toLong(); is VideoResourceFile -> data.length; else -> 0L }
+                debugLog("video resource response stream=$streamId request=${response?.get("FCUP_Response_RequestID")} status=${response?.get("FCUP_Response_StatusCode")} bytes=$bytes storage=${if (data is VideoResourceFile) "file" else "memory"}")
+            }
+            receiver.onVideoMessage(streamId, next)
+        }
+
+        override fun allowsLargeVideoResources(session: AirPlaySession): Boolean =
+            activeSession === session && videoListener?.usesIphoneNetworkForVideo() == true
+
+        override fun onVideoResourceRejected(session: AirPlaySession, streamId: Long, reason: String, bodyBytes: Int) {
+            if (activeSession === session) videoListener?.onVideoResourceRejected(streamId, reason, bodyBytes)
         }
 
         override fun onVideoPlaybackUiRequested(session: AirPlaySession) {
@@ -1802,6 +1832,13 @@ class CarPlayController(
             }
 
             // Passed on explicitly: without these the car's video player never opened over Wi-Fi.
+            override fun allowsLargeVideoResources(session: AirPlaySession): Boolean =
+                !isStaleWirelessRun(generation) && sessionListener.allowsLargeVideoResources(session)
+
+            override fun onVideoResourceRejected(session: AirPlaySession, streamId: Long, reason: String, bodyBytes: Int) {
+                if (!isStaleWirelessRun(generation)) sessionListener.onVideoResourceRejected(session, streamId, reason, bodyBytes)
+            }
+
             override fun onRemoteControlMessage(session: AirPlaySession, streamId: Long, message: Map<String, Any?>) =
                 sessionListener.onRemoteControlMessage(session, streamId, message)
 

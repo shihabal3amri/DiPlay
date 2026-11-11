@@ -1288,6 +1288,22 @@ class AdaptiveSettingsUiTest {
         assertTrue(texts(screen).any { it.text == screen.getString(R.string.save_diagnostic_report) })
     }
 
+    @Test fun iphoneVideoNetworkIsOptInAndDoesNotReconnectOrChangeVideoPermission() {
+        assertFalse(AirPlayPersistence.loadVideoUseIphoneNetwork(context))
+        com.shilapi.xcertplay.hud.BydOutputSettings.setVideoWhileParked(context, true)
+        val screen = openSettings()
+        ReflectionHelpers.setField(screen, "settingsCategory", SettingsCategory.ADVANCED)
+        ReflectionHelpers.callInstanceMethod<Unit>(screen, "render")
+        val setting = descendants(screen.window.decorView).filterIsInstance<Switch>()
+            .single { it.contentDescription == screen.getString(R.string.settings_video_use_iphone_network) }
+        for (enabled in listOf(true, false)) {
+            setting.performClick()
+            assertEquals(enabled, AirPlayPersistence.loadVideoUseIphoneNetwork(context))
+            assertTrue(com.shilapi.xcertplay.hud.BydOutputSettings.videoWhileParked(context))
+            assertNull(shadowOf(screen).nextStartedActivity)
+        }
+    }
+
     private fun openSettings(): DiPlayActivity = Robolectric.buildActivity(
         DiPlayActivity::class.java,
         Intent(context, DiPlayActivity::class.java).putExtra("page", "settings"),

@@ -954,4 +954,6 @@
     <string name="cluster_projection_shape_description">La pantalla partida mantiene junto al mapa la velocidad y el estado que el panel muestra normalmente; la pantalla completa deja que el mapa ocupe todo el panel. DiPlay fija la forma cada vez que aparece el mapa de CarPlay, que de lo contrario anula la forma elegida en el coche. Requiere ADB por red en la unidad principal.</string>
     <string name="settings_cluster_speedometer_album_color">Usar el color del álbum en el fondo del velocímetro</string>
     <string name="settings_cluster_speedometer_album_color_description">Iguala el color del borde del álbum con transiciones suaves. Conserva la opacidad elegida.</string>
+    <string name="settings_video_use_iphone_network">Usar la red del iPhone para el tráfico de vídeo (experimental)</string>
+    <string name="settings_video_use_iphone_network_description">Carga los vídeos en streaming compatibles mediante la conexión a internet del iPhone y puede consumir datos móviles. Los vídeos que se ofrecen en un solo archivo siguen cargándose mediante la conexión a internet de la unidad del vehículo, mientras que las emisiones que leen distintas partes de un mismo archivo requieren desactivar el reenvío para reproducirse. Los cambios se aplican la próxima vez que abras un vídeo.</string>
 </resources>

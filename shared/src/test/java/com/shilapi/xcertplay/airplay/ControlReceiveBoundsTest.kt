@@ -50,6 +50,10 @@ class ControlReceiveBoundsTest {
         assertTrue(parsed.messages.isEmpty())
     }
 
+    @Test fun standaloneParserRetainsTheOriginalCapEvenForVideoHeaders() {
+        assertRejected("POST /command RTSP/1.0\r\nX-Apple-StreamID: 3\r\nContent-Length: 2097152\r\n\r\n".toByteArray())
+    }
+
     @Test fun controlConnectionClosesOnHugeContentLength() {
         withControlPeer { client ->
             client.getOutputStream().apply { write(request(1_500_000_000)); flush() }

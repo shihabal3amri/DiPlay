@@ -1,6 +1,8 @@
 package com.shilapi.xcertplay.airplay
 
 import java.net.ProtocolException
+import java.net.URI
+import java.io.Closeable
 
 /**
  * RTSP/HTTP-style request framing for the CarPlay control channel.
@@ -16,7 +18,16 @@ object RtspMessage {
         val protocol: String,
         val headers: Map<String, String>,
         val body: ByteArray,
-    )
+        val videoResource: Boolean = false,
+        val rejectedBodyBytes: Int = 0,
+        val rejectionReason: String? = null,
+    ) : Closeable {
+        internal var bodyLease: Closeable? = null
+        override fun close() {
+            bodyLease?.close()
+            bodyLease = null
+        }
+    }
 
     data class Response(
         val protocol: String? = null,
@@ -57,29 +68,18 @@ object RtspMessage {
                 break
             }
             val headerText = String(buffer, offset, headerEndIndex - offset, Charsets.US_ASCII)
-            val lines = headerText.split("\r\n")
-            if (lines.isEmpty()) {
-                offset = headerEndIndex + headerEnd.size
-                continue
-            }
-            val requestLine = lines.first().split(" ", limit = 3)
-            val headers = HashMap<String, String>()
-            for (line in lines.drop(1)) {
-                val separator = line.indexOf(':')
-                if (separator == -1) continue
-                headers[line.substring(0, separator).trim().lowercase()] =
-                    line.substring(separator + 1).trim()
-            }
+            val header = parseHeader(headerText)
+            val headers = header.headers
             val bodyStart = headerEndIndex + headerEnd.size
-            val contentLength = headers["content-length"]?.toIntOrNull()?.coerceAtLeast(0) ?: 0
+            val contentLength = header.length
             if (contentLength > MAX_BODY_BYTES) throw ProtocolException("RTSP body of $contentLength bytes over $MAX_BODY_BYTES")
             val bodyEnd = bodyStart + contentLength
             if (bodyEnd > buffer.size) break
             messages.add(
                 Request(
-                    method = requestLine[0],
-                    path = requestLine.getOrElse(1) { "" },
-                    protocol = requestLine.getOrElse(2) { "RTSP/1.0" },
+                    method = header.method,
+                    path = header.path,
+                    protocol = header.protocol,
                     headers = headers,
                     body = buffer.copyOfRange(bodyStart, bodyEnd),
                 ),
@@ -88,6 +88,28 @@ object RtspMessage {
         }
         return Parsed(messages, buffer.copyOfRange(offset, buffer.size))
     }
+
+    internal data class Header(val method: String, val path: String, val protocol: String,
+        val headers: Map<String, String>, val length: Int)
+
+    internal fun parseHeader(text: String): Header {
+        val lines = text.split("\r\n")
+        val first = lines.first().split(" ", limit = 3)
+        val headers = HashMap<String, String>()
+        for (line in lines.drop(1)) {
+            val separator = line.indexOf(':')
+            if (separator >= 0) headers[line.substring(0, separator).trim().lowercase()] = line.substring(separator + 1).trim()
+        }
+        val length = headers["content-length"]?.let {
+            val value = it.toLongOrNull() ?: throw ProtocolException("Invalid Content-Length")
+            if (value !in 0..Int.MAX_VALUE.toLong()) throw ProtocolException("Invalid Content-Length")
+            value.toInt()
+        } ?: 0
+        return Header(first[0], first.getOrElse(1) { "" }, first.getOrElse(2) { "RTSP/1.0" }, headers, length)
+    }
+
+    internal fun isCommandPath(path: String): Boolean =
+        path == "/command" || runCatching { URI(path).rawPath == "/command" }.getOrDefault(false)
 
     /** Builds a response, echoing the request protocol and CSeq. */
     fun buildResponse(request: Request, response: Response): ByteArray {

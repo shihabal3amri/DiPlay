@@ -26,6 +26,10 @@ data class AirPlayDeviceInfo(
 
 /** Session lifecycle and command callbacks for the driver/UI layer. */
 interface AirPlaySessionListener {
+    /** Explicit, live opt-in. A negotiated video stream alone does not lift the ordinary body cap. */
+    fun allowsLargeVideoResources(session: AirPlaySession): Boolean = false
+    /** A bounded video body was discarded; no request ID can be decoded from its missing body. */
+    fun onVideoResourceRejected(session: AirPlaySession, streamId: Long, reason: String, bodyBytes: Int) {}
     fun onTcpAccepted(event: AirPlayTcpAccepted) {}
     fun onSessionActive(session: AirPlaySession) {}
     fun onSessionEnded(session: AirPlaySession) {}
@@ -84,9 +88,11 @@ class AirPlaySession(
     internal val pairSetup = PairSetup(identity, pairings)
     internal val pairVerify = PairVerify(identity, pairings)
     internal var cipher: ControlCipher? = null
+    internal var controlBodyBudget = ControlBodyBudget.shared
     internal var encBuf = ByteArray(0)
     internal var deviceBtMac = ""
     internal val activeStreams = linkedSetOf<Int>()
+    @Volatile private var videoControlStreamIds: Set<Long> = emptySet()
 
     /** Counts the iPhone's cluster stream setups; 0 while no cluster stream is up. */
     @Volatile var clusterStream = 0
@@ -153,6 +159,7 @@ class AirPlaySession(
 
     override fun close() {
         if (!closed.compareAndSet(false, true)) return
+        videoControlStreamIds = emptySet()
         mainScreenToken = null
         clearClusterContent()
         safeClose(socket)
@@ -451,7 +458,10 @@ class AirPlaySession(
         com.shilapi.xcertplay.network.TcpLiveness.configure(socket) { debugLog(it) }
         val input = BufferedInputStream(socket.getInputStream())
         val output = BufferedOutputStream(socket.getOutputStream())
-        var accumulated = ByteArray(0)
+        val controlReader = ControlMessageReader(
+            ::videoResourceStreams, controlBodyBudget, log = { debugLog(it) },
+            allowsLargeVideoResources = { listener.allowsLargeVideoResources(this) },
+        )
         val buffer = ByteArray(READ_CHUNK_BYTES)
         var closeReason = "session closed"
         try {
@@ -475,54 +485,59 @@ class AirPlaySession(
                     encBuf = decrypted.rest
                     plaintext = decrypted.data
                 }
-                accumulated += plaintext
-                val parsed = RtspMessage.parseMessages(accumulated)
-                accumulated = parsed.rest
-                for (request in parsed.messages) {
-                    val cseq = request.headers["cseq"] ?: "-"
-                    val path = request.path.lowercase()
-                    val showInDebugOverlay =
-                        !path.endsWith("/feedback") &&
-                            !(request.method == "POST" && path.endsWith("/command"))
-                    debugLog(
-                        "airplay rx ${request.method} ${request.path} cseq=$cseq body=${request.body.size}",
-                        showInDebugOverlay,
-                    )
-                    if (showInDebugOverlay) debugLog(
-                        AirPlayControlDiagnostics.request(request.method, request.path, request.body.size),
-                        false,
-                    )
-                    trace {
-                        "airplay control rx headers=${request.headers} " +
-                            "bodyHex=${request.body.toHex()}"
-                    }
-                    val response = try {
-                        handle(request)
-                    } catch (error: Exception) {
-                        Log.e(
-                            TAG,
-                            "airplay handler failed ${request.method} ${request.path} cseq=$cseq",
-                            error,
+                val requests = controlReader.feed(plaintext)
+                try {
+                    for (request in requests) {
+                        val cseq = request.headers["cseq"] ?: "-"
+                        val path = request.path.lowercase()
+                        val showInDebugOverlay =
+                            !path.endsWith("/feedback") &&
+                                !(request.method == "POST" && path.endsWith("/command"))
+                        debugLog(
+                            "airplay rx ${request.method} ${request.path} cseq=$cseq body=${request.body.size}",
+                            showInDebugOverlay,
                         )
-                        RtspMessage.Response(status = 500)
+                        if (showInDebugOverlay) debugLog(
+                            AirPlayControlDiagnostics.request(request.method, request.path, request.body.size),
+                            false,
+                        )
+                        trace {
+                            if (request.videoResource) "airplay video control rx stream=${request.headers["x-apple-streamid"]} bodyBytes=${request.body.size}"
+                            else "airplay control rx headers=${request.headers} " +
+                                "bodyHex=${request.body.toHex()}"
+                        }
+                        val response = try {
+                            handle(request)
+                        } catch (error: OutOfMemoryError) {
+                            if (!request.videoResource) throw error
+                            debugLog("video resource rejected reason=heap_pressure")
+                            RtspMessage.Response(status = 200)
+                        } catch (error: Exception) {
+                            Log.e(
+                                TAG,
+                                "airplay handler failed ${request.method} ${request.path} cseq=$cseq",
+                                error,
+                            )
+                            RtspMessage.Response(status = 500)
+                        }
+                        debugLog(
+                            "airplay tx status=${response.status ?: 200} cseq=$cseq body=${response.body.size}",
+                            showInDebugOverlay,
+                        )
+                        if (showInDebugOverlay) debugLog(
+                            "airplay control response status=${response.status ?: 200} contentBytes=${response.body.size}",
+                            false,
+                        )
+                        val wire = RtspMessage.buildResponse(request, response)
+                        trace { "airplay control tx wireHex=${wire.toHex()}" }
+                        output.write(cipher?.encrypt(wire) ?: wire)
+                        if (cipher == null && pairVerify.controlKeys != null) {
+                            val keys = pairVerify.controlKeys!!
+                            cipher = ControlCipher(keys.readKey, keys.writeKey)
+                            debugLog("airplay control encryption enabled")
+                        }
                     }
-                    debugLog(
-                        "airplay tx status=${response.status ?: 200} cseq=$cseq body=${response.body.size}",
-                        showInDebugOverlay,
-                    )
-                    if (showInDebugOverlay) debugLog(
-                        "airplay control response status=${response.status ?: 200} contentBytes=${response.body.size}",
-                        false,
-                    )
-                    val wire = RtspMessage.buildResponse(request, response)
-                    trace { "airplay control tx wireHex=${wire.toHex()}" }
-                    output.write(cipher?.encrypt(wire) ?: wire)
-                    if (cipher == null && pairVerify.controlKeys != null) {
-                        val keys = pairVerify.controlKeys!!
-                        cipher = ControlCipher(keys.readKey, keys.writeKey)
-                        debugLog("airplay control encryption enabled")
-                    }
-                }
+                } finally { requests.forEach { it.close() } }
                 output.flush()
                 notifySetupResponseSent()
             }
@@ -530,7 +545,8 @@ class AirPlaySession(
             closeReason = "control I/O failed: ${error.message ?: error.javaClass.simpleName}"
             if (!closed.get()) Log.e(TAG, "airplay $closeReason", error)
         } finally {
-            debugLog("airplay control closing reason=$closeReason activeStreams=$activeStreams")
+            controlReader.close()
+            debugLog("airplay control closing reason=$closeReason activeStreams=$activeStreams videoConfigured=${config.videoInCar} controlEncrypted=${cipher != null} videoStreams=$videoControlStreamIds")
             close()
         }
     }
@@ -608,7 +624,7 @@ class AirPlaySession(
                     body = BplistCodec.encode(info),
                 )
             }
-            request.method == "POST" && path.endsWith("/command") -> handleCommand(request)
+            request.method == "POST" && RtspMessage.isCommandPath(request.path) -> handleCommand(request)
             request.method == "POST" && path.endsWith("/feedback") -> {
                 val body = media.onFeedback(this)
                 if (body == null) {
@@ -728,6 +744,7 @@ class AirPlaySession(
                     if (streamResponse != null) {
                         activeStreams.add(type)
                         result.add(streamResponse)
+
                     }
                 }
                 STREAM_TYPE_MAIN_BUFFERED_AUDIO -> {
@@ -740,7 +757,13 @@ class AirPlaySession(
                     }
                 }
                 STREAM_TYPE_DATA -> {
-                    val streamResponse = media.onDataStream(this, stream)
+                    val uuid = (stream["clientTypeUUID"] as? String)?.uppercase()
+                    val videoControl = config.videoInCar && uuid in VideoInCar.REMOTE_CONTROL_UUIDS &&
+                        (stream["controlType"] as? Number)?.toInt() == 1
+                    val streamResponse = if (videoControl && videoControlStreamIds.size >= MAX_VIDEO_CONTROL_STREAMS) {
+                        debugLog("video resource stream rejected reason=stream_limit")
+                        null
+                    } else media.onDataStream(this, stream)
                     debugLog(
                         "airplay data stream type=$type accepted=${streamResponse != null} " +
                             "dataPort=${streamResponse?.get("dataPort") ?: "none"}",
@@ -748,6 +771,11 @@ class AirPlaySession(
                     if (streamResponse != null) {
                         activeStreams.add(type)
                         result.add(streamResponse)
+                        val id = (streamResponse["streamID"] as? Number)?.toLong()
+                        if (videoControl && id != null && id > 2) {
+                            videoControlStreamIds = videoControlStreamIds + id
+                            debugLog("video resource stream registered id=$id")
+                        }
                     }
                 }
                 else -> debugLog("airplay unsupported stream type=$type")
@@ -756,20 +784,48 @@ class AirPlaySession(
         return result
     }
 
+    private fun videoResourceStreams(): Set<Long> =
+        if (cipher != null && config.videoInCar) videoControlStreamIds else emptySet()
+
     private fun handleCommand(request: RtspMessage.Request): RtspMessage.Response {
+        val streamId = request.headers["x-apple-streamid"]?.toLongOrNull()
+        if (request.rejectionReason != null) {
+            debugLog("video resource rejected stream=$streamId bytes=${request.rejectedBodyBytes} reason=${request.rejectionReason}")
+            if (request.videoResource && streamId != null) {
+                listener.onVideoResourceRejected(this, streamId, request.rejectionReason, request.rejectedBodyBytes)
+            }
+            return RtspMessage.Response(status = 200)
+        }
+        // A large body that was admitted at the header can finish even if the setting changed during receipt.
+        val admittedLargeBody = request.videoResource && request.body.size > 1024 * 1024
+        val videoResource = RtspMessage.isCommandPath(request.path) && streamId in videoResourceStreams() &&
+            (admittedLargeBody || listener.allowsLargeVideoResources(this))
+        val decode: (ByteArray) -> Any? = if (videoResource) BplistCodec::decodeVideoResource else BplistCodec::decode
         val body = try {
-            asMap(BplistCodec.decode(request.body)) ?: emptyMap()
+            asMap(if (videoResource && request.body.size > 1024 * 1024)
+                BplistCodec.decodeVideoResourceView(request.body) else decode(request.body)) ?: emptyMap()
         } catch (_: Exception) {
+            if (videoResource) debugLog("video resource plist rejected stream=$streamId bytes=${request.body.size}")
             emptyMap<String, Any?>()
         }
         val type = string(body["type"])
         val params = asMap(body["params"]) ?: emptyMap()
         debugLog("airplay command type=$type keys=${params.keys.sorted()}")
-        val streamId = request.headers["x-apple-streamid"]?.toLongOrNull()
-        val data = params["data"] as? ByteArray
-        if (streamId != null && data != null) {
-            runCatching { asMap(BplistCodec.decode(data)) }.getOrNull()
-                ?.let { listener.onRemoteControlMessage(this, streamId, it) }
+        val data = params["data"]
+        if (streamId != null && (data is ByteArray || data is BplistCodec.DataSlice)) {
+            runCatching { asMap(if (data is BplistCodec.DataSlice)
+                BplistCodec.decodeVideoResourceView(data) else decode(data as ByteArray)) }.getOrNull()?.let { message ->
+                val resourceData = (message["response"] as? Map<*, *>)?.get("FCUP_Response_Data")
+                val resourceReply = message["type"] == "unhandledURL" && message["kind"] == "response" &&
+                    (resourceData is ByteArray || resourceData is BplistCodec.DataSlice)
+                if (request.body.size <= 1024 * 1024 || (videoResource && resourceReply)) {
+                    listener.onRemoteControlMessage(this, streamId, message)
+                } else debugLog("video resource message rejected stream=$streamId reason=unexpected_type")
+            }
+            return RtspMessage.Response(status = 200)
+        }
+        if (request.body.size > 1024 * 1024) {
+            debugLog("video resource message rejected stream=$streamId reason=unexpected_envelope")
             return RtspMessage.Response(status = 200)
         }
         when (type) {
@@ -792,6 +848,9 @@ class AirPlaySession(
             null
         }
         val types = teardownStreamTypes(decodedBody)
+        val tornDownIds = (((decodedBody as? Map<*, *>)?.get("streams") as? List<*>).orEmpty())
+            .mapNotNull { ((it as? Map<*, *>)?.get("streamID") as? Number)?.toLong() }.toSet()
+        videoControlStreamIds = if (types == null) emptySet() else videoControlStreamIds - tornDownIds
 
         debugLog(
             "airplay TEARDOWN types=${types ?: "all"} activeBefore=$activeStreams " +
@@ -988,6 +1047,7 @@ class AirPlaySession(
         private val BUFFERED_AUDIO_METHODS = setOf("SETRATE", "SETRATEANCHORTIME", "GETANCHOR", "FLUSHBUFFERED")
 
         const val READ_CHUNK_BYTES = 16 * 1024
+        private const val MAX_VIDEO_CONTROL_STREAMS = 16
         const val ZOOM_DIRECTION_IN = 0
         const val ZOOM_DIRECTION_OUT = 1
         const val EVENT_READY_POLL_MILLIS = 25L

@@ -5,6 +5,11 @@ import java.io.Closeable
 
 /** iOS 27 video in car, played by the host in the car's own player (see [VideoInCar]). */
 interface CarPlayVideoListener {
+    /** Current persisted setting, read without reconnecting the CarPlay control session. */
+    fun usesIphoneNetworkForVideo(): Boolean = false
+    fun onVideoResourceRejected(streamId: Long, reason: String, bodyBytes: Int) {}
+    /** Claim one pending reply before spooling/posting; late or duplicate replies must be dropped. */
+    fun claimVideoResourceResponse(streamId: Long, requestId: Long): Boolean = false
     /** Whether the car is in P, or null when it cannot tell. Blocking; read once a second while CarPlay runs. */
     fun readParked(): Boolean?
 

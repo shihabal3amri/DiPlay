@@ -1003,4 +1003,6 @@
     <string name="cluster_projection_shape_description">يُبقي وضع نصف الشاشة السرعة وحالة السيارة اللتين تعرضهما اللوحة عادةً بجانب الخريطة؛ أما ملء الشاشة فتغطي الخريطة اللوحة بالكامل. يضبط DiPlay هذا الشكل عند ظهور خريطة CarPlay، وإلا فإنه يلغي الشكل المختار في السيارة. يتطلب ADB عبر الشبكة على وحدة القيادة.</string>
     <string name="settings_cluster_speedometer_album_color">استخدام لون الألبوم لخلفية عداد السرعة</string>
     <string name="settings_cluster_speedometer_album_color_description">يطابق لون إطار الألبوم بانتقالات سلسة مع الحفاظ على التعتيم المحدد.</string>
+    <string name="settings_video_use_iphone_network">استخدام شبكة iPhone لحركة بيانات الفيديو (تجريبي)</string>
+    <string name="settings_video_use_iphone_network_description">يحمّل الفيديو المتاح للبث عبر اتصال iPhone بالإنترنت، وقد يستخدم بيانات الهاتف الخلوي. تُحمّل الفيديوهات المتاحة كملف واحد عبر اتصال وحدة السيارة بالإنترنت، أما البث الذي يقرأ أجزاء مختلفة من الملف نفسه فيتطلب إيقاف الترحيل ليعمل. تسري تغييرات الإعداد عند فتح الفيديو التالي.</string>
 </resources>
