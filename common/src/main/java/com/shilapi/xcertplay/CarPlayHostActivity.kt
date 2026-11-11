@@ -5176,11 +5176,17 @@ open class CarPlayHostActivity : ComponentActivity() {
                 AirPlayPersistence.clearCustomAirPlayIcon(this)
             }
         }
-        val bitmap = customBitmap ?: BitmapFactory.decodeResource(resources, R.raw.placeholder_icon)
+        val badge = CarBrandBadge.fromKey(AirPlayPersistence.loadCarBrand(this))
+        val bitmap = customBitmap ?: BitmapFactory.decodeResource(resources, badge.iconRawRes)
         preview.setImageBitmap(bitmap)
         iconStatusView?.text =
-            if (customBitmap != null) getString(R.string.custom_1_1_icon) else getString(R.string.default_placeholder_icon)
+            if (customBitmap != null) getString(R.string.custom_1_1_icon) else badgePreviewName(badge)
     }
+
+    // The preview names the live badge: the default keeps the literal "BYD" like the settings UI.
+    private fun badgePreviewName(badge: CarBrandBadge): String =
+        if (badge == CarBrandBadge.DEFAULT) AirPlayPersistence.DEFAULT_OEM_LABEL
+        else getString(badge.labelRes)
 
     private fun currentActivitySize(): DisplaySize? {
         val view = videoView
