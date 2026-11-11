@@ -2917,6 +2917,10 @@ open class CarPlayHostActivity : ComponentActivity() {
         }
         val panel = FrameLayout(this).apply {
             background = swipeMenuChrome()
+            // Keep the outer stroke above opaque scrolling navigation backgrounds.
+            foreground = swipeMenuChrome().apply {
+                colors = intArrayOf(Color.TRANSPARENT, Color.TRANSPARENT)
+            }
             clipToOutline = true
             elevation = dp(SWIPE_PANEL_ELEVATION_DP).toFloat()
         }
@@ -3392,10 +3396,10 @@ open class CarPlayHostActivity : ComponentActivity() {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(SWIPE_CHROME_PADDING_DP), dp(SWIPE_CHROME_PADDING_DP),
                 dp(SWIPE_CHROME_PADDING_DP), dp(SWIPE_CHROME_PADDING_DP))
-            categories.forEach { (key, title) ->
+            categories.forEachIndexed { index, (key, title) ->
                 addView(categoryButton(key, title), LinearLayout.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
-                    bottomMargin = dp(SWIPE_ACTION_GAP_DP)
+                    if (index < categories.lastIndex) bottomMargin = dp(SWIPE_ACTION_GAP_DP)
                 })
             }
         }
@@ -3408,10 +3412,10 @@ open class CarPlayHostActivity : ComponentActivity() {
             orientation = LinearLayout.HORIZONTAL
             setPadding(dp(SWIPE_CHROME_PADDING_DP), dp(SWIPE_ACTION_GAP_DP),
                 dp(SWIPE_CHROME_PADDING_DP), dp(SWIPE_ACTION_GAP_DP))
-            categories.forEach { (key, title) ->
+            categories.forEachIndexed { index, (key, title) ->
                 addView(categoryButton(key, title), LinearLayout.LayoutParams(
                     ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
-                    marginEnd = dp(SWIPE_ACTION_GAP_DP)
+                    if (index < categories.lastIndex) marginEnd = dp(SWIPE_ACTION_GAP_DP)
                 })
             }
         }
@@ -4071,7 +4075,10 @@ open class CarPlayHostActivity : ComponentActivity() {
                 ViewGroup.LayoutParams.WRAP_CONTENT,
             ).apply { topMargin = dp(10) },
         )
-        val status = menuText("", 14f, MENU_SECONDARY)
+        // Pin to the view's start edge (right in RTL) so Latin badge names line up under the icon too.
+        val status = menuText("", 14f, MENU_SECONDARY).apply {
+            textAlignment = View.TEXT_ALIGNMENT_VIEW_START
+        }
         section.addView(
             status,
             LinearLayout.LayoutParams(
@@ -5158,7 +5165,9 @@ open class CarPlayHostActivity : ComponentActivity() {
 
     private fun defaultAirPlayIconBytes(): ByteArray =
         // Shown in CarPlay's app list as the "back to the car" button.
-        resources.openRawResource(R.raw.ic_car_home).use { it.readBytes() }
+        resources.openRawResource(
+            CarBrandBadge.fromKey(AirPlayPersistence.loadCarBrand(this)).iconRawRes,
+        ).use { it.readBytes() }
 
     private fun updateAirPlayIconPreview() {
         val preview = iconPreviewView ?: return
@@ -5170,10 +5179,13 @@ open class CarPlayHostActivity : ComponentActivity() {
                 AirPlayPersistence.clearCustomAirPlayIcon(this)
             }
         }
-        val bitmap = customBitmap ?: BitmapFactory.decodeResource(resources, R.raw.placeholder_icon)
+        val badge = CarBrandBadge.fromKey(AirPlayPersistence.loadCarBrand(this))
+        val bitmap = customBitmap ?: BitmapFactory.decodeResource(resources, badge.iconRawRes)
         preview.setImageBitmap(bitmap)
+        // Share the exact settings-vehicle wording: "Custom icon", else the badge's own label.
         iconStatusView?.text =
-            if (customBitmap != null) getString(R.string.custom_1_1_icon) else getString(R.string.default_placeholder_icon)
+            if (customBitmap != null) getString(R.string.car_button_icon_custom)
+            else getString(badge.labelRes)
     }
 
     private fun currentActivitySize(): DisplaySize? {
