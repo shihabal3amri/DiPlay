@@ -8,6 +8,7 @@ import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Process
 import android.util.Log
+import com.shilapi.xcertplay.DiLink51Firmware
 import java.security.MessageDigest
 
 /** Ordinary-app IPC to the real stock receiver. No shell, local socket or permission grant. */
@@ -62,13 +63,13 @@ internal class BydStandaloneHudOutput private constructor(context: Context) {
             }.onFailure { appendLine("receiverMetadataUnavailable=${it.javaClass.simpleName}") }
         }
 
-        /** Enable production and diagnostic packages only on the physically tested firmware. */
+        /** Enable production and diagnostic packages only on known DiLink 5.1 firmware with the verified receiver. */
         fun available(context: Context): Boolean {
             if (Build.VERSION.SDK_INT < Build.VERSION_CODES.P) return false
             if (context.packageName !in setOf(
                     "com.andrerinas.headunitrevived", "com.shihab.diplay",
                     "com.andrerinas.headunitrevived.bydhudtest", "com.shihab.diplay.hudtest")) return false
-            if (Build.FINGERPRINT != "BYD-AUTO/IVI/IVI:13/TP1A.220624.014/eng.build20260722.221155:user/release-keys") return false
+            if (!DiLink51Firmware.hudReceiverSupported()) return false
             return runCatching {
                 val manager = context.packageManager
                 val info = manager.getPackageInfo(TARGET.packageName, PackageManager.GET_SIGNING_CERTIFICATES)

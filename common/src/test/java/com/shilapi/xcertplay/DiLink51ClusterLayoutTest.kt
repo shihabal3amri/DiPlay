@@ -83,6 +83,17 @@ class DiLink51ClusterLayoutTest {
         assertFalse(DiLink51ClusterLayout.supported(n9.replace("011226", "011227")))
     }
 
+    @Test fun theTangLFirmwareUsesTheSharedLayers() {
+        // A 2026-04-23 build on the same base; its 0.2.21 diagnostic report lists the same three
+        // 1920x720 layers and the same verified receiver build 10601004.
+        val tang = DiLink51ClusterLayout.TANG_L_FINGERPRINT
+        assertTrue(DiLink51ClusterLayout.supported(tang))
+        assertEquals(DiLink51ClusterLayout.FULL, DiLink51ClusterLayout.displayName(names, tang, Theme.MAP))
+        assertEquals(DiLink51ClusterLayout.SIDE, DiLink51ClusterLayout.displayName(names, tang, Theme.SCENARIO))
+        assertEquals(1920 to 720, DiLink51ClusterLayout.streamSize(tang))
+        assertFalse(DiLink51ClusterLayout.supported(tang.replace("233011", "233012")))
+    }
+
     @Test fun theWideN9ClusterGetsTheMeasuredPlansScaledAcross() {
         // Inferred from owner photos (#301): the stock side map sits in the right quarter, x=1760..2560.
         for (theme in listOf(Theme.SCENARIO, Theme.SIMPLE)) {

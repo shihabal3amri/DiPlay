@@ -492,8 +492,14 @@ open class CarPlayHostActivity : ComponentActivity() {
     private var clusterReleasedWhileIdle = false
     private val releaseIdleCluster = Runnable {
         if (SCREEN_TYPE_ALT in activeScreenStreamTypes || isDestroyed || clusterReleasedWhileIdle) return@Runnable
-        // DiLink 5.1 keeps its own cluster layers; nothing there has shown this problem.
-        if (DiLink51ClusterLayout.supported() || !AirPlayPersistence.loadClusterMapEnabled(this)) return@Runnable
+        // Preserve the existing no-release behavior on builds previously supported by this profile.
+        // Tang L is layout-enabled for testing, but retains the prior 15 s release behavior until accepted in-car.
+        val previouslySupported = Build.FINGERPRINT in setOf(
+            DiLink51ClusterLayout.FINGERPRINT,
+            DiLink51ClusterLayout.LEOPARD5_FINGERPRINT,
+            DiLink51ClusterLayout.DENZA_N9_FINGERPRINT,
+        )
+        if (previouslySupported || !AirPlayPersistence.loadClusterMapEnabled(this)) return@Runnable
         clusterReleasedWhileIdle = true
         appendLog("Cluster map: no CarPlay map for ${CLUSTER_IDLE_RELEASE_MILLIS / 1000} s; handing the cluster back to the car")
         dismissClusterPresentation()

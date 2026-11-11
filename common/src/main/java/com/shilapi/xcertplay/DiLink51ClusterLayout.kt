@@ -7,13 +7,11 @@ import com.shilapi.xcertplay.airplay.CarPlayClusterDisplay
 
 /** Geometry measured against the stock full-map and right-hand side-card layers on this firmware. */
 internal object DiLink51ClusterLayout {
-    const val FINGERPRINT = "BYD-AUTO/IVI/IVI:13/TP1A.220624.014/eng.build20260722.221155:user/release-keys"
-    // Leopard 5 Ultra 2025, system 34.1.23.2604176.1: the same three 1920x720 fission layers, and its own
-    // navigation switches between a full and a side map on the cluster (#301).
-    const val LEOPARD5_FINGERPRINT = "BYD-AUTO/IVI/IVI:13/TP1A.220624.014/eng.build20260705.021352:user/release-keys"
-    // Denza N9 2025, OTA V1.8: the same three fission layers, but 2560x720 (#301).
-    const val DENZA_N9_FINGERPRINT = "BYD-AUTO/IVI/IVI:13/TP1A.220624.014/eng.build20260705.011226:user/release-keys"
-    private val FINGERPRINTS = setOf(FINGERPRINT, LEOPARD5_FINGERPRINT, DENZA_N9_FINGERPRINT)
+    // Firmware identity lives in shared so the standalone HUD output gates on the same set of builds.
+    const val FINGERPRINT = DiLink51Firmware.FINGERPRINT
+    const val LEOPARD5_FINGERPRINT = DiLink51Firmware.LEOPARD5_FINGERPRINT
+    const val DENZA_N9_FINGERPRINT = DiLink51Firmware.DENZA_N9_FINGERPRINT
+    const val TANG_L_FINGERPRINT = DiLink51Firmware.TANG_L_FINGERPRINT
     const val BASE = "fission_bg_XDJAScreenProjection"
     const val FULL = "shared_${BASE}_0"
     const val SIDE = "shared_${BASE}_1"
@@ -43,7 +41,7 @@ internal object DiLink51ClusterLayout {
     fun streamConfig(width: Int = STREAM_WIDTH, height: Int = STREAM_HEIGHT): AirPlayDisplayConfig =
         CarPlayClusterDisplay.config(width, height, scalePercent = 100).copy(safeArea = null)
 
-    fun supported(fingerprint: String = Build.FINGERPRINT): Boolean = fingerprint in FINGERPRINTS
+    fun supported(fingerprint: String = Build.FINGERPRINT): Boolean = DiLink51Firmware.supported(fingerprint)
 
     /**
      * The stream size for this firmware's cluster layers, known before the cluster display appears: CarPlay

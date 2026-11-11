@@ -4,7 +4,7 @@ Phone navigation arrows, next-turn distance and street names can appear on suppo
 
 ## Validated windshield path
 
-Live guidance and street names were physically confirmed in both DiAuto and DiPlay on DiLink5.1 / Android13, firmware `BYD-AUTO/IVI/IVI:13/TP1A.220624.014/eng.build20260722.221155:user/release-keys`. The standalone output is restricted to that firmware and the verified stock receiver version10601004/signing certificate. Other firmware is not implicitly enabled by this result. Existing cluster/SOME-IP outputs remain available on supported factory services; the DiPlay contributor independently reported DiLink5.0 cluster/HUD operation.
+Live guidance and street names were physically confirmed in both DiAuto and DiPlay on DiLink5.1 / Android13, firmware `BYD-AUTO/IVI/IVI:13/TP1A.220624.014/eng.build20260722.221155:user/release-keys`. Standalone output is gated to that build and the BYD Tang L build `eng.build20260423.233011`; both must also have the verified stock receiver version10601004/signing certificate. The Tang L receiver and cluster layers are reported by DiPlay 0.2.21 diagnostics; on-car acceptance of the new layout/HUD path is pending. Other firmware is not implicitly enabled. Existing cluster/SOME-IP outputs remain available on supported factory services; the DiPlay contributor independently reported DiLink5.0 cluster/HUD operation.
 
 The app sends navigation-only broadcasts to the stock ClusterDebug receiver as its normal Android UID. Vendor output runs outside phone control callbacks. Street text uses the installed HAL's UTF-16LE chunk protocol, capped at48 UTF-16 units without splitting a surrogate pair. Output logs exclude street text.
 
@@ -61,7 +61,7 @@ The optional centre-screen map card mirrors that same dashboard stream. **Keep t
 
 ### DiLink 5.1 theme profile
 
-The exact Android 13 firmware `BYD-AUTO/IVI/IVI:13/TP1A.220624.014/eng.build20260722.221155:user/release-keys` has a separate profile for its measured 1920×720 cluster. The Leopard 5 Ultra firmware `…/eng.build20260705.021352` uses it unchanged, and the Denza N9 firmware `…/eng.build20260705.011226` uses it on a 2560×720 cluster with every position below scaled by 4/3 across and a 2560×720 stream (inferred from photos, not measured; see [compatibility](COMPATIBILITY.md)). Other firmware retains the original PR display selection, renderer and settings.
+The exact Android 13 firmware `BYD-AUTO/IVI/IVI:13/TP1A.220624.014/eng.build20260722.221155:user/release-keys` has a separate profile for its measured 1920×720 cluster. The Leopard 5 Ultra firmware `…/eng.build20260705.021352` and the BYD Tang L firmware `…/eng.build20260423.233011` use it unchanged, and the Denza N9 firmware `…/eng.build20260705.011226` uses it on a 2560×720 cluster with every position below scaled by 4/3 across and a 2560×720 stream (inferred from photos, not measured; see [compatibility](COMPATIBILITY.md)). Other firmware retains the original PR display selection, renderer and settings.
 
 - Map uses shared display `_0`, with a 1920×480 viewport at y=144 and contrast bands behind the instrument readouts.
 - Scenario and Simple use shared display `_1`, with a 600×720 side viewport at x=1320. Everything outside the side map is transparent. No white mini-map shading is added.
