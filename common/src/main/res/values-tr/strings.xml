@@ -186,7 +186,6 @@
     <string name="could_not_save_image">Görsel kaydedilemedi</string>
     <string name="could_not_save_the_report">Rapor kaydedilemedi</string>
     <string name="could_not_start_carplay_return_to_diplay_and_check_app_per">CarPlay başlatılamadı. DiPlay\'e dönün ve uygulama izinlerini kontrol edin.</string>
-    <string name="custom_1_1_icon">Özel</string>
     <string name="debug_logs">Hata ayıklama günlükleri</string>
     <string name="default_icon">Varsayılan simge</string>
     <string name="default_placeholder_icon">Varsayılan yer tutucu simge</string>
