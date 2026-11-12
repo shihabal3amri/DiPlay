@@ -41,13 +41,14 @@ internal object BydHudBridge {
     private var binding = false
     private var started = false
     private var senderStarted = false
-    private var guidanceSentLogged = false
+    private val guidanceNote = BydHudGuidanceNote()
     private var showing = false
     private var lastSendResult: Int? = null
     private var icons: Map<Int, ByteArray>? = null
     private var refusedBinds = 0
     private var transactionFailing = false
     private var nextBindAtMillis = 0L
+    // Field 26 stays empty except on the N9 (#301); see BydHudArrival.
     private val arrivalEnabled by lazy { BydHudArrival.enabled() }
 
     // The gateway pings registered callbacks and drops registrations that do not answer like an AIDL stub.
@@ -132,40 +133,29 @@ internal object BydHudBridge {
             clearHudLocked()
             return
         }
-        val eta = arrivalFor(guidance)
-        val payload = BydHudPayload.guidance(
-            distanceMeters = guidance.distanceMeters,
-            maneuver = guidance.maneuver,
+        val outgoing = BydHudArrival.payloadFor(
+            guidance,
             icon = iconFor(guidance.gaode),
-            road = guidance.road,
-            eta = eta,
+            arrivalEnabled = arrivalEnabled,
+            nowMillis = System.currentTimeMillis(),
+            zone = TimeZone.getDefault(),
+            use24Hour = context?.let { DateFormat.is24HourFormat(it) } ?: true,
         )
-        val accepted = sendLocked(payload)
-        if (accepted && !guidanceSentLogged) {
-            guidanceSentLogged = true
-            Log.i(TAG, "HUD profile (300ms repeat, fixed field2=2): gateway accepted guidance; rendering unconfirmed" +
-                if (arrivalEnabled) "; arrival field26=${eta.ifEmpty { "none" }}" else "")
-            NavigationOutputLog.note(TAG, "hud.guidance", NavigationOutputLines.hudGuidanceAccepted(), logcat = false)
+        val accepted = sendLocked(outgoing.payload)
+        if (!accepted) return
+        guidanceNote.accepted(outgoing.arrival)?.let { line ->
+            Log.i(TAG, "HUD profile (300ms repeat, fixed field2=2): $line")
+            NavigationOutputLog.note(TAG, "hud.guidance", line, logcat = false)
         }
-        if (accepted) showing = true
+        showing = true
     }
 
     private fun clearHudLocked() {
         if (!showing) return
         if (!sendLocked(BydHudPayload.clear())) return
         showing = false
-        guidanceSentLogged = false
+        guidanceNote.reset()
         NavigationOutputLog.note(TAG, "hud.guidance", NavigationOutputLines.hudGuidanceCleared())
-    }
-
-    // Field 26 stays empty except on the N9 (#301); see BydHudArrival.
-    private fun arrivalFor(guidance: BydHudGuidance): String {
-        if (!arrivalEnabled) return ""
-        val use24Hour = context?.let { DateFormat.is24HourFormat(it) } ?: true
-        return BydHudArrival.text(
-            System.currentTimeMillis(), guidance.arrivalEpochSeconds, guidance.remainingSeconds,
-            TimeZone.getDefault(), use24Hour,
-        )
     }
 
     // Arrow-less maneuvers (roundabouts, destination) are only visible through the field-8 icon.
@@ -323,6 +313,6 @@ internal object BydHudBridge {
         binding = false
         started = false
         showing = false
-        guidanceSentLogged = false
+        guidanceNote.reset()
     }
 }
