@@ -50,6 +50,8 @@ internal object BydHudBridge {
     private var nextBindAtMillis = 0L
     // Field 26 stays empty except on the N9 (#301); see BydHudArrival.
     private val arrivalEnabled by lazy { BydHudArrival.enabled() }
+    /** Passed where field 26 is not used, so other cars never read the default time zone on each tick. */
+    private val UNUSED_ZONE: TimeZone = TimeZone.getTimeZone("UTC")
 
     // The gateway pings registered callbacks and drops registrations that do not answer like an AIDL stub.
     private val callback = object : Binder() {
@@ -133,13 +135,15 @@ internal object BydHudBridge {
             clearHudLocked()
             return
         }
+        // Only the N9 fills field 26; other cars skip the clock and settings reads on this 300 ms path.
+        val arrival = arrivalEnabled
         val outgoing = BydHudArrival.payloadFor(
             guidance,
             icon = iconFor(guidance.gaode),
-            arrivalEnabled = arrivalEnabled,
-            nowMillis = System.currentTimeMillis(),
-            zone = TimeZone.getDefault(),
-            use24Hour = context?.let { DateFormat.is24HourFormat(it) } ?: true,
+            arrivalEnabled = arrival,
+            nowMillis = if (arrival) System.currentTimeMillis() else 0L,
+            zone = if (arrival) TimeZone.getDefault() else UNUSED_ZONE,
+            use24Hour = arrival && (context?.let { DateFormat.is24HourFormat(it) } ?: true),
         )
         val accepted = sendLocked(outgoing.payload)
         if (!accepted) return
