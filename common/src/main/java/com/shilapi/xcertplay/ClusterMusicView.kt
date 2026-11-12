@@ -124,11 +124,11 @@ internal class ClusterMusicView(context: Context) : View(context) {
         paint.style = Paint.Style.FILL
         paint.color = colorEvaluator.evaluate(artProgress, previousFrameColor, frameColor) as Int
         canvas.drawRoundRect(rect, radius, radius, paint)
-        // Album artwork fills the complete tile. The frame color remains only as a fallback
-        // while no artwork is available, never as a permanent border around a cover.
-        val artRect = rect
+        val inset = if (ClusterMusicSettings.showBorder(context)) side * BORDER_FRACTION else 0f
+        val artRect = RectF(rect).apply { inset(inset, inset) }
+        val artRadius = radius - inset
         val clipped = canvas.save()
-        canvas.clipPath(Path().apply { addRoundRect(artRect, radius, radius, Path.Direction.CW) })
+        canvas.clipPath(Path().apply { addRoundRect(artRect, artRadius, artRadius, Path.Direction.CW) })
         val art = snapshot.artwork?.takeUnless { it.isRecycled }
         val oldArt = previousArtwork?.takeUnless { it.isRecycled }
         paint.color = Color.rgb(28, 32, 40)
@@ -215,6 +215,7 @@ internal class ClusterMusicView(context: Context) : View(context) {
         }
 
         const val FADE_MILLIS = 400L
+        private const val BORDER_FRACTION = .011f
         internal fun progress(now: Long, started: Long): Float =
             ((now - started).toFloat() / FADE_MILLIS).coerceIn(0f, 1f)
         const val TEMPORARY_MILLIS = 8_000L

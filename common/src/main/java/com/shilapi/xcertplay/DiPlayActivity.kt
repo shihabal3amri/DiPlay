@@ -3915,6 +3915,10 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
             if (ClusterMusicSettings.permanent(this)) 1 else 0, reconnects = false) {
             ClusterMusicSettings.savePermanent(this, it == 1)
         }
+        toggle(card, getString(R.string.settings_cluster_music_border),
+            getString(R.string.settings_cluster_music_border_description), ClusterMusicSettings.showBorder(this)) {
+            ClusterMusicSettings.saveShowBorder(this, it)
+        }
         listOf(
             Triple("x", R.string.settings_cluster_music_horizontal, ClusterMusicSettings.x(this)),
             Triple("y", R.string.settings_cluster_music_vertical, ClusterMusicSettings.y(this)),

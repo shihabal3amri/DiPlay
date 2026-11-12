@@ -180,7 +180,7 @@ class ClusterMusicTest {
         assertTrue(ClusterMusicView.tileSide(60, 200, 150) <= 60f)
     }
 
-    @Test fun permanentArtworkHasNoFrameMargin() {
+    @Test fun artworkBorderIsOnByDefaultAndCanBeRemoved() {
         ClusterMusicSettings.saveEnabled(context, true)
         ClusterMusicSettings.savePermanent(context, true)
         ClusterMusicSettings.save(context, "x", 50)
@@ -189,7 +189,10 @@ class ClusterMusicTest {
         val controller = Robolectric.buildActivity(Activity::class.java).setup().visible()
         val view = ClusterMusicView(controller.get())
         controller.get().setContentView(view)
-        val art = Bitmap.createBitmap(64, 64, Bitmap.Config.ARGB_8888).apply { eraseColor(Color.RED) }
+        val art = Bitmap.createBitmap(64, 64, Bitmap.Config.ARGB_8888).apply {
+            eraseColor(Color.BLUE)
+            Canvas(this).drawRect(0f, 0f, 12f, 64f, android.graphics.Paint().apply { color = Color.RED })
+        }
         ClusterMusicState.publish(CarPlayNowPlaying(title = "Artwork", artworkTransferId = 1), art); idle()
         shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(9))
         view.measure(View.MeasureSpec.makeMeasureSpec(1280, View.MeasureSpec.EXACTLY),
@@ -199,7 +202,15 @@ class ClusterMusicTest {
         view.draw(Canvas(image))
         val side = ClusterMusicView.tileSide(1280, 480, 100)
         val left = 640f - side / 2f
-        assertEquals(Color.RED, image.getPixel((left + 1).toInt(), 240))
+        assertTrue(ClusterMusicSettings.showBorder(context))
+        assertEquals(ClusterMusicView.coverFrameColor(art), image.getPixel(left.toInt(), 240))
+        assertEquals(Color.RED, image.getPixel((left + 3).toInt(), 240))
+        ClusterMusicSettings.saveShowBorder(context, false)
+        idle()
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(9))
+        image.eraseColor(Color.TRANSPARENT)
+        view.draw(Canvas(image))
+        assertEquals(Color.RED, image.getPixel(left.toInt(), 240))
         image.recycle(); art.recycle(); controller.pause().stop().destroy()
     }
 
