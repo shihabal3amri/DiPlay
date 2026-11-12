@@ -2011,13 +2011,13 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
             toggle(card, getString(R.string.smooth_video), getString(R.string.smooth_video_description),
                 AirPlayPersistence.loadSmoothVideo(this)) {
                 AirPlayPersistence.saveSmoothVideo(this, it)
-                reconnectIfRunning()
+                markReconnectNeeded()
             }
             toggle(card, getString(R.string.settings_direct_video_output),
                 getString(R.string.settings_direct_video_output_description),
                 AirPlayPersistence.loadDirectVideoOutput(this)) {
                 AirPlayPersistence.saveDirectVideoOutput(this, it)
-                reconnectIfRunning()
+                markReconnectNeeded()
             }
             toggle(card, getString(R.string.settings_low_latency_decoder),
                 getString(R.string.settings_low_latency_decoder_description),
@@ -2062,22 +2062,23 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
             toggle(card, getString(R.string.main_buffered_audio), getString(R.string.main_buffered_audio_description),
                 AirPlayPersistence.loadMainBufferedAudio(this)) {
                 AirPlayPersistence.saveMainBufferedAudio(this, it)
-                reconnectIfRunning()
+                markReconnectNeeded()
             }
             toggle(card, getString(R.string.settings_speech_without_low_rates), getString(R.string.settings_speech_without_low_rates_description),
                 AirPlayPersistence.loadSpeechWithout8And16Khz(this)) {
                 AirPlayPersistence.saveSpeechWithout8And16Khz(this, it)
-                reconnectIfRunning()
+                markReconnectNeeded()
             }
             toggle(card, getString(R.string.settings_call_at_call_rate), getString(R.string.settings_call_at_call_rate_description),
                 AirPlayPersistence.loadCallAtCallRate(this)) {
                 AirPlayPersistence.saveCallAtCallRate(this, it)
                 markReconnectNeeded()
             }
-            toggle(card, getString(R.string.settings_car_bluetooth_audio), getString(R.string.settings_car_bluetooth_audio_description),
+            // Geely's input service may reconnect during CarPlay and reads this preference live.
+            // Wait for explicit consent before changing it or its key routing can diverge from the session.
+            reconnectingToggle(card, getString(R.string.settings_car_bluetooth_audio), getString(R.string.settings_car_bluetooth_audio_description),
                 AirPlayPersistence.loadCarBluetoothAudio(this)) {
                 AirPlayPersistence.saveCarBluetoothAudio(this, it)
-                reconnectIfRunning()
             }
         }
         filteredSection(content, SettingsSection.CAR_BUTTON,
@@ -6279,6 +6280,7 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
                 appDialogBuilder().setTitle(title).setMessage(description)
                     .setPositiveButton(R.string.apply_and_reconnect) { _, _ ->
                         save(selected)
+                        markReconnectNeeded()
                         reconnectIfRunning()
                     }
                     .setNegativeButton(R.string.cancel) { _, _ -> render() }
