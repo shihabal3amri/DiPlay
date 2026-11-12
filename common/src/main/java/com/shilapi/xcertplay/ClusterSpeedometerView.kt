@@ -11,6 +11,34 @@ import androidx.core.graphics.ColorUtils
 import com.shilapi.xcertplay.airplay.ClusterSpeedometerOverlay
 
 /**
+ * Keeps the animation phase independent of the wall clock, so a speed refresh cannot move
+ * an otherwise paused or hidden speedometer background.
+ */
+internal class ClusterArtworkMotionClock {
+    private var elapsed = 0L
+    private var runningSince = 0L
+    private var running = false
+
+    fun time(now: Long, active: Boolean): Long {
+        if (!active) {
+            pause(now)
+            return elapsed
+        }
+        if (!running) {
+            runningSince = now
+            running = true
+        }
+        return elapsed + now - runningSince
+    }
+
+    fun pause(now: Long) {
+        if (!running) return
+        elapsed += now - runningSince
+        running = false
+    }
+}
+
+/**
  * Optional speedometer drawn by DiPlay over the dashboard map.
  *
  * The speed value is supplied independently from the CarPlay video stream so the
@@ -29,7 +57,9 @@ internal class ClusterSpeedometerView(
     private var motion = false
     private var playing = false
     private var outputVisible = true
-    private val artworkBackground = ClusterArtworkBackground()
+    // The small dashboard card needs a little more chroma than the wide player canvas.
+    // It does not alter the Now Playing palette or its appearance.
+    private val artworkBackground = ClusterArtworkBackground(saturationMultiplier = 1.25f)
     private val backgroundClip = android.graphics.Path()
     private val frame = Runnable { invalidate() }
     private var stopObservingSettings: (() -> Unit)? = null
@@ -40,6 +70,7 @@ internal class ClusterSpeedometerView(
     private var artworkFrom = 0f
     private var artworkTarget = 0f
     private var artworkChangedAt = 0L
+    private val motionClock = ClusterArtworkMotionClock()
 
     private fun artworkAmount(now: Long): Float = artworkFrom +
         (artworkTarget - artworkFrom) * ClusterMusicView.progress(now, artworkChangedAt)
@@ -90,6 +121,7 @@ internal class ClusterSpeedometerView(
     }
 
     override fun setOutputVisible(visible: Boolean) {
+        if (!visible) motionClock.pause(android.os.SystemClock.elapsedRealtime())
         outputVisible = visible
         main.removeCallbacks(frame)
         removeCallbacks(frame)
@@ -98,6 +130,7 @@ internal class ClusterSpeedometerView(
 
     override fun onVisibilityChanged(changedView: View, visibility: Int) {
         super.onVisibilityChanged(changedView, visibility)
+        if (visibility != VISIBLE) motionClock.pause(android.os.SystemClock.elapsedRealtime())
         if (isAttachedToWindow) {
             main.removeCallbacks(frame)
             removeCallbacks(frame)
@@ -106,6 +139,7 @@ internal class ClusterSpeedometerView(
 
     override fun onWindowVisibilityChanged(visibility: Int) {
         super.onWindowVisibilityChanged(visibility)
+        if (visibility != VISIBLE) motionClock.pause(android.os.SystemClock.elapsedRealtime())
         if (isAttachedToWindow) {
             main.removeCallbacks(frame)
             removeCallbacks(frame)
@@ -115,6 +149,7 @@ internal class ClusterSpeedometerView(
     private fun applySettings() {
         animatedBackground = com.shilapi.xcertplay.airplay.ClusterSpeedometerArtworkSettings.enabled(context)
         motion = com.shilapi.xcertplay.airplay.ClusterSpeedometerArtworkSettings.motion(context)
+        if (!animatedBackground || !motion) motionClock.pause(android.os.SystemClock.elapsedRealtime())
         main.removeCallbacks(frame)
         removeCallbacks(frame)
         setLayout(AirPlayPersistence.loadClusterSpeedometerX(context),
@@ -134,6 +169,7 @@ internal class ClusterSpeedometerView(
                     }
                     if (playing != snapshot.info.playing) {
                         playing = snapshot.info.playing
+                        if (!playing) motionClock.pause(android.os.SystemClock.elapsedRealtime())
                         main.removeCallbacks(frame)
                         removeCallbacks(frame)
                         invalidate()
@@ -214,6 +250,7 @@ internal class ClusterSpeedometerView(
 
         speedKmh = next
         visibility = if (next == null) GONE else VISIBLE
+        if (next == null) motionClock.pause(android.os.SystemClock.elapsedRealtime())
         if (next != null) bringToFront()
         invalidate()
     }
@@ -224,6 +261,7 @@ internal class ClusterSpeedometerView(
         albumArtwork = null
         albumColor = null
         playing = false
+        motionClock.pause(android.os.SystemClock.elapsedRealtime())
         main.removeCallbacks(frame)
         removeCallbacks(frame)
         artworkFrom = 0f
@@ -292,6 +330,8 @@ internal class ClusterSpeedometerView(
         val radius = h * 0.22f
         val artworkMode = animatedBackground
         val amount = if (artworkMode) artworkAmount(now) else 0f
+        val motionActive = amount > 0f && motion && playing && outputVisible && isShown && windowVisibility == VISIBLE
+        val phaseTime = motionClock.time(now, motionActive)
         if (artworkMode) {
             val save = canvas.saveLayerAlpha(rect, (opacityPercent * 255 / 100).coerceIn(51, 255))
             backgroundClip.reset()
@@ -300,9 +340,13 @@ internal class ClusterSpeedometerView(
             canvas.translate(rect.left, rect.top)
             canvas.drawColor(Color.rgb(12, 14, 18))
             if (amount > 0f) {
-                val gradient = canvas.saveLayerAlpha(0f, 0f, w, h, (amount * 255).toInt())
-                artworkBackground.drawWideCrop(canvas, w, h, now, motion)
-                canvas.restoreToCount(gradient)
+                if (amount < 1f) {
+                    val gradient = canvas.saveLayerAlpha(0f, 0f, w, h, (amount * 255).toInt())
+                    artworkBackground.drawWideCrop(canvas, w, h, now, motion, phaseTime)
+                    canvas.restoreToCount(gradient)
+                } else {
+                    artworkBackground.drawWideCrop(canvas, w, h, now, motion, phaseTime)
+                }
             }
             canvas.restoreToCount(save)
         } else canvas.drawRoundRect(rect, radius, radius, backgroundPaint)
@@ -311,7 +355,7 @@ internal class ClusterSpeedometerView(
                 ClusterMusicView.progress(now, artworkChangedAt) < 1f
             if ((artworkMode && (artworkFade || (amount > 0f && artworkBackground.isTransitioning(now)))) ||
                 (!artworkMode && ClusterMusicView.progress(now, backgroundChangedAt) < 1f)) postOnAnimation(frame)
-            else if (artworkMode && amount > 0f && motion && playing) main.postDelayed(frame, 50)
+            else if (motionActive) main.postDelayed(frame, 50)
         }
         canvas.drawRoundRect(rect, radius, radius, strokePaint)
 

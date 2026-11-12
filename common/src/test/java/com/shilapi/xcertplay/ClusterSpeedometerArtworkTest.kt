@@ -47,6 +47,52 @@ class ClusterSpeedometerArtworkTest {
         assertFalse(prefs.getBoolean("cluster_background_motion", true))
     }
 
+    @Test fun motionClockOnlyAdvancesWhileItIsActive() {
+        val clock = ClusterArtworkMotionClock()
+        assertEquals(0, clock.time(100, true))
+        assertEquals(200, clock.time(300, true))
+        assertEquals(200, clock.time(300, false))
+        assertEquals(200, clock.time(30_300, false))
+        assertEquals(200, clock.time(30_300, true))
+        assertEquals(500, clock.time(30_600, true))
+    }
+
+    @Test fun pausedMusicKeepsTheGradientStillWhenSpeedRefreshes() {
+        val app = RuntimeEnvironment.getApplication()
+        AirPlayPersistence.saveClusterSpeedometerEnabled(app, true)
+        ClusterSpeedometerArtworkSettings.save(app, true)
+        ClusterSpeedometerArtworkSettings.saveMotion(app, true)
+        val activity = Robolectric.buildActivity(Activity::class.java).setup().visible()
+        val view = ClusterSpeedometerView(activity.get()) { {} }
+        activity.get().setContentView(view)
+        val art = Bitmap.createBitmap(64, 64, Bitmap.Config.ARGB_8888).apply {
+            eraseColor(Color.rgb(220, 70, 40))
+            Canvas(this).drawRect(20f, 0f, 44f, 64f, Paint().apply { color = Color.rgb(35, 130, 220) })
+        }
+        fun frame(speed: Int): Bitmap {
+            view.measure(View.MeasureSpec.makeMeasureSpec(1280, View.MeasureSpec.EXACTLY),
+                View.MeasureSpec.makeMeasureSpec(480, View.MeasureSpec.EXACTLY))
+            view.layout(0, 0, 1280, 480)
+            view.setSpeedKmh(speed)
+            return Bitmap.createBitmap(1280, 480, Bitmap.Config.ARGB_8888).also { view.draw(Canvas(it)) }
+        }
+        ClusterMusicState.publish(CarPlayNowPlaying(title = "Track", playing = true), art)
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(500))
+        frame(100).recycle()
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(500))
+        ClusterMusicState.publish(CarPlayNowPlaying(title = "Track", playing = false), art)
+        shadowOf(Looper.getMainLooper()).idle()
+        val paused = frame(100)
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(30))
+        val afterSpeedRefresh = frame(101)
+        val rect = ReflectionHelpers.getField<RectF>(view, "rect")
+        val x = (rect.left + rect.width() * .12f).toInt()
+        val y = (rect.top + rect.height() * .12f).toInt()
+        assertEquals(paused.getPixel(x, y), afterSpeedRefresh.getPixel(x, y))
+        activity.pause().stop().destroy()
+        paused.recycle(); afterSpeedRefresh.recycle(); art.recycle()
+    }
+
     @Test fun missingArtworkFadesToAndFromSolidAndUnitPaintHasContrast() {
         val app = RuntimeEnvironment.getApplication()
         AirPlayPersistence.saveClusterSpeedometerEnabled(app, true)

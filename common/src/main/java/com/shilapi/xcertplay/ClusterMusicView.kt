@@ -124,10 +124,11 @@ internal class ClusterMusicView(context: Context) : View(context) {
         paint.style = Paint.Style.FILL
         paint.color = colorEvaluator.evaluate(artProgress, previousFrameColor, frameColor) as Int
         canvas.drawRoundRect(rect, radius, radius, paint)
-        val inset = side * .015f
-        val artRect = RectF(left + inset, top + inset, rect.right - inset, rect.bottom - inset)
+        // Album artwork fills the complete tile. The frame color remains only as a fallback
+        // while no artwork is available, never as a permanent border around a cover.
+        val artRect = rect
         val clipped = canvas.save()
-        canvas.clipPath(Path().apply { addRoundRect(artRect, radius - inset, radius - inset, Path.Direction.CW) })
+        canvas.clipPath(Path().apply { addRoundRect(artRect, radius, radius, Path.Direction.CW) })
         val art = snapshot.artwork?.takeUnless { it.isRecycled }
         val oldArt = previousArtwork?.takeUnless { it.isRecycled }
         paint.color = Color.rgb(28, 32, 40)

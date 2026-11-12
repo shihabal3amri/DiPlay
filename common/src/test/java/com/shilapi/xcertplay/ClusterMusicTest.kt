@@ -180,6 +180,29 @@ class ClusterMusicTest {
         assertTrue(ClusterMusicView.tileSide(60, 200, 150) <= 60f)
     }
 
+    @Test fun permanentArtworkHasNoFrameMargin() {
+        ClusterMusicSettings.saveEnabled(context, true)
+        ClusterMusicSettings.savePermanent(context, true)
+        ClusterMusicSettings.save(context, "x", 50)
+        ClusterMusicSettings.save(context, "y", 50)
+        ClusterMusicSettings.save(context, "size", 100)
+        val controller = Robolectric.buildActivity(Activity::class.java).setup().visible()
+        val view = ClusterMusicView(controller.get())
+        controller.get().setContentView(view)
+        val art = Bitmap.createBitmap(64, 64, Bitmap.Config.ARGB_8888).apply { eraseColor(Color.RED) }
+        ClusterMusicState.publish(CarPlayNowPlaying(title = "Artwork", artworkTransferId = 1), art); idle()
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(9))
+        view.measure(View.MeasureSpec.makeMeasureSpec(1280, View.MeasureSpec.EXACTLY),
+            View.MeasureSpec.makeMeasureSpec(480, View.MeasureSpec.EXACTLY))
+        view.layout(0, 0, 1280, 480)
+        val image = Bitmap.createBitmap(1280, 480, Bitmap.Config.ARGB_8888)
+        view.draw(Canvas(image))
+        val side = ClusterMusicView.tileSide(1280, 480, 100)
+        val left = 640f - side / 2f
+        assertEquals(Color.RED, image.getPixel((left + 1).toInt(), 240))
+        image.recycle(); art.recycle(); controller.pause().stop().destroy()
+    }
+
     @Test fun missingCoverKeepsLastImageUntilReplacementAndDisconnectClearsIt() {
         val states = mutableListOf<ClusterMusicState.Snapshot>()
         val stop = ClusterMusicState.observe { states.add(it) }
