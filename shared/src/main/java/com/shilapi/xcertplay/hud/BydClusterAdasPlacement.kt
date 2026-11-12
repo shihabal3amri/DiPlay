@@ -186,7 +186,16 @@ object BydClusterAdasPlacement : BydClusterAdasPlacementControl {
                 }
                 Outcome.OTHER_ACTIVE -> publish(Status(State.OTHER))
                 Outcome.UNSUPPORTED -> publish(Status(State.UNSUPPORTED, result?.get("code")))
-                else -> probe(app)
+                else -> {
+                    // A file that rollback kept, or a selection whose answer never came, may be in use by the cluster.
+                    // Remember it, so the check at the next start finds out even if the probe below gets no answer.
+                    if (action == BydClusterAdasThemeMain.INSTALL && outcome == Outcome.FAILED &&
+                        (result == null || result["code"] == "rollback")
+                    ) {
+                        BydOutputSettings.setAdasPackInstalled(app, true)
+                    }
+                    probe(app)
+                }
             }
             return outcome
         } finally {

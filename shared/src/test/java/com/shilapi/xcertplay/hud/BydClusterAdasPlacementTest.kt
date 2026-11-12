@@ -35,6 +35,13 @@ class BydClusterAdasPlacementTest {
     @Before fun setUp() {
         context.applicationInfo.sourceDir = "/data/app/com.test-1/base.apk"
         BydClusterAdasPlacement.resetForTest()
+        wire()
+        BydOutputSettings.setAdasSceneBesideMap(context, false)
+        BydOutputSettings.setAdasPackInstalled(context, false)
+        BydOutputSettings.setAdasPackRetired(context, false)
+    }
+
+    private fun wire() {
         BydClusterAdasPlacement.submit = { it() }
         BydClusterAdasPlacement.run = { _, command ->
             commands += command
@@ -44,9 +51,6 @@ class BydClusterAdasPlacementTest {
         BydClusterAdasPlacement.parked = { true }
         BydClusterAdasPlacement.mapShown = { true }
         BydClusterAdasPlacement.nowMillis = { now }
-        BydOutputSettings.setAdasSceneBesideMap(context, false)
-        BydOutputSettings.setAdasPackInstalled(context, false)
-        BydOutputSettings.setAdasPackRetired(context, false)
     }
 
     @After fun tearDown() {
@@ -148,7 +152,55 @@ class BydClusterAdasPlacementTest {
         BydClusterAdasPlacement.install(context) { outcome = it }
         assertEquals(Outcome.FAILED, outcome)
         assertEquals(State.NOT_INSTALLED, BydClusterAdasPlacement.status.state)
+        assertFalse(BydOutputSettings.adasPackInstalled(context))
         assertEquals(1, helperCommands("probe").size)
+    }
+
+    @Test fun aFileThatRollbackKeptIsRememberedSoTheNextStartGivesItUpEvenIfNothingAnsweredNow() {
+        helper = { command -> if (" install " in command) line(Status.FAILED, "code" to "rollback") else null }
+        var outcome: Outcome? = null
+        BydClusterAdasPlacement.install(context) { outcome = it }
+        assertEquals(Outcome.FAILED, outcome)
+        assertEquals(State.UNKNOWN, BydClusterAdasPlacement.status.state)
+        assertTrue(BydOutputSettings.adasPackInstalled(context))
+
+        BydClusterAdasPlacement.resetForTest()
+        wire()
+        commands.clear()
+        helper = { command -> if (" probe " in command) probeReply("STALE") else line(Status.REMOVED, "reloaded" to "true") }
+        BydClusterAdasPlacement.tick(context)
+        assertEquals(1, helperCommands("probe").size)
+        assertEquals(1, helperCommands("remove").size)
+        assertFalse(BydOutputSettings.adasPackInstalled(context))
+        assertTrue(BydOutputSettings.adasPackRetired(context))
+    }
+
+    @Test fun theRecordOfAKeptFileIsClearedWhenTheNextStartFindsNothingInTheCluster() {
+        helper = { command -> if (" install " in command) line(Status.FAILED, "code" to "rollback") else null }
+        BydClusterAdasPlacement.install(context) {}
+        assertTrue(BydOutputSettings.adasPackInstalled(context))
+
+        BydClusterAdasPlacement.resetForTest()
+        wire()
+        commands.clear()
+        helper = { probeReply("NONE") }
+        BydClusterAdasPlacement.tick(context)
+        assertEquals(1, helperCommands("probe").size)
+        assertFalse(BydOutputSettings.adasPackInstalled(context))
+        assertEquals(0, helperCommands("remove").size + helperCommands("retire").size)
+    }
+
+    @Test fun anInstallWhoseAnswerNeverCameIsRememberedUnlessAdbWasDown() {
+        helper = { null }
+        BydClusterAdasPlacement.install(context) {}
+        assertTrue(BydOutputSettings.adasPackInstalled(context))
+
+        BydOutputSettings.setAdasPackInstalled(context, false)
+        BydClusterAdasPlacement.access = { LocalAdb.Access.UNREACHABLE }
+        var outcome: Outcome? = null
+        BydClusterAdasPlacement.install(context) { outcome = it }
+        assertEquals(Outcome.NO_ADB, outcome)
+        assertFalse(BydOutputSettings.adasPackInstalled(context))
     }
 
     @Test fun aHelperThatDoesNotAnswerIsAFailureOrAnAdbProblem() {
