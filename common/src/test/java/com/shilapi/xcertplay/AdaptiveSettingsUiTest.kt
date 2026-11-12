@@ -1039,6 +1039,59 @@ class AdaptiveSettingsUiTest {
     }
 
     @Test
+    @Config(sdk = [28, 33])
+    fun bluetoothAudioKeepsReconnectPendingWhenSetupBlocksIt() {
+        val before = AirPlayPersistence.loadCarBluetoothAudio(context)
+        val previousWireless = AirPlayPersistence.loadWirelessEnabled(context)
+        val screen = openSettings()
+        val appPrefs = context.getSharedPreferences("diplay", Context.MODE_PRIVATE)
+        val previousNotificationAsked = appPrefs.getBoolean("notification_asked", false)
+        appPrefs.edit().putBoolean("notification_asked", true).commit()
+        val session = mock(CarPlayController::class.java)
+        var stops = 0
+        AirPlayPersistence.saveWirelessEnabled(context, false)
+        CarPlayBackgroundSession.store(session, mock(AndroidMediaSink::class.java), 800, 480, Any(),
+            CarPlaySessionDisplay(800, 480, Surface.ROTATION_0, false, false, 800, 480)) { complete ->
+                stops++
+                CarPlayBackgroundSession.clear(session)
+                complete()
+            }
+        CarPlayBackgroundSession.active = true
+        try {
+            ReflectionHelpers.setField(screen, "settingsCategory", SettingsCategory.ADVANCED)
+            ReflectionHelpers.callInstanceMethod<Unit>(screen, "render")
+            ReflectionHelpers.setField(screen, "setupError", "Setup is incomplete")
+            descendants(screen.window.decorView).filterIsInstance<Switch>()
+                .single { it.contentDescription == screen.getString(R.string.settings_car_bluetooth_audio) }
+                .performClick()
+            ShadowAlertDialog.getLatestAlertDialog().getButton(AlertDialog.BUTTON_POSITIVE).performClick()
+            shadowOf(Looper.getMainLooper()).idle()
+
+            assertEquals(!before, AirPlayPersistence.loadCarBluetoothAudio(context))
+            assertTrue(PendingReconnect.isPending(session))
+            val reconnectBar = ReflectionHelpers.getField<View>(screen, "reconnectBar")
+            assertEquals(View.VISIBLE, reconnectBar.visibility)
+            assertSame(session, CarPlayBackgroundSession.snapshot()?.controller)
+            assertEquals(0, stops)
+
+            ReflectionHelpers.setField(screen, "setupError", null)
+            descendants(reconnectBar).filterIsInstance<TextView>()
+                .single { it.text == screen.getString(R.string.settings_reconnect_now) }
+                .performClick()
+            shadowOf(Looper.getMainLooper()).idle()
+
+            assertEquals(1, stops)
+            assertNull(CarPlayBackgroundSession.snapshot())
+        } finally {
+            AirPlayPersistence.saveWirelessEnabled(context, previousWireless)
+            AirPlayPersistence.saveCarBluetoothAudio(context, before)
+            appPrefs.edit().putBoolean("notification_asked", previousNotificationAsked).commit()
+            CarPlayBackgroundSession.clear()
+            PendingReconnect.clear()
+        }
+    }
+
+    @Test
     @Config(sdk = [28])
     fun mtkDecoderTuningAppearsOnlyForMtkAndMarksReconnect() {
         AirPlayPersistence.saveMtkDecoderTuning(context, false)

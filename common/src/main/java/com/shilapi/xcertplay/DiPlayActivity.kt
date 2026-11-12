@@ -6280,6 +6280,7 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
                 appDialogBuilder().setTitle(title).setMessage(description)
                     .setPositiveButton(R.string.apply_and_reconnect) { _, _ ->
                         save(selected)
+                        markReconnectNeeded()
                         reconnectIfRunning()
                     }
                     .setNegativeButton(R.string.cancel) { _, _ -> render() }
