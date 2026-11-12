@@ -11,7 +11,8 @@ internal object DiLink51ClusterLayout {
     // Leopard 5 Ultra 2025, system 34.1.23.2604176.1: the same three 1920x720 fission layers, and its own
     // navigation switches between a full and a side map on the cluster (#301).
     const val LEOPARD5_FINGERPRINT = "BYD-AUTO/IVI/IVI:13/TP1A.220624.014/eng.build20260705.021352:user/release-keys"
-    // Denza N9 2025, OTA V1.8: the same three fission layers, but 2560x720 (#301).
+    // Denza N9 2025, OTA V1.8: the same three fission layers, but 2560x720 (#301). The HUD's arrival-time
+    // field (BydHudArrival in :shared) is enabled for the same firmware.
     const val DENZA_N9_FINGERPRINT = "BYD-AUTO/IVI/IVI:13/TP1A.220624.014/eng.build20260705.011226:user/release-keys"
     private val FINGERPRINTS = setOf(FINGERPRINT, LEOPARD5_FINGERPRINT, DENZA_N9_FINGERPRINT)
     const val BASE = "fission_bg_XDJAScreenProjection"
@@ -38,6 +39,17 @@ internal object DiLink51ClusterLayout {
     const val STREAM_HEIGHT = 720
     // The N9 cluster is wider; its stream matches the cluster so the crop stays at native scale.
     const val N9_STREAM_WIDTH = 2560
+
+    /**
+     * The N9 side map (#301), from owner photos of the 2560x720 cluster, not measured on the car. The 1920
+     * box scaled 4/3 across (x=1760..2560 at full height) ran under the top-right status icons (x≈1430..2010,
+     * y≈15..71) and the power, P and trip readouts (x≈1805..2355, y≈651..694). This box keeps that width,
+     * which is centred on the stock navigation card (x≈2160), and stops about 25 px short of both rows.
+     */
+    const val N9_SIDE_LEFT = 1760
+    const val N9_SIDE_TOP = 96
+    const val N9_SIDE_WIDTH = 800
+    const val N9_SIDE_HEIGHT = 528
     // DiLink 5.1 retains its measured native-size stream and bottom-centered crop.
     // DiLink 5's marker safe area and scale controls must not alter this profile.
     fun streamConfig(width: Int = STREAM_WIDTH, height: Int = STREAM_HEIGHT): AirPlayDisplayConfig =
@@ -85,15 +97,15 @@ internal object DiLink51ClusterLayout {
     }
 
     fun plan(width: Int, height: Int, theme: Theme): Plan? {
-        // The measured side-map bounds are x=1320..1920 on the 1920x720 cluster. On the 2560x720
-        // N9 cluster, owner photos show the stock side map in the same place at the right, so its
-        // plans are the measured ones scaled 4/3 across (x=1760..2560). That geometry is not measured.
         if (height != STREAM_HEIGHT || (width != STREAM_WIDTH && width != N9_STREAM_WIDTH)) return null
-        fun across(x: Int) = x * width / STREAM_WIDTH
-        return if (theme == Theme.MAP) {
+        return when {
             // Protect speed/status and gear/range. Bottom-aligned cropping keeps the car marker
-            // inside this viewport even when the phone app ignores safe-area insets.
-            Plan(0, 144, width, 480, true, width, height)
-        } else Plan(across(1320), 0, across(600), height, false, width, height)
+            // inside this viewport even when the phone app ignores safe-area insets. The N9 uses
+            // the same bands across its wider cluster.
+            theme == Theme.MAP -> Plan(0, 144, width, 480, true, width, height)
+            // The measured side-map bounds on the 1920x720 cluster: x=1320..1920 at full height.
+            width == STREAM_WIDTH -> Plan(1320, 0, 600, height, false, width, height)
+            else -> Plan(N9_SIDE_LEFT, N9_SIDE_TOP, N9_SIDE_WIDTH, N9_SIDE_HEIGHT, false, width, height)
+        }
     }
 }

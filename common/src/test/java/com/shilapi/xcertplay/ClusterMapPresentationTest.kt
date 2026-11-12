@@ -135,10 +135,11 @@ class ClusterMapPresentationTest {
 
     @Test fun sideMapViewportFollowsTheClusterWidth() {
         assertSideViewport(DiLink51ClusterLayout.FINGERPRINT, "w1920dp-h720dp-mdpi", left = 1320, width = 600)
-        assertSideViewport(DiLink51ClusterLayout.DENZA_N9_FINGERPRINT, "w2560dp-h720dp-mdpi", left = 1760, width = 800)
+        // #301: the N9 box stops short of the top-right icons and the bottom power/P/trip readouts.
+        assertSideViewport(DiLink51ClusterLayout.DENZA_N9_FINGERPRINT, "w2560dp-h720dp-mdpi", left = 1760, width = 800, top = 96, height = 528)
     }
 
-    private fun assertSideViewport(fingerprint: String, spec: String, left: Int, width: Int) {
+    private fun assertSideViewport(fingerprint: String, spec: String, left: Int, width: Int, top: Int = 0, height: Int = 720) {
         val original = android.os.Build.FINGERPRINT
         org.robolectric.shadows.ShadowBuild.setFingerprint(fingerprint)
         try {
@@ -148,7 +149,8 @@ class ClusterMapPresentationTest {
                 val params = video.layoutParams as android.widget.FrameLayout.LayoutParams
                 assertEquals(left, params.leftMargin)
                 assertEquals(width, params.width)
-                assertEquals(720, params.height)
+                assertEquals(top, params.topMargin)
+                assertEquals(height, params.height)
             }
         } finally {
             org.robolectric.shadows.ShadowBuild.setFingerprint(original)
@@ -245,6 +247,25 @@ class ClusterMapPresentationTest {
         }
     }
 
+    // #1196: the report names which navigation receiver the head unit has, not only whether one exists.
+    @Test fun theReportNamesEachNavigationReceiverInstalled() {
+        val packages = shadowOf(context.packageManager)
+        val installed = listOf("com.byd.amapservice", "com.ts.car.someip.service")
+        installed.forEach { name ->
+            packages.installPackage(android.content.pm.PackageInfo().apply {
+                packageName = name
+                applicationInfo = android.content.pm.ApplicationInfo().apply { packageName = name }
+            })
+        }
+        try {
+            assertEquals(installed, com.shilapi.xcertplay.hud.BydOutputSettings.navigationReceivers(context))
+            assertTrue(ClusterMapPresentation.diagnosticReport(context).lines().contains(
+                "navigationReceiverAvailable=true receivers=com.byd.amapservice,com.ts.car.someip.service"))
+        } finally {
+            installed.forEach(packages::deletePackage)
+        }
+    }
+
     @Test fun disabledClusterStillReportsDisplayWithoutNavigationReceiver() {
         val enabled = AirPlayPersistence.loadClusterMapEnabled(context)
         AirPlayPersistence.saveClusterMapEnabled(context, false)
@@ -253,7 +274,7 @@ class ClusterMapPresentationTest {
             assertFalse(com.shilapi.xcertplay.hud.BydOutputSettings.navigationAvailable(context))
             val report = ClusterMapPresentation.diagnosticReport(context)
             assertTrue(report.contains("clusterEnabled=false"))
-            assertTrue(report.contains("navigationReceiverAvailable=false"))
+            assertTrue(report.contains("navigationReceiverAvailable=false receivers=none"))
             assertTrue(report.contains("1920x720"))
             assertTrue(report.contains("selectedCluster=$id:${DiLink4ClusterDisplay.NAME}"))
         } finally {
