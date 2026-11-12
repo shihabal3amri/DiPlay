@@ -5360,7 +5360,7 @@ open class CarPlayHostActivity : ComponentActivity() {
                         installIphoneCornerMask(session, pending.second.first, pending.second.second)
                     } else clearIphoneCornerMask()
                     CarPlayBackgroundSession.active = true
-                    LastConnectionProblem.sessionStarted(this@CarPlayHostActivity)
+                    LastConnectionProblem.clear(this@CarPlayHostActivity)
                     showConnectionHelp(null)
                     callPopupSessionReady = true
                     updateCallPopupGuard()

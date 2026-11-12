@@ -21,25 +21,6 @@ internal sealed interface ConnectionProblem {
     data class Startup(val failure: WirelessStartupFailure) : ConnectionProblem
     data class UsbNotListed(val otherDevice: Boolean) : ConnectionProblem
 
-    /**
-     * Video while parked is on, but the gear cannot be read, so video stays off (#1180). Not a connection
-     * failure: it happens while CarPlay runs, so it is shown during a session too.
-     */
-    data class VideoGearUnreadable(val adb: LocalAdb.Access?, val replied: Boolean) : ConnectionProblem {
-        /** What the driver can do about it, from the ADB texts the Vehicle settings already show. */
-        @StringRes
-        fun hint(context: Context): Int = when (adb) {
-            LocalAdb.Access.NOT_APPROVED -> R.string.adb_not_approved
-            LocalAdb.Access.UNREACHABLE ->
-                // #1002: the developer-options switch can stay on while nothing listens on 5555.
-                if (runCatching { Settings.Global.getInt(context.contentResolver, Settings.Global.ADB_ENABLED, 0) }
-                        .getOrDefault(0) == 1) R.string.adb_network_not_answering else R.string.adb_off
-            LocalAdb.Access.UNSUPPORTED -> R.string.adb_pairing_only
-            LocalAdb.Access.READY -> if (replied) R.string.adb_vehicle_gear_unreadable else R.string.adb_check_failed
-            null -> R.string.adb_not_checked
-        }
-    }
-
     @StringRes
     fun line(): Int = when (this) {
         is Cause -> ConnectionFailureGuidance.stage(cause)
@@ -51,24 +32,64 @@ internal sealed interface ConnectionProblem {
             WirelessStartupFailure.BLUETOOTH_UNUSABLE -> R.string.connection_help_bluetooth_unusable
         }
         is UsbNotListed -> if (otherDevice) R.string.car_sees_usb_device_not_iphone else R.string.car_sees_no_usb_device
-        is VideoGearUnreadable -> R.string.video_off_gear_unreadable
     }
 
     val token: String get() = when (this) {
         is Cause -> "cause:${cause.name}"
         is Startup -> "startup:${failure.name}"
         is UsbNotListed -> if (otherDevice) "usb:other" else "usb:none"
-        is VideoGearUnreadable -> "video:gear:${adb?.name ?: "unknown"}${if (replied) ":replied" else ""}"
+    }
+}
+
+/**
+ * Video while parked is on, but the gear cannot be read, so video stays off (#1180). Kept apart from
+ * connection problems: it belongs to a running session, and neither record replaces the other. Each value is
+ * what the driver can do about it, resolved once when recorded so a later report says what was true then.
+ */
+internal enum class VideoGearProblem {
+    NOT_APPROVED, ADB_OFF, ADB_NETWORK_NOT_ANSWERING, PAIRING_ONLY, GEAR_UNREADABLE, NO_REPLY, NOT_CHECKED;
+
+    @StringRes
+    fun hint(): Int = when (this) {
+        NOT_APPROVED -> R.string.adb_not_approved
+        ADB_OFF -> R.string.adb_off
+        ADB_NETWORK_NOT_ANSWERING -> R.string.adb_network_not_answering
+        PAIRING_ONLY -> R.string.adb_pairing_only
+        GEAR_UNREADABLE -> R.string.adb_vehicle_gear_unreadable
+        // The gate's own gear read got no reply; the driver ran no check.
+        NO_REPLY -> R.string.video_gear_no_reply
+        NOT_CHECKED -> R.string.adb_not_checked
+    }
+
+    val token: String get() = "video:gear:$name"
+
+    companion object {
+        fun of(context: Context, adb: LocalAdb.Access?, replied: Boolean): VideoGearProblem = when (adb) {
+            LocalAdb.Access.NOT_APPROVED -> NOT_APPROVED
+            LocalAdb.Access.UNREACHABLE ->
+                // #1002: the developer-options switch can stay on while nothing listens on 5555.
+                if (runCatching { Settings.Global.getInt(context.contentResolver, Settings.Global.ADB_ENABLED, 0) }
+                        .getOrDefault(0) == 1) ADB_NETWORK_NOT_ANSWERING else ADB_OFF
+            LocalAdb.Access.UNSUPPORTED -> PAIRING_ONLY
+            LocalAdb.Access.READY -> if (replied) GEAR_UNREADABLE else NO_REPLY
+            null -> NOT_CHECKED
+        }
+
+        fun parse(token: String): VideoGearProblem? =
+            token.removePrefix("video:gear:").takeIf { it != token }?.let { name -> entries.firstOrNull { it.name == name } }
     }
 }
 
 internal object LastConnectionProblem {
     data class Record(val problem: ConnectionProblem, val atMillis: Long)
+    data class VideoRecord(val problem: VideoGearProblem, val atMillis: Long)
 
     private const val PREFS = "diplay_last_problem"
     private const val KEY_PROBLEM = "problem"
     private const val KEY_AT = "at"
-    private const val VIDEO_PREFIX = "video:"
+    // #1180: video that stays off has its own keys, so follow(), clear() and a connection record never touch it.
+    private const val KEY_VIDEO = "video"
+    private const val KEY_VIDEO_AT = "video_at"
 
     fun follow(context: Context, status: CarPlayStatus) {
         val problem = when (status) {
@@ -81,30 +102,17 @@ internal object LastConnectionProblem {
         prefs(context).edit().putString(KEY_PROBLEM, problem.token).putLong(KEY_AT, System.currentTimeMillis()).apply()
     }
 
-    fun clear(context: Context) = prefs(context).edit().clear().apply()
+    fun clear(context: Context) = prefs(context).edit().remove(KEY_PROBLEM).remove(KEY_AT).apply()
 
     /** Video while parked stays off because the gear cannot be read (#1180). Gate thread; written on a change only. */
     fun videoGearUnreadable(context: Context, adb: LocalAdb.Access?, replied: Boolean) {
-        val problem = ConnectionProblem.VideoGearUnreadable(adb, replied)
-        if (prefs(context).getString(KEY_PROBLEM, null) == problem.token) return
-        prefs(context).edit().putString(KEY_PROBLEM, problem.token).putLong(KEY_AT, System.currentTimeMillis()).apply()
+        val problem = VideoGearProblem.of(context, adb, replied)
+        if (prefs(context).getString(KEY_VIDEO, null) == problem.token) return
+        prefs(context).edit().putString(KEY_VIDEO, problem.token).putLong(KEY_VIDEO_AT, System.currentTimeMillis()).apply()
     }
 
-    /** The gear reads again; drops only a video record, never a connection problem. */
-    fun videoGearReadable(context: Context) {
-        if (videoRecord(context)) clear(context)
-    }
-
-    /**
-     * A session became active, which answers a connection problem. The video gate reads the gear as the
-     * controller starts, before that, so a video record stays.
-     */
-    fun sessionStarted(context: Context) {
-        if (!videoRecord(context)) clear(context)
-    }
-
-    private fun videoRecord(context: Context): Boolean =
-        prefs(context).getString(KEY_PROBLEM, null)?.startsWith(VIDEO_PREFIX) == true
+    /** The gear reads again (in a session or in Vehicle → Check ADB access), or the setting was turned off. */
+    fun clearVideoGear(context: Context) = prefs(context).edit().remove(KEY_VIDEO).remove(KEY_VIDEO_AT).apply()
 
     fun load(context: Context): Record? {
         val prefs = prefs(context)
@@ -118,30 +126,51 @@ internal object LastConnectionProblem {
         return Record(problem, at)
     }
 
-    /** While CarPlay runs only a problem of the running session shows: video that stays off. */
-    fun homeLine(context: Context, sessionActive: Boolean = false): String? {
-        val record = load(context) ?: return null
-        val problem = record.problem
-        if (problem is ConnectionProblem.VideoGearUnreadable) {
-            // Turning the setting off answers it.
-            if (!BydOutputSettings.videoWhileParked(context)) return null
-            return context.getString(problem.line()) + " " + context.getString(problem.hint(context))
+    /** Only while Video while parked runs; a record kept while the setting was off is forgotten, not shown later. */
+    fun loadVideo(context: Context): VideoRecord? {
+        val prefs = prefs(context)
+        val token = prefs.getString(KEY_VIDEO, null) ?: return null
+        val problem = VideoGearProblem.parse(token)
+        val at = prefs.getLong(KEY_VIDEO_AT, -1)
+        if (problem == null || at < 0 || !BydOutputSettings.videoWhileParked(context)) {
+            clearVideoGear(context)
+            return null
         }
-        if (sessionActive) return null
-        val time = DateUtils.formatSameDayTime(record.atMillis, System.currentTimeMillis(), DateFormat.SHORT, DateFormat.SHORT)
-        return context.getString(R.string.last_connection_attempt, time, context.getString(problem.line()))
+        // A vehicle mode without a gear reading runs no gate; hide the record until the gate runs again.
+        if (!BydOutputSettings.videoWhileParkedActive(context)) return null
+        return VideoRecord(problem, at)
     }
 
+    /**
+     * While CarPlay runs only a problem of the running session shows: video that stays off. Otherwise the last
+     * connection attempt and, with the time it was recorded, video that stayed off.
+     */
+    fun homeLine(context: Context, sessionActive: Boolean = false): String? {
+        val video = loadVideo(context)
+        val videoText = video?.let { context.getString(R.string.video_off_gear_unreadable) + " " + context.getString(it.problem.hint()) }
+        if (sessionActive) return videoText
+        val record = load(context)
+        val lines = listOfNotNull(
+            record?.let { context.getString(R.string.last_connection_attempt, shortTime(it.atMillis), context.getString(it.problem.line())) },
+            video?.let { context.getString(R.string.last_carplay_connection_problem, shortTime(it.atMillis), videoText) },
+        )
+        return lines.takeIf { it.isNotEmpty() }?.joinToString("\n")
+    }
+
+    private fun shortTime(atMillis: Long): String =
+        DateUtils.formatSameDayTime(atMillis, System.currentTimeMillis(), DateFormat.SHORT, DateFormat.SHORT).toString()
+
     fun report(context: Context): String {
-        val record = load(context) ?: return "Last problem: none recorded"
         val english = context.createConfigurationContext(
             Configuration(context.resources.configuration).apply { setLocale(Locale.ENGLISH) },
         ).resources
-        val at = SimpleDateFormat("yyyy-MM-dd HH:mm:ss Z", Locale.US).format(Date(record.atMillis))
-        val problem = record.problem
-        val text = english.getString(problem.line()) +
-            if (problem is ConnectionProblem.VideoGearUnreadable) " " + english.getString(problem.hint(context)) else ""
-        return "Last problem: $text (${problem.token}) at $at"
+        fun at(millis: Long) = SimpleDateFormat("yyyy-MM-dd HH:mm:ss Z", Locale.US).format(Date(millis))
+        val record = load(context)
+        val connection = if (record == null) "Last problem: none recorded"
+            else "Last problem: ${english.getString(record.problem.line())} (${record.problem.token}) at ${at(record.atMillis)}"
+        val video = loadVideo(context) ?: return connection
+        return connection + "\nVideo in car problem: " + english.getString(R.string.video_off_gear_unreadable) + " " +
+            english.getString(video.problem.hint()) + " (${video.problem.token}) at ${at(video.atMillis)}"
     }
 
     private fun parse(token: String): ConnectionProblem? {
@@ -149,14 +178,6 @@ internal object LastConnectionProblem {
         return when (token.substringBefore(':')) {
             "cause" -> ConnectionFailureCause.entries.firstOrNull { it.name == value }?.let(ConnectionProblem::Cause)
             "startup" -> WirelessStartupFailure.entries.firstOrNull { it.name == value }?.let(ConnectionProblem::Startup)
-            "video" -> value.split(':').takeIf { it.firstOrNull() == "gear" }?.let { parts ->
-                val adb = parts.getOrNull(1)
-                ConnectionProblem.VideoGearUnreadable(
-                    LocalAdb.Access.entries.firstOrNull { it.name == adb }
-                        ?: if (adb == "unknown") null else return null,
-                    replied = parts.getOrNull(2) == "replied",
-                )
-            }
             "usb" -> when (value) {
                 "none" -> ConnectionProblem.UsbNotListed(false)
                 "other" -> ConnectionProblem.UsbNotListed(true)

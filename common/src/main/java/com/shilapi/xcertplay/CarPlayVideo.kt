@@ -72,7 +72,7 @@ internal object CarPlayVideo : CarPlayVideoListener {
     /** An unreadable gear keeps video off; Home and the report say why until the gear reads again (#1180). */
     override fun onGearObserved(parked: Boolean?) {
         val context = appContext ?: return
-        if (parked != null) return LastConnectionProblem.videoGearReadable(context)
+        if (parked != null) return LastConnectionProblem.clearVideoGear(context)
         val unreadable = BydNavigationOutputs.gearUnreadable()
         LastConnectionProblem.videoGearUnreadable(context, unreadable?.adb, unreadable?.replied == true)
     }
