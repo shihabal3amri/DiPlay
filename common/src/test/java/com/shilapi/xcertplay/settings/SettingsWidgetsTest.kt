@@ -157,6 +157,47 @@ class SettingsWidgetsTest {
         assertEquals(WirelessHotspotMode.WIFI_P2P, options.first { it.isChecked }.tag)
     }
 
+    @Test fun squircleBadgeCreatesExpectedDimensionsAndIcon() {
+        val badge = SettingsWidgets.createSquircleBadge(context, com.shilapi.xcertplay.host.R.drawable.ic_dp_display, Color.BLUE, sizeDp = 30)
+        assertNotNull(badge)
+        val icon = views(badge).filterIsInstance<android.widget.ImageView>().firstOrNull()
+        assertNotNull(icon)
+    }
+
+    @Test fun segmentedControlSwitchesSelectionAndEmitsCallback() {
+        val selections = mutableListOf<String>()
+        val control = SettingsWidgets.createSegmentedControl(
+            context = context,
+            options = listOf("dark" to "Dark", "light" to "Light", "auto" to "Auto"),
+            selected = "dark",
+            theme = SettingsTheme.CARD,
+            onSelected = selections::add,
+        )
+        val buttons = views(control).filterIsInstance<TextView>().toList()
+        assertEquals(3, buttons.size)
+        buttons[1].performClick()
+        assertEquals(listOf("light"), selections)
+    }
+
+    @Test fun navigationRowRendersTitleSubtitleAndValue() {
+        var clicked = false
+        val row = SettingsWidgets.createNavigationRow(
+            context = context,
+            title = "Display Settings",
+            subtitle = "Resolution & frame rate",
+            badge = null,
+            valueText = "1920x720",
+            theme = SettingsTheme.CARD,
+            onClick = { clicked = true },
+        )
+        val texts = views(row).filterIsInstance<TextView>().map { it.text.toString() }.toList()
+        assertTrue(texts.contains("Display Settings"))
+        assertTrue(texts.contains("Resolution & frame rate"))
+        assertTrue(texts.contains("1920x720"))
+        row.performClick()
+        assertTrue(clicked)
+    }
+
     private fun views(view: View): Sequence<View> = sequence {
         yield(view)
         if (view is ViewGroup) for (i in 0 until view.childCount) yieldAll(views(view.getChildAt(i)))

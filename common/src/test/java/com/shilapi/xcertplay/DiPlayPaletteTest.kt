@@ -17,25 +17,25 @@ import kotlin.math.pow
 class DiPlayPaletteTest {
     @Test fun darkPalettePreservesTheExistingProductionColors() {
         val palette = DiPlayPalette.DARK
-        assertEquals(Color.rgb(12, 17, 27), palette.background)
-        assertEquals(Color.rgb(21, 30, 44), palette.surface)
-        assertEquals(Color.rgb(31, 43, 61), palette.button)
-        assertEquals(Color.rgb(42, 56, 75), palette.outline)
-        assertEquals(Color.rgb(24, 54, 92), palette.railSelected)
-        assertEquals(Color.rgb(42, 82, 130), palette.railSelectedOutline)
-        assertEquals(Color.rgb(241, 245, 252), palette.primaryText)
-        assertEquals(Color.rgb(168, 182, 202), palette.secondaryText)
-        assertEquals(Color.rgb(166, 200, 255), palette.accent)
-        assertEquals(Color.rgb(255, 196, 128), palette.warning)
-        assertEquals(Color.rgb(127, 205, 154), palette.success)
-        assertEquals(Color.rgb(190, 45, 45), palette.danger)
-        assertEquals(0x336F9FD9, palette.ripple)
+        assertEquals(Color.rgb(0, 0, 0), palette.background)
+        assertEquals(Color.rgb(28, 28, 30), palette.surface)
+        assertEquals(Color.rgb(44, 44, 46), palette.button)
+        assertEquals(Color.rgb(56, 56, 58), palette.outline)
+        assertEquals(Color.rgb(30, 45, 65), palette.railSelected)
+        assertEquals(Color.rgb(10, 132, 255), palette.railSelectedOutline)
+        assertEquals(Color.rgb(255, 255, 255), palette.primaryText)
+        assertEquals(Color.rgb(160, 160, 165), palette.secondaryText)
+        assertEquals(Color.rgb(140, 190, 255), palette.accent)
+        assertEquals(Color.rgb(255, 179, 64), palette.warning)
+        assertEquals(Color.rgb(48, 209, 88), palette.success)
+        assertEquals(Color.rgb(255, 69, 58), palette.danger)
+        assertEquals(0x330A84FF, palette.ripple)
         assertFalse(palette.systemBarIconsAreDark)
     }
 
     @Test fun waitingScreenDelegationKeepsItsExactLightAndDarkColors() {
         assertEquals(
-            WaitingScreenColors(Color.rgb(12, 17, 27), Color.rgb(241, 245, 252), Color.rgb(168, 182, 202)),
+            WaitingScreenColors(Color.rgb(0, 0, 0), Color.rgb(255, 255, 255), Color.rgb(160, 160, 165)),
             WaitingScreenColors.of(night = true),
         )
         assertEquals(

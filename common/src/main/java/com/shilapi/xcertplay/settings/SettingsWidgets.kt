@@ -9,6 +9,8 @@ import android.graphics.drawable.InsetDrawable
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
+import android.widget.FrameLayout
+import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.RadioButton
 import android.widget.RadioGroup
@@ -108,6 +110,7 @@ object SettingsWidgets {
         contentDescription: String = label,
         enabled: Boolean = true,
         labelSizeSp: Float = 18f,
+        badge: View? = null,
         onChanged: (Boolean) -> Unit,
     ): SwitchRowResult {
         val row = LinearLayout(context).apply {
@@ -134,6 +137,13 @@ object SettingsWidgets {
             row.addView(switch, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT))
         } else {
             row.setPadding(0, theme.dp(context, 12), 0, theme.dp(context, 12))
+            if (badge != null) {
+                val badgeParams = LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.WRAP_CONTENT,
+                    ViewGroup.LayoutParams.WRAP_CONTENT,
+                ).apply { marginEnd = theme.dp(context, 14) }
+                row.addView(badge, badgeParams)
+            }
             val textCol = LinearLayout(context).apply {
                 orientation = LinearLayout.VERTICAL
             }
@@ -143,15 +153,17 @@ object SettingsWidgets {
                 setTextColor(theme.textPrimary)
                 applyTextStyle(context, theme, bold = true)
             }
-            val descView = TextView(context).apply {
-                text = description
-                textSize = 14f
-                setTextColor(theme.textSecondary)
-                setPadding(0, theme.dp(context, 6), theme.dp(context, 16), 0)
-                applyTextStyle(context, theme)
-            }
             textCol.addView(labelView)
-            textCol.addView(descView)
+            if (description.isNotBlank()) {
+                val descView = TextView(context).apply {
+                    text = description
+                    textSize = 14f
+                    setTextColor(theme.textSecondary)
+                    setPadding(0, theme.dp(context, 4), theme.dp(context, 16), 0)
+                    applyTextStyle(context, theme)
+                }
+                textCol.addView(descView)
+            }
             row.addView(textCol, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
             row.addView(switch)
             // The whole row is the target; the switch stays out of the focus order so D-pad stops once.
@@ -180,6 +192,232 @@ object SettingsWidgets {
         }
 
         return SwitchRowResult(row, switch)
+    }
+
+    /**
+     * Creates an authentic Apple CarPlay squircle icon badge (rounded-square container with centered vector icon).
+     */
+    fun createSquircleBadge(
+        context: Context,
+        iconRes: Int,
+        backgroundColor: Int,
+        iconTint: Int = Color.WHITE,
+        sizeDp: Int = 30,
+    ): View {
+        val density = context.resources.displayMetrics.density
+        val sizePx = (sizeDp * density).roundToInt()
+        val cornerRadiusPx = (sizeDp * 0.28f * density)
+        val iconSizePx = (sizeDp * 0.6f * density).roundToInt()
+
+        val container = FrameLayout(context).apply {
+            layoutParams = LinearLayout.LayoutParams(sizePx, sizePx)
+            background = GradientDrawable().apply {
+                shape = GradientDrawable.RECTANGLE
+                cornerRadius = cornerRadiusPx
+                setColor(backgroundColor)
+            }
+        }
+        val icon = ImageView(context).apply {
+            setImageResource(iconRes)
+            imageTintList = ColorStateList.valueOf(iconTint)
+            importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+        }
+        val iconParams = FrameLayout.LayoutParams(iconSizePx, iconSizePx, Gravity.CENTER)
+        container.addView(icon, iconParams)
+        return container
+    }
+
+    /**
+     * Creates an iOS-style 1px hairline divider with configurable start inset.
+     */
+    fun createDivider(
+        context: Context,
+        theme: SettingsTheme,
+        insetStartDp: Int = 16,
+    ): View = View(context).apply {
+        val density = context.resources.displayMetrics.density
+        val heightPx = maxOf(1, (1 * density).roundToInt())
+        val params = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, heightPx).apply {
+            marginStart = (insetStartDp * density).roundToInt()
+        }
+        layoutParams = params
+        setBackgroundColor(theme.outline)
+    }
+
+    /**
+     * Creates an authentic Apple CarPlay Inset Grouped Card container with rounded corners.
+     */
+    fun createGroupedCard(
+        context: Context,
+        theme: SettingsTheme,
+        cornerRadiusDp: Int = 16,
+    ): LinearLayout = LinearLayout(context).apply {
+        orientation = LinearLayout.VERTICAL
+        val density = context.resources.displayMetrics.density
+        val radiusPx = (cornerRadiusDp * density)
+        background = GradientDrawable().apply {
+            shape = GradientDrawable.RECTANGLE
+            cornerRadius = radiusPx
+            setColor(theme.surface)
+            setStroke(maxOf(1, (1 * density).roundToInt()), theme.outline)
+        }
+        setPadding((16 * density).roundToInt(), (8 * density).roundToInt(), (16 * density).roundToInt(), (8 * density).roundToInt())
+    }
+
+    /**
+     * Creates an iOS-style segmented pill control for 2 to 4 options.
+     */
+    fun <T> createSegmentedControl(
+        context: Context,
+        options: List<Pair<T, String>>,
+        selected: T,
+        theme: SettingsTheme,
+        onSelected: (T) -> Unit,
+    ): View {
+        val density = context.resources.displayMetrics.density
+        val containerRadius = (10 * density)
+        val segmentRadius = (8 * density)
+        val pad = (3 * density).roundToInt()
+
+        val container = LinearLayout(context).apply {
+            orientation = LinearLayout.HORIZONTAL
+            setPadding(pad, pad, pad, pad)
+            background = GradientDrawable().apply {
+                shape = GradientDrawable.RECTANGLE
+                cornerRadius = containerRadius
+                setColor(if (theme.isOverlay) Color.rgb(30, 38, 48) else Color.rgb(38, 38, 40))
+            }
+        }
+
+        var currentSelected = selected
+        val buttons = mutableListOf<TextView>()
+
+        fun updateStates() {
+            buttons.forEach { btn ->
+                @Suppress("UNCHECKED_CAST")
+                val isCurrent = btn.tag as? T == currentSelected
+                btn.background = if (isCurrent) {
+                    GradientDrawable().apply {
+                        shape = GradientDrawable.RECTANGLE
+                        cornerRadius = segmentRadius
+                        setColor(if (theme.isOverlay) theme.accent else Color.rgb(99, 99, 102))
+                    }
+                } else null
+                btn.setTextColor(if (isCurrent) Color.WHITE else theme.textSecondary)
+                btn.typeface = if (isCurrent) Typeface.DEFAULT_BOLD else Typeface.DEFAULT
+            }
+        }
+
+        options.forEach { (value, title) ->
+            val btn = TextView(context).apply {
+                text = title
+                textSize = 14f
+                gravity = Gravity.CENTER
+                tag = value
+                val heightPx = (38 * density).roundToInt()
+                minHeight = heightPx
+                setPadding((10 * density).roundToInt(), 0, (10 * density).roundToInt(), 0)
+                isClickable = true
+                isFocusable = true
+                setOnClickListener {
+                    if (currentSelected != value) {
+                        currentSelected = value
+                        updateStates()
+                        onSelected(value)
+                    }
+                }
+            }
+            buttons.add(btn)
+            container.addView(btn, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+        }
+
+        updateStates()
+        return container
+    }
+
+    /**
+     * Creates an iOS-style navigation row with optional squircle badge, title, subtitle, right value text, and chevron.
+     */
+    fun createNavigationRow(
+        context: Context,
+        title: String,
+        subtitle: String? = null,
+        badge: View? = null,
+        valueText: String? = null,
+        theme: SettingsTheme = SettingsTheme.CARD,
+        contentDescription: String = title,
+        onClick: () -> Unit,
+    ): View {
+        val density = context.resources.displayMetrics.density
+        val row = LinearLayout(context).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            minHeight = (54 * density).roundToInt()
+            setPadding(0, (10 * density).roundToInt(), 0, (10 * density).roundToInt())
+            isClickable = true
+            isFocusable = true
+            this.contentDescription = contentDescription
+            background = android.graphics.drawable.RippleDrawable(
+                ColorStateList.valueOf(theme.ripple),
+                null,
+                android.graphics.drawable.ColorDrawable(Color.WHITE),
+            )
+            setOnClickListener { onClick() }
+        }
+
+        if (badge != null) {
+            val params = LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+            ).apply { marginEnd = (14 * density).roundToInt() }
+            row.addView(badge, params)
+        }
+
+        val textCol = LinearLayout(context).apply {
+            orientation = LinearLayout.VERTICAL
+        }
+        val titleView = TextView(context).apply {
+            text = title
+            textSize = 17f
+            setTextColor(theme.textPrimary)
+            applyTextStyle(context, theme, bold = true)
+        }
+        textCol.addView(titleView)
+
+        if (!subtitle.isNullOrBlank()) {
+            val subView = TextView(context).apply {
+                text = subtitle
+                textSize = 13f
+                setTextColor(theme.textSecondary)
+                setPadding(0, (2 * density).roundToInt(), 0, 0)
+                applyTextStyle(context, theme)
+            }
+            textCol.addView(subView)
+        }
+        row.addView(textCol, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+
+        if (!valueText.isNullOrBlank()) {
+            val valueView = TextView(context).apply {
+                text = valueText
+                textSize = 15f
+                setTextColor(theme.textSecondary)
+                applyTextStyle(context, theme)
+                setPadding((6 * density).roundToInt(), 0, (6 * density).roundToInt(), 0)
+            }
+            row.addView(valueView, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+        }
+
+        val chevron = ImageView(context).apply {
+            setImageResource(R.drawable.ic_dp_chevron)
+            imageTintList = ColorStateList.valueOf(theme.textSecondary)
+            importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+        }
+        val chevronParams = LinearLayout.LayoutParams((18 * density).roundToInt(), (18 * density).roundToInt()).apply {
+            marginStart = (4 * density).roundToInt()
+        }
+        row.addView(chevron, chevronParams)
+
+        return row
     }
 
     fun <T> createChoiceRow(
