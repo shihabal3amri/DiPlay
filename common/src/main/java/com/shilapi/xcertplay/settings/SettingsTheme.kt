@@ -1,6 +1,7 @@
 package com.shilapi.xcertplay.settings
 
 import android.content.Context
+import android.graphics.Color
 import com.shilapi.xcertplay.DiPlayPalette
 
 class SettingsTheme private constructor(
@@ -13,6 +14,8 @@ class SettingsTheme private constructor(
     val buttonText: Int,
     val ripple: Int,
     val focusRing: Int,
+    val surface: Int = Color.rgb(28, 28, 30),
+    val outline: Int = Color.rgb(56, 56, 58),
 ) {
 
     fun dp(context: Context, value: Int): Int =
@@ -34,6 +37,8 @@ class SettingsTheme private constructor(
             buttonText = palette.onAccent,
             ripple = palette.ripple,
             focusRing = palette.focusRing,
+            surface = palette.surface,
+            outline = palette.outline,
         )
 
         internal fun overlay(palette: DiPlayPalette) = SettingsTheme(
@@ -46,6 +51,8 @@ class SettingsTheme private constructor(
             buttonText = palette.overlayOnAccent,
             ripple = palette.ripple,
             focusRing = palette.focusRing,
+            surface = palette.overlayBackground,
+            outline = palette.outline,
         )
     }
 }
