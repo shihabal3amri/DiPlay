@@ -1123,11 +1123,12 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
                 }
                 importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
             }, LinearLayout.LayoutParams(dp(4), dp(34)).apply { marginEnd = dp(10) })
-            addView(ImageView(this@DiPlayActivity).apply {
-                setImageResource(settingsCategoryIcon(category))
-                imageTintList = ColorStateList.valueOf(if (selected) ACCENT else TEXT)
-                importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
-            }, LinearLayout.LayoutParams(dp(26), dp(26)).apply { marginEnd = dp(12) })
+            addView(SettingsWidgets.createSquircleBadge(
+                this@DiPlayActivity,
+                settingsCategoryIcon(category),
+                settingsCategoryBadgeColor(category),
+                sizeDp = 26,
+            ), LinearLayout.LayoutParams(dp(26), dp(26)).apply { marginEnd = dp(12) })
             addView(label(title, 16, if (selected) ACCENT else TEXT, true,
                 centreGlyphs = usesChineseGlyphAlignment(resources.configuration.locales[0].language, title)),
                 LinearLayout.LayoutParams(0, -1, 1f))
@@ -1135,6 +1136,19 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
                 openSettingsCategory(category)
             }
         }
+    }
+
+    private fun settingsCategoryBadgeColor(category: SettingsCategory): Int = when (category) {
+        SettingsCategory.OVERVIEW -> Color.rgb(142, 142, 147)
+        SettingsCategory.CONNECTION -> Color.rgb(10, 132, 255)
+        SettingsCategory.DISPLAY -> Color.rgb(88, 86, 214)
+        SettingsCategory.AUDIO -> Color.rgb(48, 209, 88)
+        SettingsCategory.NAVIGATION -> Color.rgb(175, 82, 222)
+        SettingsCategory.VEHICLE -> Color.rgb(255, 159, 10)
+        SettingsCategory.DIAGNOSTICS -> Color.rgb(100, 210, 255)
+        SettingsCategory.ADVANCED -> Color.rgb(255, 69, 58)
+        SettingsCategory.LANGUAGE -> Color.rgb(0, 199, 190)
+        SettingsCategory.ABOUT -> Color.rgb(142, 142, 147)
     }
 
     private fun settingsCategoryIcon(category: SettingsCategory): Int = when (category) {
@@ -1276,8 +1290,25 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
             state == SettingsReadiness.CONNECTED -> READY
             else -> TEXT
         }
-        card.addView(label(title, 22, tint, true))
-        card.addView(label(detail, 15, MUTED).apply { setPadding(0, dp(6), 0, 0) })
+        val badgeColor = when {
+            state.needsAction -> WARNING
+            state == SettingsReadiness.CONNECTED -> READY
+            else -> ACCENT
+        }
+        val header = row().apply {
+            gravity = Gravity.CENTER_VERTICAL
+            addView(SettingsWidgets.createSquircleBadge(
+                this@DiPlayActivity,
+                if (state == SettingsReadiness.CONNECTED) R.drawable.ic_carplay else R.drawable.ic_dp_connection,
+                badgeColor,
+                sizeDp = 36,
+            ), LinearLayout.LayoutParams(dp(36), dp(36)).apply { marginEnd = dp(14) })
+            addView(column().apply {
+                addView(label(title, 22, tint, true))
+                addView(label(detail, 15, MUTED).apply { setPadding(0, dp(4), 0, 0) })
+            }, LinearLayout.LayoutParams(0, -2, 1f))
+        }
+        card.addView(header)
         when (state) {
             SettingsReadiness.CHOOSE_IPHONE -> card.addView(button(getString(R.string.settings_choose_iphone_action), true) {
                 choosePhone()
@@ -1292,19 +1323,51 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
     private fun quickSettingsCard(): LinearLayout = card().also(::buildQuickSettings).also(::normalizeSpacing)
 
     private fun buildQuickSettings(card: LinearLayout): Unit = card.run {
-        toggle(this, getString(R.string.connect_when_diplay_opens),
+        toggle(
+            this,
+            getString(R.string.connect_when_diplay_opens),
             getString(R.string.default_connection_description),
-            DiPlayPreferences.autoConnect(this@DiPlayActivity)) { DiPlayPreferences.saveAutoConnect(this@DiPlayActivity, it) }
+            DiPlayPreferences.autoConnect(this@DiPlayActivity),
+            badge = SettingsWidgets.createSquircleBadge(
+                this@DiPlayActivity,
+                R.drawable.ic_dp_connection,
+                Color.rgb(10, 132, 255),
+                sizeDp = 30,
+            ),
+        ) { DiPlayPreferences.saveAutoConnect(this@DiPlayActivity, it) }
+        card.addView(SettingsWidgets.createDivider(this@DiPlayActivity, SettingsTheme.card(palette), insetStartDp = 44))
         appearanceControl(this)
-        toggle(this, getString(R.string.full_screen), getString(R.string.settings_full_screen_description),
-            AirPlayPersistence.loadHideTopBar(this@DiPlayActivity) && AirPlayPersistence.loadHideBottomBar(this@DiPlayActivity)) { enabled ->
+        card.addView(SettingsWidgets.createDivider(this@DiPlayActivity, SettingsTheme.card(palette), insetStartDp = 44))
+        toggle(
+            this,
+            getString(R.string.full_screen),
+            getString(R.string.settings_full_screen_description),
+            AirPlayPersistence.loadHideTopBar(this@DiPlayActivity) && AirPlayPersistence.loadHideBottomBar(this@DiPlayActivity),
+            badge = SettingsWidgets.createSquircleBadge(
+                this@DiPlayActivity,
+                R.drawable.ic_dp_display,
+                Color.rgb(88, 86, 214),
+                sizeDp = 30,
+            ),
+        ) { enabled ->
             AirPlayPersistence.saveHideTopBar(this@DiPlayActivity, enabled)
             AirPlayPersistence.saveHideBottomBar(this@DiPlayActivity, enabled)
             applyFullscreenMode()
         }
-        toggle(this, getString(R.string.report_location_to_iphone),
+        card.addView(SettingsWidgets.createDivider(this@DiPlayActivity, SettingsTheme.card(palette), insetStartDp = 44))
+        toggle(
+            this,
+            getString(R.string.report_location_to_iphone),
             "${getString(R.string.location_reporting_reconnects)} ${getString(R.string.sends_precise_android_location_as_carplay_gps_data_when_th)}",
-            AirPlayPersistence.loadLocationReportingEnabled(this@DiPlayActivity), save = ::onLocationReportingChanged)
+            AirPlayPersistence.loadLocationReportingEnabled(this@DiPlayActivity),
+            badge = SettingsWidgets.createSquircleBadge(
+                this@DiPlayActivity,
+                R.drawable.ic_dp_navigation,
+                Color.rgb(175, 82, 222),
+                sizeDp = 30,
+            ),
+            save = ::onLocationReportingChanged,
+        )
         Unit
     }
 
@@ -1321,7 +1384,7 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
 
     private fun settingsSummaryCard(category: SettingsCategory, summary: String): LinearLayout = card().apply {
         val warning = category == SettingsCategory.ADVANCED
-        setPadding(dp(24), dp(10), dp(24), dp(10))
+        setPadding(dp(20), dp(12), dp(20), dp(12))
         isClickable = true
         isFocusable = true
         foreground = android.graphics.drawable.LayerDrawable(arrayOf(
@@ -1330,15 +1393,21 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
         contentDescription = getString(R.string.settings_open_category, settingsCategoryTitle(category))
         addView(row().apply {
             gravity = Gravity.CENTER_VERTICAL
-            addView(ImageView(this@DiPlayActivity).apply {
-                setImageResource(settingsCategoryIcon(category))
-                imageTintList = ColorStateList.valueOf(if (warning) WARNING else ACCENT)
-                importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
-            }, LinearLayout.LayoutParams(dp(24), dp(24)).apply { marginEnd = dp(20) })
+            addView(SettingsWidgets.createSquircleBadge(
+                this@DiPlayActivity,
+                settingsCategoryIcon(category),
+                if (warning) WARNING else settingsCategoryBadgeColor(category),
+                sizeDp = 32,
+            ), LinearLayout.LayoutParams(dp(32), dp(32)).apply { marginEnd = dp(16) })
             addView(column().apply {
                 addView(label(settingsCategoryTitle(category), 17, if (warning) WARNING else TEXT, true))
                 addView(label(summary, 13, MUTED).apply { setPadding(0, dp(3), 0, 0) })
             }, LinearLayout.LayoutParams(0, -2, 1f))
+            addView(ImageView(this@DiPlayActivity).apply {
+                setImageResource(R.drawable.ic_dp_chevron)
+                imageTintList = ColorStateList.valueOf(MUTED)
+                importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+            }, LinearLayout.LayoutParams(dp(18), dp(18)).apply { marginStart = dp(8) })
         })
         setOnClickListener { openSettingsCategory(category) }
     }
@@ -6212,14 +6281,30 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
         }
     }
 
+    private fun settingsSectionBadgeColor(iconRes: Int): Int = when (iconRes) {
+        R.drawable.ic_dp_display -> Color.rgb(88, 86, 214)
+        R.drawable.ic_dp_audio -> Color.rgb(48, 209, 88)
+        R.drawable.ic_dp_navigation -> Color.rgb(175, 82, 222)
+        R.drawable.ic_dp_car, R.drawable.ic_dp_controls -> Color.rgb(255, 159, 10)
+        R.drawable.ic_dp_diagnostics -> Color.rgb(100, 210, 255)
+        R.drawable.ic_dp_advanced -> Color.rgb(255, 69, 58)
+        R.drawable.ic_dp_automation, R.drawable.ic_dp_connection -> Color.rgb(10, 132, 255)
+        R.drawable.ic_dp_language -> Color.rgb(0, 199, 190)
+        else -> ACCENT
+    }
+
     private fun section(parent: LinearLayout, title: String, icon: Int? = null, build: (LinearLayout) -> Unit) {
         searchIndexSink?.add(title)
         val card = card()
         val heading = row().apply { gravity = Gravity.CENTER_VERTICAL; setPadding(0, 0, 0, dp(16)) }
-        if (icon != null) heading.addView(ImageView(this).apply {
-            setImageResource(icon); imageTintList = ColorStateList.valueOf(ACCENT)
-            importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
-        }, LinearLayout.LayoutParams(dp(28), dp(28)).apply { marginEnd = dp(12) })
+        if (icon != null) {
+            heading.addView(SettingsWidgets.createSquircleBadge(
+                this,
+                icon,
+                settingsSectionBadgeColor(icon),
+                sizeDp = 28,
+            ), LinearLayout.LayoutParams(dp(28), dp(28)).apply { marginEnd = dp(12) })
+        }
         heading.addView(label(title, 22, TEXT, true,
             centreGlyphs = icon != null && usesChineseGlyphAlignment(resources.configuration.locales[0].language, title)),
             LinearLayout.LayoutParams(0, -2, 1f))
@@ -6288,7 +6373,7 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
         }
     }
 
-    private fun toggle(parent: LinearLayout, title: String, description: String, value: Boolean, enabled: Boolean = true, save: (Boolean) -> Unit): Switch {
+    private fun toggle(parent: LinearLayout, title: String, description: String, value: Boolean, enabled: Boolean = true, badge: View? = null, save: (Boolean) -> Unit): Switch {
         searchIndexSink?.add(title)
         val result = SettingsWidgets.createSwitchRow(
             context = this,
@@ -6298,6 +6383,7 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
             theme = SettingsTheme.card(palette),
             contentDescription = title,
             enabled = enabled,
+            badge = badge,
             onChanged = save,
         )
         parent.addView(result.rowView)
