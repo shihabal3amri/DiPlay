@@ -8,3 +8,6 @@
 -keep class com.shilapi.xcertplay.transport.IphoneUsbGrantTool {
     public static void main(java.lang.String[]);
 }
+-keep class com.shilapi.xcertplay.hud.BydClusterAdasThemeMain {
+    public static void main(java.lang.String[]);
+}
