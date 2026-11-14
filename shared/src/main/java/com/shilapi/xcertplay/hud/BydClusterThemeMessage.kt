@@ -23,11 +23,19 @@ internal object BydClusterThemeMessage {
     private const val FIRST_STRING = 92
     private const val FIELDS = 12
     private const val INTS = 5
+    private const val ACTIVE_PATH_AT = 2
     private const val MAX_TEXT = 65_536
 
-    class Reply(val cmd: Int, val sub: Int, val ints: List<Int>, val strings: List<String>)
+    class Reply(val cmd: Int, val sub: Int, val ints: List<Int>, val strings: List<String>) {
+        /**
+         * The file the cluster has selected. On a Han the first string is always the name of the resource family
+         * (`Di3F_DynastyOceanTranslate_V0001`) and the third is the selection: the full path of a file from the
+         * translate folder, or `default` for the car's own.
+         */
+        val activePath: String get() = strings.getOrElse(ACTIVE_PATH_AT) { "" }
+    }
 
-    /** Asks which language resource is active: the reply holds its kind in the first integer and its path in the first string. */
+    /** Asks which language resource is active: the reply holds its kind in the first integer and its path in [Reply.activePath]. */
     fun queryActive(): ByteArray = packet(QUERY, QUERY_ACTIVE, 0, "")
 
     /** Asks the cluster to use the resource file [name] from the translate folder. */
@@ -36,8 +44,12 @@ internal object BydClusterThemeMessage {
     /** Asks the cluster to go back to the car's own resource. */
     fun selectDefault(): ByteArray = packet(SELECT, 0, 1, "")
 
-    fun packet(cmd: Int, sub: Int, value: Int, text: String): ByteArray {
-        val strings = listOf(text, "", "", "", "").map { it.toByteArray(Charsets.UTF_8) }
+    fun packet(cmd: Int, sub: Int, value: Int, text: String): ByteArray = packet(cmd, sub, value, listOf(text))
+
+    /** [texts] fill the five strings in order; the rest stay empty. */
+    fun packet(cmd: Int, sub: Int, value: Int, texts: List<String>): ByteArray {
+        require(texts.size <= INTS)
+        val strings = List(INTS) { texts.getOrElse(it) { "" } }.map { it.toByteArray(Charsets.UTF_8) }
         var size = FIRST_STRING
         for (string in strings) size += padded(string)
         val buffer = ByteBuffer.allocate(size).order(ByteOrder.LITTLE_ENDIAN)

@@ -252,6 +252,17 @@ class BydClusterAdasThemeTest {
         assertEquals(DEFAULT, channel.active!!.path)
     }
 
+    @Test fun aHanReportsItsOwnResourceAsDefaultAndThatIsNotAnotherAppsTheme() {
+        // A Han answers the active query with "default" while the car's own resource is in use; no path at all.
+        // After the cluster restarts it can answer with the translate folder itself, which names no file either.
+        for (reported in listOf("default", "/data/cells/cell2-rw/data/media/0/.cluster/translate/")) {
+            val channel = car(reported)
+            assertEquals(reported, "NONE", tool(channel).probe()["state"])
+            val installed = tool(channel).install(30)
+            assertEquals(reported, Status.INSTALLED, installed.status)
+        }
+    }
+
     @Test fun aNameWithMoreThanOneRevisionDigitIsStillOneOfDiPlays() {
         val prefix = BydClusterAdasTheme.PACK_PREFIX
         for (name in listOf("DiPlay1a1b2c3d4", "DiPlay3381b36ef", "DiPlay10a1b2c3d4", "DiPlay123a1b2c3d4")) {

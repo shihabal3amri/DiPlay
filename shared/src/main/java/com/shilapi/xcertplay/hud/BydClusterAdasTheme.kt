@@ -253,7 +253,9 @@ internal class BydClusterAdasTheme(
 
     private fun ownName(path: String): String? = path.substringAfterLast('/').takeIf { OWN_PACK.matches(it) }
 
-    private fun isDefault(path: String) = path.isEmpty() || path.substringAfterLast('/') == LANGUAGE_FILE_NAME
+    // A path that ends at the folder names no file: a Han reports that after the cluster restarts, with its own resource loaded.
+    private fun isDefault(path: String) =
+        path.isEmpty() || path == DEFAULT_SELECTION || path.endsWith("/") || path.substringAfterLast('/') == LANGUAGE_FILE_NAME
 
     companion object {
         const val THEME_PATH = "/system/lib64/cluster_theme1.rcc"
@@ -276,6 +278,9 @@ internal class BydClusterAdasTheme(
         const val CENTER_QML = "/qml/Center.qml"
         private const val LANGUAGE_DIR = "/common/language/"
         private const val LANGUAGE_FILE_NAME = "commonTranslate.rcc"
+
+        /** What a Han reports as the selection while the car's own resource is in use. */
+        private const val DEFAULT_SELECTION = "default"
         private const val PART = ".part"
         private const val VERSION = 2
         private const val RELOAD_DELAY_MILLIS = 1_100L

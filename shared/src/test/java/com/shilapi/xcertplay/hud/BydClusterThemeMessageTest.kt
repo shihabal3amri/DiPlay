@@ -62,6 +62,20 @@ class BydClusterThemeMessageTest {
         assertEquals(listOf("", "", "", ""), reply.strings.drop(1))
     }
 
+    @Test fun aHansQueryReplyHoldsTheSelectionInTheThirdString() {
+        // Seen on a Han: the first string names the resource family, the third is "default" or the selected file.
+        val own = BydClusterThemeMessage.parse(
+            BydClusterThemeMessage.packet(1001, 4, 1, listOf("Di3F_DynastyOceanTranslate_V0001", "", "default", "", "default")),
+        )!!
+        assertEquals("default", own.activePath)
+        val file = "/data/cells/cell2-rw/data/media/0/.cluster/translate/Di3F_DynastyOceanTranslate_V0001_Translate_DiPlay37d919857.rcc"
+        val selected = BydClusterThemeMessage.parse(
+            BydClusterThemeMessage.packet(1001, 4, 1, listOf("Di3F_DynastyOceanTranslate_V0001", "", file, "", "_DiPlay37d9")),
+        )!!
+        assertEquals(file, selected.activePath)
+        assertEquals("", BydClusterThemeMessage.parse(bytes(selectDefault))!!.activePath)
+    }
+
     @Test fun textThatIsNotAscii() {
         val reply = BydClusterThemeMessage.parse(bytes(unicodeReply))!!
         assertEquals(BydClusterThemeMessage.SELECT_REPLY, reply.cmd)

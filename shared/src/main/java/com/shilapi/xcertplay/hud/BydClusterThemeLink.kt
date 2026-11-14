@@ -38,7 +38,7 @@ internal class BydClusterThemeLink private constructor(
         replies.clear()
         send(BydClusterThemeMessage.queryActive())
         val reply = await(BydClusterThemeMessage.QUERY_REPLY, BydClusterThemeMessage.QUERY_ACTIVE) ?: return null
-        return BydClusterThemeChannel.Active(reply.ints[0], reply.strings[0])
+        return BydClusterThemeChannel.Active(reply.ints[0], reply.activePath)
     }
 
     override fun select(name: String?): Boolean {
