@@ -204,6 +204,8 @@ class AndroidMediaSink(
     private val callVoiceFilter: Boolean = false,
     /** Read at each call: a phone or tablet used as the head unit plays calls on its loudspeaker (#701). */
     private val callSpeakerphone: () -> Boolean = { false },
+    /** Read at each call: play calls like music on a head unit whose call path is silent ([callPlaysAsMedia]). */
+    private val callMediaOutput: () -> Boolean = { false },
     /**
      * Smooth video: show main-screen frames at the iPhone's frame time plus a delay that starts here and
      * then follows how late the decoder releases frames ([PacingDelay]); 0 shows each as soon as it is
@@ -558,8 +560,7 @@ class AndroidMediaSink(
     override fun onMicrophoneStarted(id: AudioStreamId, config: MicrophoneConfig) {
         // This callback runs on the downlink thread; microphone failures must not stop playback.
         try {
-            val speakerphoneCall = config.audioType == "telephony" &&
-                appContext != null && BydBluetoothSuspend.isSuspendedByUs(appContext)
+            val speakerphoneCall = config.audioType == "telephony" && callPlaysAsMedia()
             if (config.audioType == "telephony" && !speakerphoneCall) enterCommunicationMode(id)
             val uplink = microphoneUplinks.computeIfAbsent(id) {
                 MicrophoneUplink(config, onAudioDiagnostic,
@@ -585,6 +586,15 @@ class AndroidMediaSink(
             restoreAudioMode(id)
         }
     }
+
+    /**
+     * A call plays on the media output, without Android's call mode, while DiPlay has paused the car Bluetooth (no
+     * SCO), or when the driver chose it for a head unit whose call path stays silent although music plays (#1198,
+     * #1214). The car's phone audio state needs the call mode, so it overrides the driver's choice.
+     */
+    private fun callPlaysAsMedia(): Boolean =
+        (appContext != null && BydBluetoothSuspend.isSuspendedByUs(appContext)) ||
+            (runCatching(callMediaOutput).getOrDefault(false) && !PhoneAudioRoute.carPlayCallsUseCarAudio())
 
     private fun enterCommunicationMode(id: AudioStreamId) {
         val manager = audioManager ?: return
@@ -746,8 +756,7 @@ class AndroidMediaSink(
             mediaBufferMillis,
             onAudioDiagnostic,
             ambientSinkToken,
-            speakerphoneCall = format.audioType == "telephony" &&
-                appContext != null && BydBluetoothSuspend.isSuspendedByUs(appContext),
+            speakerphoneCall = format.audioType == "telephony" && callPlaysAsMedia(),
             echoReference = echoReference,
             voiceFilter = callVoiceFilter && format.audioType == TELEPHONY_AUDIO_TYPE,
         ).also {
@@ -2005,7 +2014,7 @@ private class AudioRenderer(
         actualLegacyStreamType = streamOverride.takeIf { it != 0 }
         var attributes = audioAttributesFor(selection, streamOverride)
         trackAttributes = attributes
-        val plan = MediaAudioBuffer.plan(selection.channel == AudioChannel.MEDIA,
+        val plan = MediaAudioBuffer.plan(streamChannel() == AudioChannel.MEDIA,
             format.sampleRate, format.channels, minBuffer, mediaBufferMillis)
         bytesPerSecond = format.sampleRate * frameBytes
         val built: AudioTrack
@@ -2064,7 +2073,7 @@ private class AudioRenderer(
         val capacityBytes = built.bufferSizeInFrames * frameBytes
         startThresholdBytes = MediaAudioBuffer.startBytesFor(plan.startBytes, capacityBytes, PREBUFFER_WRITE_CHUNK_BYTES)
         // Only music plays long enough for the clocks to drift apart; calls keep their echo reference exact.
-        clockTrim = if (mappedChannel == AudioChannel.MEDIA) MediaClockTrim(format.sampleRate, (startThresholdBytes / frameBytes).toLong(),
+        clockTrim = if (streamChannel() == AudioChannel.MEDIA) MediaClockTrim(format.sampleRate, (startThresholdBytes / frameBytes).toLong(),
             measuresTarget = true) else null
         val trackMetadata = runCatching {
             "api=${Build.VERSION.SDK_INT} trackState=${built.state} trackRate=${built.sampleRate} " +
@@ -2148,6 +2157,12 @@ private class AudioRenderer(
         return if (speakerphoneCall) AudioChannelMapper.playCallOnSpeaker(selection) else selection
     }
 
+    /**
+     * What the stream is, where [mappedChannel] is where it plays: a call on the media output still takes focus,
+     * buffers and keeps its clock like a call, so the coordinator never mutes it and the echo reference stays exact.
+     */
+    private fun streamChannel(): AudioChannel? = if (speakerphoneCall) AudioChannel.PHONE else mappedChannel
+
     private fun audioAttributesFor(selection: AudioChannelSelection): AudioAttributes =
         AudioAttributes.Builder()
             .setUsage(usageFor(selection.channel))
@@ -2160,7 +2175,7 @@ private class AudioRenderer(
      * [NavigationPromptFocus] requests focus for each prompt, between duckAudio and unduckAudio.
      */
     private fun requestAudioFocus() {
-        val channel = mappedChannel ?: return
+        val channel = streamChannel() ?: return
         val attributes = trackAttributes ?: return
         if (channel == AudioChannel.NAVIGATION) {
             Log.i(TAG, "audio focus skipped channel=NAVIGATION; overlays without ducking")
@@ -2538,7 +2553,7 @@ private class AudioRenderer(
 
     private fun maintainPlaybackBuffer() {
         val track = track ?: return
-        if (bufferProgress.shouldRebuffer(mappedChannel == AudioChannel.MEDIA, playbackStarted,
+        if (bufferProgress.shouldRebuffer(streamChannel() == AudioChannel.MEDIA, playbackStarted,
                 track.underrunCount > underrunsAtPlaybackStart, queue.isEmpty(), track.playbackHeadPosition,
                 startThresholdBytes / 2L)) {
             // The hardware buffer has starved below the recovery floor. Pause without flushing
