@@ -42,6 +42,8 @@ class WifiChannelRankerTest {
             WifiChannelRanker.Observation(1, -88),
             WifiChannelRanker.Observation(1, -90),
             WifiChannelRanker.Observation(6, -40),
+            WifiChannelRanker.Observation(11, -70),
+            WifiChannelRanker.Observation(11, -75),
         )
         assertEquals(6, WifiChannelRanker.recommend(observations))
     }
