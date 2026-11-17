@@ -1,0 +1,62 @@
+package com.shilapi.xcertplay
+
+import com.shilapi.xcertplay.airplay.CarPlayDisplayScale
+import com.shilapi.xcertplay.airplay.CarPlaySize
+import com.shilapi.xcertplay.media.MediaAudioBuffer
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotEquals
+import org.junit.Assert.assertTrue
+import org.junit.Test
+
+class WeakDeviceProfileTest {
+    @Test
+    fun `targets lower the display scale inside the accepted range`() {
+        assertTrue(WeakDeviceProfile.targetsAreValid())
+        assertEquals(75, WeakDeviceProfile.targets().displayScalePercent)
+        assertTrue(WeakDeviceProfile.TARGET_DISPLAY_SCALE_PERCENT in
+            CarPlayDisplayScale.MIN_PERCENT..CarPlayDisplayScale.MAX_PERCENT)
+    }
+
+    @Test
+    fun `targets use the Medium CarPlay size preset`() {
+        assertEquals(CarPlaySize.MEDIUM.widthMillimeters, WeakDeviceProfile.targets().widthPhysicalMm)
+        assertEquals(CarPlaySize.MEDIUM, CarPlaySize.exact(WeakDeviceProfile.targets().widthPhysicalMm))
+    }
+
+    @Test
+    fun `targets use the most stable wireless music buffer preset`() {
+        assertEquals(MediaAudioBuffer.MOST_STABLE_MILLIS, WeakDeviceProfile.targets().wirelessMusicBufferMillis)
+        assertTrue(WeakDeviceProfile.targets().wirelessMusicBufferMillis in MediaAudioBuffer.wirelessPresets)
+    }
+
+    @Test
+    fun `targets enable direct video output, Spreadtrum tuning and Bluetooth pause`() {
+        val targets = WeakDeviceProfile.targets()
+        assertTrue(targets.directVideoOutput)
+        assertTrue(targets.sprdDecoderTuning)
+        assertTrue(targets.btSuspendDuringCarplay)
+    }
+
+    @Test
+    fun `targets differ from the factory defaults they restore to`() {
+        assertNotEquals(WeakDeviceProfile.defaults(), WeakDeviceProfile.targets())
+        assertEquals(100, WeakDeviceProfile.defaults().displayScalePercent)
+        assertEquals(CarPlaySize.DEFAULT.widthMillimeters, WeakDeviceProfile.defaults().widthPhysicalMm)
+        assertEquals(MediaAudioBuffer.DEFAULT_MILLIS, WeakDeviceProfile.defaults().wirelessMusicBufferMillis)
+    }
+
+    @Test
+    fun `a snapshot round-trips through its own values`() {
+        val snapshot = WeakDeviceProfile.Snapshot(
+            displayScalePercent = 90,
+            widthPhysicalMm = CarPlaySize.SMALL.widthMillimeters,
+            directVideoOutput = true,
+            wirelessMusicBufferMillis = 500,
+            sprdDecoderTuning = true,
+            btSuspendDuringCarplay = false,
+        )
+        assertEquals(snapshot, snapshot.copy())
+        assertEquals(90, snapshot.displayScalePercent)
+        assertEquals(CarPlaySize.SMALL.widthMillimeters, snapshot.widthPhysicalMm)
+    }
+}
