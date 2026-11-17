@@ -3691,7 +3691,7 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
         ).apply { setPadding(0, dp(10), 0, 0) }
         card.addView(wifiChannelScanResultLabel)
         wifiChannelScanButton = button(
-            if (wifiChannelScanInProgress) getString(R.string.settings_wifi_channel_scanning)
+            if (wifiChannelScanInProgress) getString(R.string.settings_wifi_channel_scan_scanning)
             else getString(R.string.settings_wifi_channel_scan_button), false,
         ) { startWifiChannelScan() }.apply { isEnabled = !wifiChannelScanInProgress }
         card.addView(wifiChannelScanButton, matchButton(10, 60))
@@ -3709,8 +3709,8 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
     private fun startWifiChannelScan() {
         if (wifiChannelScanInProgress) return
         wifiChannelScanInProgress = true
-        wifiChannelScanButton?.apply { isEnabled = false; text = getString(R.string.settings_wifi_channel_scanning) }
-        wifiChannelScanResultLabel?.text = getString(R.string.settings_wifi_channel_scanning)
+        wifiChannelScanButton?.apply { isEnabled = false; text = getString(R.string.settings_wifi_channel_scan_scanning) }
+        wifiChannelScanResultLabel?.text = getString(R.string.settings_wifi_channel_scan_scanning)
         WifiChannelScanner(this).scanOnce { outcome ->
             if (isFinishing || isDestroyed) return@scanOnce
             wifiChannelScanInProgress = false

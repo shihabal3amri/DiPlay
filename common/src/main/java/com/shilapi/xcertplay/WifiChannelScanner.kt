@@ -77,7 +77,7 @@ class WifiChannelScanner(private val context: Context) {
             if (done) return
             done = true
             scanning = false
-            handler.removeCallbacks(timeoutRunnable)
+            timeoutRunnable?.let { handler.removeCallbacks(it) }
             runCatching { context.unregisterReceiver(receiver) }
             onOutcome(outcome)
         }
