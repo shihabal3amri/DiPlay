@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ambient_delay_title">Atraso de transição</string>
+    <string name="ambient_delay_hint">Digite de 0 a 60 segundos. Zero troca na hora.</string>
+    <string name="custom_number_error">Digite um número inteiro de %1$d a %2$d.</string>
+    <string name="ambient_delay_summary">%1$d s</string>
+</resources>

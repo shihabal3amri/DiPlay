@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ambient_light_threshold_title">Limite de brilho</string>
+    <string name="ambient_light_threshold_summary">%1$d lux</string>
+    <string name="ambient_light_threshold_value">Limite de troca (lux)</string>
+    <string name="ambient_light_threshold_hint">Abaixo do limite (lux) seleciona noite; igual ou acima seleciona dia. As leituras precisam ficar no novo lado durante o atraso selecionado. Digite um número inteiro de 1 a 200000.</string>
+    <string name="ambient_light_threshold_error">Digite um número inteiro de 1 a 200000.</string>
+    <string name="ambient_light_reset_defaults">Restaurar padrão</string>
+</resources>

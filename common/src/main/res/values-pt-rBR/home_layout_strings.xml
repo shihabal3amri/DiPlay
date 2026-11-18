@@ -1,0 +1,4 @@
+<resources>
+    <string name="settings_force_full_settings">Forçar layout completo de Configurações</string>
+    <string name="settings_force_full_settings_hint">Usa o layout completo de Configurações com barra lateral de categorias no modo paisagem, e layout automático no modo retrato. Não altera a tela inicial nem o CarPlay.</string>
+</resources>
