@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_navigation_wheel_volume">Volume do volante durante a orientação de navegação (experimental)</string>
+    <string name="settings_navigation_wheel_volume_description">Durante a orientação falada do CarPlay, as teclas de volume ajustam o fluxo de áudio de navegação selecionado. Fora disso, as teclas seguem a central. Exige permissão de acessibilidade das teclas do volante. Chamadas, zoom do mapa e joystick mantêm prioridade. Testado localmente numa central Tang platform-21; o teste no carro upstream está pendente. O roteamento automático ou de mídia não é interceptado.</string>
+    <string name="settings_navigation_wheel_service_required">Permita o serviço de acessibilidade das teclas do volante nas configurações do Android, ou use o botão de autorização de ADB existente.</string>
+</resources>

@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="card_preview_title">Prévia de posição do cartão de curva</string>
+    <string name="card_preview_note">Posição proporcional no painel completo do cluster. A borda real da janela pequena varia conforme o carro.</string>
+    <string name="card_preview_full">Tela cheia</string>
+    <string name="card_preview_small">Janela pequena</string>
+</resources>
