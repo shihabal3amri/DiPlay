@@ -164,4 +164,26 @@ class AppLocaleTest {
         AppLocale.save(context, AppLocale.SYSTEM)
         assertTrue(manager.applicationLocales.isEmpty)
     }
+
+    @Test fun brazilianPortugueseIsSelectableOnAndroid13() {
+        AppLocale.save(context, AppLocale.PORTUGUESE_BR)
+        assertEquals("pt-BR", manager.applicationLocales.toLanguageTags())
+        assertEquals(AppLocale.PORTUGUESE_BR, AppLocale.preference(context))
+        assertEquals("Português (Brasil)", AppLocale.displayName(context, AppLocale.PORTUGUESE_BR))
+        assertSame(context, AppLocale.wrap(context))
+        manager.applicationLocales = LocaleList.forLanguageTags("pt-PT")
+        assertEquals(AppLocale.PORTUGUESE_BR, AppLocale.preference(context))
+        AppLocale.save(context, AppLocale.SYSTEM)
+        assertTrue(manager.applicationLocales.isEmpty)
+    }
+
+    @Test @Config(sdk = [28, 32])
+    fun brazilianPortugueseWorksOnOlderAndroidAndUsesTranslatedResources() {
+        AppLocale.save(context, AppLocale.PORTUGUESE_BR)
+        val wrapped = AppLocale.wrap(context)
+        assertEquals("pt-BR", wrapped.resources.configuration.locales.toLanguageTags())
+        assertEquals("Idioma do app", wrapped.getString(R.string.language_app_language))
+        assertEquals(View.LAYOUT_DIRECTION_LTR, wrapped.resources.configuration.layoutDirection)
+        assertEquals(AppLocale.PORTUGUESE_BR, AppLocale.preference(context))
+    }
 }

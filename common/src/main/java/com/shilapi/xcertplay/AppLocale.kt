@@ -26,8 +26,9 @@ object AppLocale {
 
     const val ITALIAN = "it"
     const val TURKISH = "tr"
+    const val PORTUGUESE_BR = "pt-BR"
 
-    val ALL = listOf(SYSTEM, ENGLISH, SIMPLIFIED_CHINESE, TRADITIONAL_CHINESE, ARABIC, RUSSIAN, SPANISH, UKRAINIAN, JAPANESE, KOREAN, ITALIAN, TURKISH)
+    val ALL = listOf(SYSTEM, ENGLISH, SIMPLIFIED_CHINESE, TRADITIONAL_CHINESE, ARABIC, RUSSIAN, SPANISH, UKRAINIAN, JAPANESE, KOREAN, ITALIAN, TURKISH, PORTUGUESE_BR)
 
     private const val PREFS = "diplay"
     private const val KEY_LANGUAGE = "app_language"
@@ -39,6 +40,7 @@ object AppLocale {
             val locales = context.getSystemService(LocaleManager::class.java).applicationLocales
             if (locales.isEmpty) return SYSTEM
             val selected = locales[0]
+            if (selected.language == "pt") return PORTUGUESE_BR
             if (selected.language != "zh") return selected.language
             // An explicit BCP 47 script is more specific than the region's usual script.
             return when (selected.script) {
@@ -144,6 +146,7 @@ object AppLocale {
         KOREAN -> "한국어"
         ITALIAN -> "Italiano"
         TURKISH -> "Türkçe"
+        PORTUGUESE_BR -> "Português (Brasil)"
         else -> language
     }
 
@@ -159,6 +162,7 @@ object AppLocale {
         KOREAN -> Locale.KOREAN
         ITALIAN -> Locale.ITALIAN
         TURKISH -> Locale("tr")
+        PORTUGUESE_BR -> Locale("pt", "BR")
         else -> null
     }
 }

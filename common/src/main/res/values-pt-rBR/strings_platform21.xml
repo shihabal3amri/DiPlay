@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="platform21_cluster_mode">Tarefa de cluster da Platform 21 (experimental)</string>
+    <string name="platform21_cluster_description">Para a adaptação do controlador-21 do Tang DM-i 2023. Desligado por padrão. Usa só o display de projeção verificado, mantém um mapa de meia largura centralizado e não altera os modos de cluster de fábrica nem desativa o mapa de fábrica. Exige ADB local previamente autorizado. Aplicar este ajuste reconecta o CarPlay. Esta integração upstream precisa de um teste com o carro parado.</string>
+</resources>

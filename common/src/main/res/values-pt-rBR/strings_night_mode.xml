@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="carplay_night_mode">Modo dia/noite do CarPlay</string>
+    <string name="settings_app_appearance">Aparência do app</string>
+    <string name="settings_app_appearance_dark">Escuro</string>
+    <string name="settings_app_appearance_light">Claro</string>
+    <string name="settings_app_appearance_auto">Automático</string>
+    <string name="settings_app_appearance_description">Automático segue o ajuste de dia/noite salvo do CarPlay; com o CarPlay aberto, segue o resultado ao vivo. Claro e Escuro ficam fixos e não exigem reconexão.</string>
+    <string name="settings_switch_to_light_appearance">Mudar para aparência clara</string>
+    <string name="settings_switch_to_dark_appearance">Mudar para aparência escura</string>
+    <string name="carplay_night_system">Seguir o sistema Android</string>
+    <string name="carplay_night_ambient">Seguir a luz ambiente</string>
+    <string name="carplay_night_day">Sempre dia</string>
+    <string name="carplay_night_night">Sempre noite</string>
+    <string name="carplay_night_schedule">Agendado</string>
+    <string name="carplay_night_start">A noite começa</string>
+    <string name="carplay_night_end">A noite termina</string>
+    <string name="carplay_night_schedule_hint">Usa o horário local da central. Defina horários de início e fim diferentes; faixas que viram a noite são suportadas.</string>
+    <string name="carplay_night_schedule_same_time">Os horários de início e fim devem ser diferentes.</string>
+    <string name="carplay_night_hint">Salve e volte ao CarPlay para aplicar.</string>
+    <string name="carplay_night_ambient_hint">Usa o limite e o atraso abaixo. Sem sensor de luz, segue o Android.</string>
+    <string name="carplay_night_time_note">Quando a aparência está em Automático nas configurações do CarPlay, ele também considera o horário do iPhone. Mesmo escolhendo Sempre dia, o CarPlay ainda pode aparecer escuro à noite.</string>
+</resources>
