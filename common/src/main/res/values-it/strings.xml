@@ -925,6 +925,8 @@
     <string name="cluster_small_window_card_opacity">Scheda svolta in finestra piccola · opacità</string>
     <string name="turn_card_theme_day">Sempre giorno</string>
     <string name="turn_card_theme_night">Sempre notte</string>
+    <string name="settings_dudu_card_compat">Compatibilità con la scheda musicale di Dudu Desktop</string>
+    <string name="settings_dudu_card_compat_description">Se attivata, la scheda si adatta a Dudu Desktop; Dudu cerca da solo il testo online.</string>
     <string name="settings_disable_media_key_audio_focus">Disattiva il focus audio dei tasti multimediali (sperimentale)</string>
     <string name="settings_disable_media_key_audio_focus_description">Impedisce a DiPlay di richiedere il focus audio multimediale mentre la musica di CarPlay è attiva. Abilitalo se la head unit instrada a DiPlay i suoi pulsanti fisici del volume e questi non regolano più il volume. I comandi riproduci, pausa e brano del volante potrebbero smettere di funzionare su head unit che richiedono il focus. Si applica alla prossima connessione CarPlay.</string>
     <string name="settings_navigation_prompt_audio_focus">Le indicazioni di navigazione richiedono il focus audio</string>

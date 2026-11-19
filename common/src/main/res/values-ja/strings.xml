@@ -950,6 +950,8 @@
     <string name="cluster_small_window_card_opacity">小画面の案内カード · 不透明度</string>
     <string name="turn_card_theme_day">常に昼</string>
     <string name="turn_card_theme_night">常に夜</string>
+    <string name="settings_dudu_card_compat">嘟嘟デスクトップ音楽カード互換</string>
+    <string name="settings_dudu_card_compat_description">オンにすると嘟嘟デスクトップの音楽カードに対応します。歌詞は嘟嘟が自身でネット検索します。</string>
     <string name="settings_disable_media_key_audio_focus">メディアキーのオーディオフォーカスを無効化（実験的機能）</string>
     <string name="settings_disable_media_key_audio_focus_description">CarPlayで音楽再生中、DiPlayがメディアのオーディオフォーカスを要求しないようにします。車の物理音量キーがDiPlayに割り当てられ、音量調整できなくなる場合に使用してください。ステアリングの再生・停止・曲送りが動作しなくなる場合があります。</string>
     <string name="settings_navigation_prompt_audio_focus">ナビ音声案内でオーディオフォーカスを要求</string>

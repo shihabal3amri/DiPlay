@@ -143,15 +143,23 @@ internal object CarPlayMediaKeys {
                     artwork = nextArtwork(update.artworkTransferId, artworkCache, artwork)
                 }
                 if (nowPlaying.elapsedMillis != update.elapsedMillis) elapsedUpdatedAt = SystemClock.elapsedRealtime()
-                val metadataChanged = metadataChanged(nowPlaying, update) || artwork !== previousArtwork
+                val compat = duduCompat()
+                val internalChanged = metadataChanged(nowPlaying, update) || artwork !== previousArtwork
+                // Under Dudu compatibility the running lyric line lands in TITLE and must not rebuild
+                // the record, so identity is compared on the split song name and artist instead.
+                val sessionChanged = if (compat) {
+                    compatMetadataChanged(nowPlaying, update) || artwork !== previousArtwork
+                } else {
+                    metadataChanged(nowPlaying, update) || artwork !== previousArtwork
+                }
                 nowPlaying = update
-                if (metadataChanged) ClusterMusicState.publish(update, artwork)
+                if (internalChanged) ClusterMusicState.publish(update, artwork)
                 updateInitialAlbumRecovery(expected)
                 // The iPhone repeats NowPlayingUpdate about twice a second for the position alone.
                 // Republishing the metadata each time sent a copy of the artwork through system_server
                 // to every media listener, and on a DiLink 5.0 Tang that exhausted memory within
                 // minutes. The position goes in the playback state.
-                if (metadataChanged) session?.setMetadata(androidMetadata(update, shownArtworkLocked()))
+                if (sessionChanged) session?.setMetadata(androidMetadata(update, shownArtworkLocked(), compat))
                 publishPlaybackStateLocked()
             }
         }
@@ -188,7 +196,7 @@ internal object CarPlayMediaKeys {
             ClusterMusicState.publish(nowPlaying, artwork)
             controller?.let { com.shilapi.xcertplay.media.AmbientMusicController.albumColorChanged(it, result?.color) }
             controller?.let(::updateInitialAlbumRecovery)
-            session?.setMetadata(androidMetadata(nowPlaying, shownArtworkLocked()))
+            session?.setMetadata(androidMetadata(nowPlaying, shownArtworkLocked(), duduCompat()))
         }
     }
 
@@ -324,7 +332,7 @@ internal object CarPlayMediaKeys {
         }
         session = MediaSession(context, "DiPlay CarPlay").apply {
             setCallback(callback, mainHandler)
-            setMetadata(androidMetadata(nowPlaying, shownArtworkLocked()))
+            setMetadata(androidMetadata(nowPlaying, shownArtworkLocked(), duduCompat()))
             isActive = true
         }
         Log.i(TAG, "media keys active focusDisabled=$focusDisabled focusGranted=$granted")
@@ -455,24 +463,68 @@ internal object CarPlayMediaKeys {
     internal fun metadataChanged(previous: CarPlayNowPlaying, next: CarPlayNowPlaying): Boolean =
         previous.copy(elapsedMillis = null, playing = false) != next.copy(elapsedMillis = null, playing = false)
 
-    internal fun androidMetadata(info: CarPlayNowPlaying, artwork: Bitmap? = null): MediaMetadata =
-        MediaMetadata.Builder().apply {
-            info.title?.let {
-                putString(MediaMetadata.METADATA_KEY_TITLE, it)
-                putString(MediaMetadata.METADATA_KEY_DISPLAY_TITLE, it)
+    internal fun androidMetadata(info: CarPlayNowPlaying, artwork: Bitmap? = null, compat: Boolean = false): MediaMetadata {
+        val split = if (compat) splitTrack(info) else null to null
+        val songName = split.first
+        val artistName = split.second
+        return MediaMetadata.Builder().apply {
+            if (compat) {
+                // Qishui puts the running lyric line in TITLE and packs "song · artist" into ARTIST.
+                // Publish the recovered name and artist instead; the launcher looks the lyrics up itself.
+                songName?.let {
+                    putString(MediaMetadata.METADATA_KEY_TITLE, it)
+                    putString(MediaMetadata.METADATA_KEY_DISPLAY_TITLE, it)
+                }
+                artistName?.let {
+                    putString(MediaMetadata.METADATA_KEY_ARTIST, it)
+                    putString(MediaMetadata.METADATA_KEY_DISPLAY_SUBTITLE, it)
+                    putString(MediaMetadata.METADATA_KEY_DISPLAY_DESCRIPTION, it)
+                }
+                // The name already sits in the title; sending the album would repeat it on the card.
+            } else {
+                info.title?.let {
+                    putString(MediaMetadata.METADATA_KEY_TITLE, it)
+                    putString(MediaMetadata.METADATA_KEY_DISPLAY_TITLE, it)
+                }
+                info.artist?.let {
+                    putString(MediaMetadata.METADATA_KEY_ARTIST, it)
+                    putString(MediaMetadata.METADATA_KEY_DISPLAY_SUBTITLE, it)
+                }
+                info.album?.let { putString(MediaMetadata.METADATA_KEY_ALBUM, it) }
+                info.sourceApp?.let { putString(MediaMetadata.METADATA_KEY_DISPLAY_DESCRIPTION, it) }
             }
-            info.artist?.let {
-                putString(MediaMetadata.METADATA_KEY_ARTIST, it)
-                putString(MediaMetadata.METADATA_KEY_DISPLAY_SUBTITLE, it)
-            }
-            info.album?.let { putString(MediaMetadata.METADATA_KEY_ALBUM, it) }
             info.durationMillis?.let { putLong(MediaMetadata.METADATA_KEY_DURATION, it) }
-            info.sourceApp?.let { putString(MediaMetadata.METADATA_KEY_DISPLAY_DESCRIPTION, it) }
             artwork?.let {
                 putBitmap(MediaMetadata.METADATA_KEY_ALBUM_ART, it)
                 putBitmap(MediaMetadata.METADATA_KEY_DISPLAY_ICON, it)
             }
         }.build()
+    }
+
+    /** Whether the compatibility card's record must be replaced: only the recovered track identity. */
+    private fun compatMetadataChanged(previous: CarPlayNowPlaying, next: CarPlayNowPlaying): Boolean {
+        val (previousName, previousArtist) = splitTrack(previous)
+        val (nextName, nextArtist) = splitTrack(next)
+        return previousName != nextName || previousArtist != nextArtist ||
+            previous.artworkTransferId != next.artworkTransferId
+    }
+
+    /** Splits the "song · artist" string some apps pack into [CarPlayNowPlaying.artist]. */
+    private fun splitTrack(info: CarPlayNowPlaying): Pair<String?, String?> {
+        val raw = info.artist?.trim()?.takeIf { it.isNotEmpty() } ?: return info.album to info.artist
+        val separator = " · "
+        val at = raw.lastIndexOf(separator)
+        if (at <= 0 || at + separator.length >= raw.length) {
+            // No combined string: the field is just the artist, and the album (if any) is the name.
+            return (info.album?.takeIf { it.isNotBlank() } ?: raw) to raw
+        }
+        val name = raw.substring(0, at).trim().ifEmpty { null }
+        val artist = raw.substring(at + separator.length).trim().ifEmpty { null }
+        return name to artist
+    }
+
+    private fun duduCompat(): Boolean =
+        appContext?.let { AirPlayPersistence.loadDuduCardCompat(it) } ?: false
 
     // Without art the car draws DiPlay's bright launcher icon instead.
     private fun shownArtworkLocked(): Bitmap? =

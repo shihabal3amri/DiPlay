@@ -940,6 +940,8 @@
     <string name="cluster_small_window_card_opacity">소형 창 회전 안내 카드 · 불투명도</string>
     <string name="turn_card_theme_day">항상 주간</string>
     <string name="turn_card_theme_night">항상 야간</string>
+    <string name="settings_dudu_card_compat">두두 데스크톱 음악 카드 호환</string>
+    <string name="settings_dudu_card_compat_description">켜면 두두 데스크톱 음악 카드와 호환되며, 가사는 두두가 직접 온라인에서 검색합니다.</string>
     <string name="settings_disable_media_key_audio_focus">미디어 키 오디오 포커스 비활성화 (실험 기능)</string>
     <string name="settings_disable_media_key_audio_focus_description">CarPlay 음악 재생 중 DiPlay가 미디어 오디오 포커스를 요청하지 않도록 합니다. 헤드 유닛의 물리 볼륨 버튼이 DiPlay로 연결되어 더 이상 볼륨을 조절하지 못한다면 이 기능을 켜세요. 포커스가 필요한 헤드 유닛에서는 핸들 재생, 일시정지 및 트랙 제어가 작동하지 않을 수 있습니다. 다음 CarPlay 연결부터 적용됩니다.</string>
     <string name="settings_ambient_album">앨범 표지 반응</string>

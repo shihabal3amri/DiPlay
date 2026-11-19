@@ -48,6 +48,7 @@ object AirPlayPersistence {
     private const val KEY_AUDIO_FOCUS_AUTO_YIELD = "audio_focus_auto_yield"
     private const val KEY_NAVIGATION_PROMPT_AUDIO_FOCUS = "navigation_prompt_audio_focus"
     private const val KEY_DISABLE_MEDIA_KEY_AUDIO_FOCUS = "disable_media_key_audio_focus"
+    private const val KEY_DUDU_CARD_COMPAT = "dudu_card_compat"
     private const val KEY_MEDIA_AUDIO_CHANNEL = "media_audio_channel"
     private const val KEY_NAVIGATION_AUDIO_CHANNEL = "navigation_audio_channel"
     private const val KEY_NAVIGATION_AUDIO_ATTENUATION = "navigation_audio_attenuation_db"
@@ -286,6 +287,23 @@ object AirPlayPersistence {
     fun saveDisableMediaKeyAudioFocus(context: Context, disabled: Boolean) {
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
             .putBoolean(KEY_DISABLE_MEDIA_KEY_AUDIO_FOCUS, disabled)
+            .apply()
+    }
+
+    /**
+     * Compatibility for third-party launchers (Dudu Desktop) that read the session record's title
+     * and artist and look the lyrics up themselves. Qishui Music on the iPhone puts the running
+     * lyric line in TITLE and packs "song · artist" into ARTIST, so the compatible record splits
+     * that string, keeps the name on the title line and the artist on the subtitle, and never
+     * republishes for a lyric-line change.
+     */
+    fun loadDuduCardCompat(context: Context): Boolean =
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .getBoolean(KEY_DUDU_CARD_COMPAT, false)
+
+    fun saveDuduCardCompat(context: Context, enabled: Boolean) {
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
+            .putBoolean(KEY_DUDU_CARD_COMPAT, enabled)
             .apply()
     }
 

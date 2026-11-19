@@ -6229,6 +6229,11 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
         parent.addView(card, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(SETTINGS_BLOCK_GAP_DP) })
     }
     private fun audioFocusControls(parent: LinearLayout) {
+        toggle(parent, getString(R.string.settings_dudu_card_compat),
+            getString(R.string.settings_dudu_card_compat_description),
+            AirPlayPersistence.loadDuduCardCompat(this)) {
+            AirPlayPersistence.saveDuduCardCompat(this, it)
+        }
         toggle(parent, getString(R.string.settings_disable_media_key_audio_focus),
             getString(R.string.settings_disable_media_key_audio_focus_description),
             AirPlayPersistence.loadDisableMediaKeyAudioFocus(this)) {

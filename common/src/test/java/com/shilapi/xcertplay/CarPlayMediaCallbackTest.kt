@@ -109,6 +109,29 @@ class CarPlayMediaCallbackTest {
     }
 
     @Test
+    fun duduCompatSplitsTheTrackNameAndArtistAndOmitsAlbum() {
+        val metadata = CarPlayMediaKeys.androidMetadata(
+            CarPlayNowPlaying(
+                title = "the running lyric line",
+                album = "unused album",
+                artist = "把回忆拼好给你 · 妙音",
+                sourceApp = "Music",
+                durationMillis = 240_000,
+            ),
+            null,
+            compat = true,
+        )
+
+        assertEquals("把回忆拼好给你", metadata.getString(MediaMetadata.METADATA_KEY_TITLE))
+        assertEquals("把回忆拼好给你", metadata.getString(MediaMetadata.METADATA_KEY_DISPLAY_TITLE))
+        assertEquals("妙音", metadata.getString(MediaMetadata.METADATA_KEY_ARTIST))
+        assertEquals("妙音", metadata.getString(MediaMetadata.METADATA_KEY_DISPLAY_SUBTITLE))
+        assertEquals("妙音", metadata.getString(MediaMetadata.METADATA_KEY_DISPLAY_DESCRIPTION))
+        assertNull(metadata.getString(MediaMetadata.METADATA_KEY_ALBUM))
+        assertEquals(240_000, metadata.getLong(MediaMetadata.METADATA_KEY_DURATION))
+    }
+
+    @Test
     fun aPendingArtworkTransferKeepsThePreviousArt() {
         val previous = Bitmap.createBitmap(2, 2, Bitmap.Config.ARGB_8888)
         val cached = Bitmap.createBitmap(2, 2, Bitmap.Config.ARGB_8888)

@@ -908,6 +908,8 @@
     <string name="cluster_small_window_card_opacity">Küçük pencere dönüş kartı · opaklık</string>
     <string name="turn_card_theme_day">Her zaman gündüz</string>
     <string name="turn_card_theme_night">Her zaman gece</string>
+    <string name="settings_dudu_card_compat">Dudu Desktop müzik kartı uyumluluğu</string>
+    <string name="settings_dudu_card_compat_description">Açıldığında müzik kartı Dudu Desktop ile uyumlu olur; şarkı sözlerini Dudu kendisi çevrimiçi arar.</string>
     <string name="settings_disable_media_key_audio_focus">Medya tuşu ses odağını devre dışı bırak (deneysel)</string>
     <string name="settings_disable_media_key_audio_focus_description">CarPlay müziği etkinken DiPlay\'in medya ses odağı istemesini durdurur. Ana üniteniz fiziksel ses düğmelerini DiPlay\'e yönlendiriyorsa ve artık ses düzeyini ayarlamıyorsa bunu etkinleştirin. Odak gerektiren ana ünitelerde direksiyondan oynatma, duraklatma ve parça kontrolleri çalışmayı durdurabilir. Sonraki CarPlay bağlantısında geçerli olur.</string>
     <string name="settings_ambient_album">Albüm kapağını takip et</string>

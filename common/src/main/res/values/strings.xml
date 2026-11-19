@@ -951,6 +951,8 @@
     <string name="cluster_small_window_card_opacity">Small-window turn card · opacity</string>
     <string name="turn_card_theme_day">Always day</string>
     <string name="turn_card_theme_night">Always night</string>
+    <string name="settings_dudu_card_compat">Dudu Desktop music card compatibility</string>
+    <string name="settings_dudu_card_compat_description">When enabled, the music card shows the track name and artist for the Dudu Desktop launcher; Dudu searches the lyrics online itself.</string>
     <string name="settings_disable_media_key_audio_focus">Disable media-key audio focus (experimental)</string>
     <string name="settings_disable_media_key_audio_focus_description">Stops DiPlay from requesting media audio focus while CarPlay music is active. Enable this if your head unit routes its physical volume buttons to DiPlay and they no longer adjust volume. Steering-wheel play, pause and track controls may stop working on head units that require focus. Applies at the next CarPlay connection.</string>
     <string name="settings_navigation_prompt_audio_focus">Navigation prompts ask for audio focus</string>

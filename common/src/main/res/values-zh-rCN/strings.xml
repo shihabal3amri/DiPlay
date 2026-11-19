@@ -908,6 +908,8 @@
     <string name="cluster_small_window_card_opacity">小屏转向卡 · 透明度</string>
     <string name="turn_card_theme_day">始终白天</string>
     <string name="turn_card_theme_night">始终夜间</string>
+    <string name="settings_dudu_card_compat">嘟嘟桌面音乐卡片兼容</string>
+    <string name="settings_dudu_card_compat_description">开启后兼容嘟嘟桌面音乐卡片已实现嘟嘟联网搜索歌词</string>
     <string name="settings_disable_media_key_audio_focus">禁用媒体按键音频焦点（实验性）</string>
     <string name="settings_disable_media_key_audio_focus_description">CarPlay 音乐播放时不再由 DiPlay 申请媒体音频焦点。若车机将实体音量键路由给 DiPlay，导致音量键无法调节音量，请开启此项。部分依赖音频焦点的车机可能无法继续使用方向盘播放、暂停和切歌键。下次连接 CarPlay 时生效。</string>
     <string name="settings_navigation_prompt_audio_focus">导航播报申请音频焦点</string>

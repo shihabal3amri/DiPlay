@@ -848,6 +848,8 @@
     <string name="settings_ambient_car_rhythm_unavailable">إيقاع الموسيقى في السيارة غير متاح: لا يستطيع DiPlay تشغيله بنفسه، ولا يتوفر وصول DiPlay إلى ADB الشبكي أو استدعاء خدمة الصوت في الوحدة الرئيسية. لم يُحفظ أي شيء.</string>
     <string name="settings_ambient_car_rhythm_feed">إرسال بيانات الموسيقى إلى إيقاع السيارة (الأجهزة الأقدم)</string>
     <string name="settings_ambient_car_rhythm_feed_description">في بعض الأجهزة (مثل هان 2023) يبدأ إيقاع السيارة لكن تبقى الإضاءة مظلمة لأن السيارة لا تولّد طيفًا خاصًا بها لموسيقى CarPlay. يرسل هذا الخيار نطاقات التردد الستة عشر للموسيقى المشغَّلة إلى وحدة التحكم بالإضاءة، فيتبعها إيقاع السيارة بما في ذلك لوحة الراكب. يعمل فقط عند تشغيل إيقاع موسيقى السيارة أعلاه ويحتاج إلى ADB الشبكي للسيارة.</string>
+    <string name="settings_dudu_card_compat">توافق بطاقة موسيقى سطح مكتب Dudu</string>
+    <string name="settings_dudu_card_compat_description">عند التشغيل، تتوافق بطاقة الموسيقى مع سطح مكتب Dudu؛ وتبحث Dudu عن كلمات الأغنية عبر الإنترنت بنفسها.</string>
     <string name="settings_disable_media_key_audio_focus">تعطيل تركيز الصوت لمفاتيح الوسائط (تجريبي)</string>
     <string name="settings_disable_media_key_audio_focus_description">يمنع DiPlay من طلب تركيز صوت الوسائط أثناء تشغيل موسيقى CarPlay. فعّله إذا كانت وحدة السيارة توجّه أزرار مستوى الصوت الفعلية إلى DiPlay فلا تعود تضبط مستوى الصوت. قد تتوقف أزرار التشغيل والإيقاف المؤقت وتغيير المسار في عجلة القيادة على الوحدات التي تتطلب التركيز. يُطبّق عند اتصال CarPlay التالي.</string>
     <string name="settings_navigation_prompt_audio_focus">تطلب إرشادات الملاحة تركيز الصوت</string>
