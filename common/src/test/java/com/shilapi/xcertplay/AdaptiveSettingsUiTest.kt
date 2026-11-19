@@ -571,7 +571,7 @@ class AdaptiveSettingsUiTest {
         assertFalse(index.any { it.title == screen.getString(R.string.auto_car_hotspot_title) })
     }
 
-    @Test fun cardControlsShareOneHeightAndGap() {
+    @Test fun cardControlsShareOneMinimumHeightAndGap() {
         val screen = openSettings()
         descendants(screen.window.decorView)
             .first { it.contentDescription == screen.getString(R.string.settings_open_category,
@@ -588,7 +588,8 @@ class AdaptiveSettingsUiTest {
         assertTrue(buttons.size >= 4)
         buttons.forEach { button ->
             val lp = button.layoutParams as LinearLayout.LayoutParams
-            assertEquals(button.text.toString(), dp(60), lp.height)
+            assertEquals(button.text.toString(), ViewGroup.LayoutParams.WRAP_CONTENT, lp.height)
+            assertEquals(button.text.toString(), dp(60), button.minHeight)
             assertEquals(button.text.toString(), 0, lp.topMargin)
             assertTrue(button.text.toString(), lp.bottomMargin in setOf(0, dp(6), dp(12)))
         }
@@ -610,10 +611,18 @@ class AdaptiveSettingsUiTest {
             .first { it.contentDescription == screen.getString(R.string.settings_open_category,
                 screen.getString(R.string.settings_vehicle)) }
             .performClick()
-        val chooseImage = texts(screen).single { it.text == screen.getString(R.string.choose_image) }
-        val card = chooseImage.parent as LinearLayout
-        val preview = card.getChildAt(card.indexOfChild(chooseImage) - 1)
+        val iconTitle = texts(screen).single { it.text == screen.getString(R.string.car_button_icon) }
+        // The title sits inside the text column, which sits inside the icon preview row.
+        val preview = iconTitle.parent.parent as LinearLayout
+        val card = preview.parent as LinearLayout
+        // The first button after the preview is now the "Car brand badge · …" row.
+        val firstButton = (card.indexOfChild(preview) + 1 until card.childCount)
+            .map { card.getChildAt(it) }.first { it is android.widget.Button } as android.widget.Button
+        assertTrue(
+            firstButton.text.startsWith(screen.getString(R.string.settings_car_brand_title)),
+        )
 
+        // The gap between the preview row and its button is carried by the preview row.
         assertEquals(Math.round(12 * screen.resources.displayMetrics.density),
             (preview.layoutParams as LinearLayout.LayoutParams).bottomMargin)
     }
