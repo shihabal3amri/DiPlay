@@ -80,6 +80,7 @@ import com.shilapi.xcertplay.network.CarHotspotSavedCredentials
 import com.shilapi.xcertplay.network.CarHotspotSettings
 import com.shilapi.xcertplay.network.CarHotspotTethering
 import com.shilapi.xcertplay.network.HotspotCredentials
+import com.shilapi.xcertplay.network.WifiChannelRanker
 import com.shilapi.xcertplay.network.WifiP2pChannels
 import com.shilapi.xcertplay.orchestration.ManualHotspotProvisioning
 import com.shilapi.xcertplay.orchestration.ManualHotspotSecurity
@@ -215,6 +216,12 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
     private var testToneTrack: AudioTrack? = null
     private var toneStop: Runnable? = null
     private var exportButton: Button? = null
+    private var wifiChannelScanButton: Button? = null
+    private var wifiChannelScanApplyButton: Button? = null
+    private var wifiChannelScanResultLabel: TextView? = null
+    private var wifiChannelScanInProgress = false
+    private var wifiChannelScanSummary: String? = null
+    private var wifiChannelScanRecommendedChannel: Int? = null
     private var rootScroll: ScrollView? = null
     private var settingsRailScroll: ScrollView? = null
     private var reconnectBar: View? = null
@@ -689,6 +696,9 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
         reconnectBar = null
         readinessCard = null
         exportButton = null
+        wifiChannelScanButton = null
+        wifiChannelScanApplyButton = null
+        wifiChannelScanResultLabel = null
         bydAdbControls = null
         adbSwitches.clear()
         adbStatus = null
@@ -1774,6 +1784,7 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
             card.addView(label(destination + getString(R.string.nothing_is_sent_automatically_protocol_payloads_and_creden), 14, MUTED).apply { setPadding(0, dp(12), 0, 0) })
             toggle(card, getString(R.string.settings_fps_counter), getString(R.string.settings_fps_counter_description),
                 AirPlayPersistence.loadFpsCounter(this)) { AirPlayPersistence.saveFpsCounter(this, it) }
+            wifiChannelScanControls(card)
         }
         filteredSection(content, SettingsSection.AUTOMATIC_CONNECTION,
             getString(R.string.automatic_connection), R.drawable.ic_dp_automation) { card ->
@@ -2024,6 +2035,16 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
                 AirPlayPersistence.loadLowLatencyDecoder(this)) {
                 AirPlayPersistence.saveLowLatencyDecoder(this, it)
                 markReconnectNeeded()
+            }
+            // One switch for slow head units: it also moves the toggles above and below,
+            // so re-render to show their new state instead of leaving them stale.
+            toggle(card, getString(R.string.settings_weak_device_mode),
+                getString(R.string.settings_weak_device_mode_description),
+                AirPlayPersistence.loadWeakDeviceMode(this)) { enabled ->
+                if (enabled) AirPlayPersistence.applyWeakDeviceProfile(this)
+                else AirPlayPersistence.restoreWeakDeviceProfile(this)
+                markReconnectNeeded()
+                render()
             }
             toggle(card, getString(R.string.call_echo_cancellation), getString(R.string.call_echo_cancellation_description),
                 AirPlayPersistence.loadCallEchoCancellation(this)) {
@@ -3658,6 +3679,77 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
             setPadding(0, 0, 0, dp(12))
         })
     }
+
+    /** Wi-Fi channel scanner in Diagnostics: one scan, a ranked summary, and an apply action. */
+    private fun wifiChannelScanControls(card: LinearLayout) {
+        card.addView(label(getString(R.string.settings_wifi_channel_scan_description), 14, MUTED).apply {
+            setPadding(0, dp(10), 0, 0)
+        })
+        wifiChannelScanResultLabel = label(
+            wifiChannelScanSummary ?: getString(R.string.settings_wifi_channel_scan),
+            15, MUTED,
+        ).apply { setPadding(0, dp(10), 0, 0) }
+        card.addView(wifiChannelScanResultLabel)
+        wifiChannelScanButton = button(
+            if (wifiChannelScanInProgress) getString(R.string.settings_wifi_channel_scan_scanning)
+            else getString(R.string.settings_wifi_channel_scan_button), false,
+        ) { startWifiChannelScan() }.apply { isEnabled = !wifiChannelScanInProgress }
+        card.addView(wifiChannelScanButton, matchButton(10, 60))
+        val recommended = wifiChannelScanRecommendedChannel
+        if (recommended != null) {
+            wifiChannelScanApplyButton = button(getString(R.string.settings_wifi_channel_scan_apply, recommended), false) {
+                AirPlayPersistence.saveWifiP2pPreferredChannel(this, recommended)
+                markReconnectNeeded()
+                toast(getString(R.string.saved_for_your_next_connection))
+            }
+            card.addView(wifiChannelScanApplyButton, matchButton(10, 60))
+        }
+    }
+
+    private fun startWifiChannelScan() {
+        if (wifiChannelScanInProgress) return
+        wifiChannelScanInProgress = true
+        wifiChannelScanButton?.apply { isEnabled = false; text = getString(R.string.settings_wifi_channel_scan_scanning) }
+        wifiChannelScanResultLabel?.text = getString(R.string.settings_wifi_channel_scan_scanning)
+        WifiChannelScanner(this).scanOnce { outcome ->
+            if (isFinishing || isDestroyed) return@scanOnce
+            wifiChannelScanInProgress = false
+            when (outcome) {
+                WifiChannelScanner.Outcome.NeedsLocation -> {
+                    wifiChannelScanSummary = getString(R.string.settings_wifi_channel_scan_needs_location)
+                    wifiChannelScanRecommendedChannel = null
+                }
+                WifiChannelScanner.Outcome.ScanFailed -> {
+                    wifiChannelScanSummary = getString(R.string.settings_wifi_channel_scan_failed)
+                    wifiChannelScanRecommendedChannel = null
+                }
+                is WifiChannelScanner.Outcome.Scanned -> {
+                    wifiChannelScanSummary = wifiChannelScanSummaryText(outcome.ranking, outcome.recommendedChannel)
+                    wifiChannelScanRecommendedChannel = outcome.recommendedChannel
+                }
+            }
+            render()
+        }
+    }
+
+    private fun wifiChannelScanSummaryText(
+        ranking: List<WifiChannelRanker.ChannelScore>,
+        recommendedChannel: Int?,
+    ): String = buildString {
+        for (score in ranking) {
+            if (score.accessPointCount == 0) {
+                appendLine(getString(R.string.settings_wifi_channel_scan_channel_empty, score.channel))
+            } else {
+                appendLine(getString(R.string.settings_wifi_channel_scan_channel,
+                    score.channel, score.accessPointCount, score.strongestRssiDbm ?: 0))
+            }
+        }
+        if (recommendedChannel != null) {
+            append(getString(R.string.settings_wifi_channel_scan_recommend, recommendedChannel))
+        } else {
+            append(getString(R.string.settings_wifi_channel_scan_empty))
+        }
+    }.trimEnd().toString()
 
     private fun mediaChannelControl(parent: LinearLayout) {
         val summary: (Int) -> String = {
@@ -5986,6 +6078,7 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
         appendLine("Saved video preference (may differ from active session): ${if (AirPlayPersistence.loadHevcEnabled(appContext)) "HEVC" else "H.264"}; ${AirPlayPersistence.loadFps(appContext)} fps")
         appendLine("Media-key audio focus: ${if (AirPlayPersistence.loadDisableMediaKeyAudioFocus(appContext)) "disabled" else "enabled"}")
         appendLine("MTK decoder tuning preference: ${if (AirPlayPersistence.loadMtkDecoderTuning(appContext)) "enabled" else "disabled"}")
+        appendLine("Weak head-unit mode: ${if (AirPlayPersistence.loadWeakDeviceMode(appContext)) "enabled" else "disabled"}")
         appendLine("CarPlay size: ${AirPlayPersistence.loadWidthPhysicalMm(appContext).let { mm -> "${com.shilapi.xcertplay.airplay.CarPlaySize.exact(mm)?.label ?: "Custom"}, $mm mm" }}")
         appendLine("Saved resolution preference (may differ from active session): ${AirPlayPersistence.loadDisplayScalePercent(appContext)}%")
         appendLine("Session: ${if (CarPlayBackgroundSession.active) "active" else if (CarPlayBackgroundSession.hasSession()) "connecting" else "stopped"}")
