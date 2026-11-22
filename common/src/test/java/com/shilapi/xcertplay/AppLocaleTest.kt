@@ -165,6 +165,16 @@ class AppLocaleTest {
         assertTrue(manager.applicationLocales.isEmpty)
     }
 
+    @Test fun vietnameseIsSelectableOnAndroid13() {
+        AppLocale.save(context, AppLocale.VIETNAMESE)
+        assertEquals("vi", manager.applicationLocales.toLanguageTags())
+        assertEquals(AppLocale.VIETNAMESE, AppLocale.preference(context))
+        assertEquals("Tiếng Việt", AppLocale.displayName(context, AppLocale.VIETNAMESE))
+        assertSame(context, AppLocale.wrap(context))
+        AppLocale.save(context, AppLocale.SYSTEM)
+        assertTrue(manager.applicationLocales.isEmpty)
+    }
+
     @Test fun frenchIsSelectableOnAndroid13() {
         AppLocale.save(context, AppLocale.FRENCH)
         assertEquals("fr", manager.applicationLocales.toLanguageTags())
