@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="startup_picker_title">¿Qué iPhone?</string>
+    <string name="startup_picker_countdown">Conectando con %1$s en %2$d\u00A0s</string>
+    <string name="startup_picker_tap">Toca un iPhone para conectar</string>
+</resources>

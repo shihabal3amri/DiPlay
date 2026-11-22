@@ -8,6 +8,8 @@ import android.app.Dialog
 import android.app.TimePickerDialog
 import android.view.Window
 import android.bluetooth.BluetoothAdapter
+import android.bluetooth.BluetoothClass
+import android.bluetooth.BluetoothDevice
 import android.bluetooth.BluetoothManager
 import android.content.ComponentName
 import android.content.Context
@@ -201,6 +203,13 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
     private var disconnectButton: Button? = null
     private var lastRunning: Boolean? = null
     private var pendingWireless = false
+    /**
+     * The driver answered which iPhone to connect since DiPlay last came on screen. Head units often
+     * keep DiPlay in memory between drives, so showing DiPlay again, for the next drive or back from
+     * Bluetooth settings, asks again.
+     */
+    private var iphoneQuestionAnswered = false
+    private var startupPickerDialog: AlertDialog? = null
     private var bluetoothSettingsVisited = false
     private var initialLaunch = true
     private var notificationTransport = true
@@ -502,6 +511,7 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
 
     override fun onStart() {
         super.onStart()
+        iphoneQuestionAnswered = false
         // Results from the image picker and crop screens arrive before onResume.
         enforceInterfaceSize()
         CenterMapOverlay.onDiPlayScreenShown()
@@ -512,6 +522,8 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
     override fun onStop() {
         cancelUsbPermissionSetup()
         clusterSafeAreaDialog?.dismiss()
+        // Off screen, the question stops instead of connecting an iPhone in the background.
+        startupPickerDialog?.dismiss()
         startupHotspotCancelled = true
         super.onStop()
         if (!isFinishing && !isChangingConfigurations) {
@@ -566,6 +578,8 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
     }
 
     override fun onDestroy() {
+        // Dismissing also stops its countdown, so it cannot connect for a destroyed screen.
+        startupPickerDialog?.dismiss()
         settingsSearchPopup?.dismiss()
         appearanceObserverRemoval?.invoke()
         appearanceObserverRemoval = null
@@ -5740,6 +5754,19 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
             return
         }
         if (wireless && carHotspotOff()) { carHotspotOffDialog(); return }
+        if (wireless && !iphoneQuestionAnswered) {
+            // Runs before the single-iPhone chooser below, so a driver is asked at most once.
+            val paired = pairedDevices()
+            when (val decision = StartupPhonePicker.decide(paired.map { it.second }, DiPlayPreferences.phoneAddress(this))) {
+                StartupPhonePicker.Decision.Skip -> Unit
+                is StartupPhonePicker.Decision.Connect -> {
+                    pickStartupPhone(paired.first { it.second.address == decision.address }.first); return
+                }
+                is StartupPhonePicker.Decision.Ask -> {
+                    showStartupPhonePicker(decision, paired.map { it.first }); return
+                }
+            }
+        }
         if (wireless && DiPlayPreferences.phoneAddress(this) == null) {
             pendingWireless = true; choosePhone(); return
         }
@@ -5803,6 +5830,84 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
                 if (start) connect(true)
             }.setNeutralButton(getString(R.string.pair_another)) { _, _ -> openBluetoothSettings() }
             .setNegativeButton(getString(R.string.cancel)) { _, _ -> pendingWireless = false }.show()
+    }
+
+    /** The car's paired devices as it reports them now; empty without Bluetooth or its permission. */
+    private fun pairedDevices(): List<Pair<BluetoothDevice, StartupPhonePicker.Candidate>> {
+        if (Build.VERSION.SDK_INT >= 31 && checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) return emptyList()
+        val adapter = getSystemService(BluetoothManager::class.java)?.adapter ?: return emptyList()
+        if (!adapter.isEnabled) return emptyList()
+        return runCatching {
+            adapter.bondedDevices.map { device ->
+                device to StartupPhonePicker.Candidate(
+                    address = device.address,
+                    name = device.name,
+                    isPhone = device.bluetoothClass?.let { it.majorDeviceClass == BluetoothClass.Device.Major.PHONE },
+                    connected = bluetoothConnected(device),
+                )
+            }
+        }.getOrDefault(emptyList())
+    }
+
+    // BluetoothDevice.isConnected is hidden API. Where the firmware blocks it, nothing counts as
+    // connected, so the driver is asked instead of DiPlay guessing.
+    private fun bluetoothConnected(device: BluetoothDevice): Boolean = runCatching {
+        device.javaClass.getMethod("isConnected").invoke(device) as Boolean
+    }.getOrDefault(false)
+
+    private fun showStartupPhonePicker(ask: StartupPhonePicker.Decision.Ask, paired: List<BluetoothDevice>) {
+        val devices = ask.choices.mapNotNull { choice -> paired.firstOrNull { it.address == choice.address } }
+        val fallback = devices.firstOrNull { it.address == ask.fallbackAddress }
+        var secondsLeft = STARTUP_PICKER_SECONDS
+        fun countdownText(device: BluetoothDevice, seconds: Int) = getString(R.string.startup_picker_countdown,
+            device.name ?: getString(R.string.paired_device), seconds)
+        val hint = TextView(this).apply {
+            setTextColor(MUTED); textSize = 15f; gravity = Gravity.CENTER
+            setPadding(0, dp(STARTUP_PICKER_HINT_GAP_DP), 0, 0)
+            text = if (fallback == null) getString(R.string.startup_picker_tap) else countdownText(fallback, secondsLeft)
+        }
+        val content = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(STARTUP_PICKER_PADDING_DP), dp(STARTUP_PICKER_GAP_DP), dp(STARTUP_PICKER_PADDING_DP), 0)
+        }
+        devices.forEach { device ->
+            // Only the iPhone the countdown will connect is highlighted; a new driver sees no default.
+            // actionButton keeps a name such as "iPhone · Work" a plain button rather than a setting row.
+            content.addView(actionButton(device.name ?: getString(R.string.paired_device), primary = device == fallback) {
+                startupPickerDialog?.dismiss(); pickStartupPhone(device)
+            }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(STARTUP_PICKER_BUTTON_HEIGHT_DP)).apply {
+                bottomMargin = dp(STARTUP_PICKER_GAP_DP)
+            })
+        }
+        content.addView(hint)
+        val tick = object : Runnable {
+            override fun run() {
+                val dialog = startupPickerDialog ?: return
+                if (fallback == null || !dialog.isShowing || isFinishing || isDestroyed) return
+                secondsLeft--
+                if (secondsLeft <= 0) { dialog.dismiss(); pickStartupPhone(fallback); return }
+                hint.text = countdownText(fallback, secondsLeft)
+                handler.postDelayed(this, STARTUP_PICKER_TICK_MILLIS)
+            }
+        }
+        startupPickerDialog = appDialogBuilder().setTitle(getString(R.string.startup_picker_title))
+            .setView(content)
+            // Back here after pairing, the next Connect asks again with the new iPhone in the list.
+            .setNeutralButton(getString(R.string.pair_another)) { _, _ -> openBluetoothSettings() }
+            .setNegativeButton(getString(R.string.cancel)) { _, _ -> iphoneQuestionAnswered = true }
+            .setOnCancelListener { iphoneQuestionAnswered = true }
+            .setOnDismissListener { handler.removeCallbacks(tick); startupPickerDialog = null }
+            .show()
+            // A stray touch beside the dialog must not cancel the countdown while driving off.
+            .apply { setCanceledOnTouchOutside(false) }
+        if (fallback != null) handler.postDelayed(tick, STARTUP_PICKER_TICK_MILLIS)
+    }
+
+    private fun pickStartupPhone(device: BluetoothDevice) {
+        iphoneQuestionAnswered = true
+        DiPlayPreferences.savePhone(this, device.address, device.name ?: "iPhone")
+        render()
+        connect(true)
     }
 
     private fun wirelessHelp() {
@@ -6922,6 +7027,15 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
     private val FOCUS_RING get() = palette.focusRing
 
     companion object {
+        /** With nobody tapping, the start-up picker connects the last iPhone after this many seconds. */
+        private const val STARTUP_PICKER_SECONDS = 8
+        private const val STARTUP_PICKER_TICK_MILLIS = 1000L
+        /** Taller than a settings row: the driver taps it from the seat as the car starts. */
+        private const val STARTUP_PICKER_BUTTON_HEIGHT_DP = 72
+        private const val STARTUP_PICKER_GAP_DP = 12
+        private const val STARTUP_PICKER_PADDING_DP = 20
+        private const val STARTUP_PICKER_HINT_GAP_DP = 4
+
         private fun alignedTextCentreY(
             view: TextView,
             text: CharSequence,

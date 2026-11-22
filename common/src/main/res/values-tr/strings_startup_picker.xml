@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="startup_picker_title">Hangi iPhone?</string>
+    <string name="startup_picker_countdown">%2$d\u00A0sn içinde %1$s cihazına bağlanılıyor</string>
+    <string name="startup_picker_tap">Bağlanmak için bir iPhone\'a dokunun</string>
+</resources>

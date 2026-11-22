@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="startup_picker_title">哪一部 iPhone？</string>
+    <string name="startup_picker_countdown">%2$d\u00A0秒後連接到 %1$s</string>
+    <string name="startup_picker_tap">點按一部 iPhone 進行連接</string>
+</resources>

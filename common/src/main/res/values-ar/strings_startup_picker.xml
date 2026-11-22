@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="startup_picker_title">أي آيفون؟</string>
+    <string name="startup_picker_countdown">الاتصال بـ %1$s خلال %2$d\u00A0ث</string>
+    <string name="startup_picker_tap">اضغط على آيفون للاتصال</string>
+</resources>
