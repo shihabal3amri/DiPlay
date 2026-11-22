@@ -7,7 +7,9 @@ package com.shilapi.xcertplay.network
  * points on a channel wins, and ties break towards the channel whose loudest access
  * point is weakest. Only exact-channel counts are used: spillover from neighbouring
  * channels is not assumed, because the receiver cannot measure it from SSIDs alone.
- * 5 GHz and other channels are ignored; they never carry a Wi-Fi Direct group here.
+ * 5 GHz channels (36–165) and the "Auto · band" choices are not scored here: this
+ * ranking only covers the 2.4 GHz non-overlapping channels, and a 5 GHz or Auto
+ * choice is a separate setting, not a quieter 2.4 GHz channel.
  */
 object WifiChannelRanker {
     /** The channels a 2.4 GHz Wi-Fi Direct group can use without overlapping a neighbour. */

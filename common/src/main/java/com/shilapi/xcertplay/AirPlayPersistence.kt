@@ -84,14 +84,10 @@ object AirPlayPersistence {
     private const val KEY_CALL_SPEAKERPHONE = "call_speakerphone"
     private const val KEY_SMOOTH_VIDEO = "smooth_video"
     private const val KEY_MTK_DECODER_TUNING = "mtk_decoder_tuning"
-    private const val KEY_SPRD_DECODER_TUNING = "sprd_decoder_tuning"
     private const val KEY_WEAK_DEVICE_MODE = "weak_device_mode"
     private const val KEY_WEAK_DEVICE_PREV_DISPLAY_SCALE_PERCENT = "weak_device_prev_display_scale_percent"
-    private const val KEY_WEAK_DEVICE_PREV_WIDTH_PHYSICAL_MM = "weak_device_prev_width_physical_mm"
     private const val KEY_WEAK_DEVICE_PREV_DIRECT_VIDEO_OUTPUT = "weak_device_prev_direct_video_output"
     private const val KEY_WEAK_DEVICE_PREV_WIRELESS_MUSIC_BUFFER_MILLIS = "weak_device_prev_wireless_music_buffer_millis"
-    private const val KEY_WEAK_DEVICE_PREV_SPRD_DECODER_TUNING = "weak_device_prev_sprd_decoder_tuning"
-    private const val KEY_WEAK_DEVICE_PREV_BT_SUSPEND_DURING_CARPLAY = "weak_device_prev_bt_suspend_during_carplay"
     private const val KEY_DIRECT_VIDEO_OUTPUT = "direct_video_output"
     private const val KEY_LOW_LATENCY_DECODER = "low_latency_decoder"
     private const val KEY_FPS_COUNTER = "fps_counter"
@@ -760,15 +756,6 @@ object AirPlayPersistence {
             .putBoolean(KEY_MTK_DECODER_TUNING, enabled).apply()
     }
 
-    /** Spreadtrum's tuned decoder path; opt-in and applied at reconnect. */
-    fun loadSprdDecoderTuning(context: Context): Boolean =
-        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getBoolean(KEY_SPRD_DECODER_TUNING, false)
-
-    fun saveSprdDecoderTuning(context: Context, enabled: Boolean) {
-        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
-            .putBoolean(KEY_SPRD_DECODER_TUNING, enabled).apply()
-    }
-
     /** One switch for slow head units; see WeakDeviceProfile. The previous values live under their own keys. */
     fun loadWeakDeviceMode(context: Context): Boolean =
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getBoolean(KEY_WEAK_DEVICE_MODE, false)
@@ -783,42 +770,30 @@ object AirPlayPersistence {
         val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
         val keys = listOf(
             KEY_WEAK_DEVICE_PREV_DISPLAY_SCALE_PERCENT,
-            KEY_WEAK_DEVICE_PREV_WIDTH_PHYSICAL_MM,
             KEY_WEAK_DEVICE_PREV_DIRECT_VIDEO_OUTPUT,
             KEY_WEAK_DEVICE_PREV_WIRELESS_MUSIC_BUFFER_MILLIS,
-            KEY_WEAK_DEVICE_PREV_SPRD_DECODER_TUNING,
-            KEY_WEAK_DEVICE_PREV_BT_SUSPEND_DURING_CARPLAY,
         )
         if (keys.any { !prefs.contains(it) }) return null
         return WeakDeviceProfile.Snapshot(
             displayScalePercent = prefs.getInt(KEY_WEAK_DEVICE_PREV_DISPLAY_SCALE_PERCENT, 100),
-            widthPhysicalMm = prefs.getInt(KEY_WEAK_DEVICE_PREV_WIDTH_PHYSICAL_MM, 300),
             directVideoOutput = prefs.getBoolean(KEY_WEAK_DEVICE_PREV_DIRECT_VIDEO_OUTPUT, false),
             wirelessMusicBufferMillis = prefs.getInt(KEY_WEAK_DEVICE_PREV_WIRELESS_MUSIC_BUFFER_MILLIS, 300),
-            sprdDecoderTuning = prefs.getBoolean(KEY_WEAK_DEVICE_PREV_SPRD_DECODER_TUNING, false),
-            btSuspendDuringCarplay = prefs.getBoolean(KEY_WEAK_DEVICE_PREV_BT_SUSPEND_DURING_CARPLAY, false),
         )
     }
 
     fun saveWeakDevicePrevious(context: Context, snapshot: WeakDeviceProfile.Snapshot) {
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
             .putInt(KEY_WEAK_DEVICE_PREV_DISPLAY_SCALE_PERCENT, snapshot.displayScalePercent)
-            .putInt(KEY_WEAK_DEVICE_PREV_WIDTH_PHYSICAL_MM, snapshot.widthPhysicalMm)
             .putBoolean(KEY_WEAK_DEVICE_PREV_DIRECT_VIDEO_OUTPUT, snapshot.directVideoOutput)
             .putInt(KEY_WEAK_DEVICE_PREV_WIRELESS_MUSIC_BUFFER_MILLIS, snapshot.wirelessMusicBufferMillis)
-            .putBoolean(KEY_WEAK_DEVICE_PREV_SPRD_DECODER_TUNING, snapshot.sprdDecoderTuning)
-            .putBoolean(KEY_WEAK_DEVICE_PREV_BT_SUSPEND_DURING_CARPLAY, snapshot.btSuspendDuringCarplay)
             .apply()
     }
 
     fun clearWeakDevicePrevious(context: Context) {
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
             .remove(KEY_WEAK_DEVICE_PREV_DISPLAY_SCALE_PERCENT)
-            .remove(KEY_WEAK_DEVICE_PREV_WIDTH_PHYSICAL_MM)
             .remove(KEY_WEAK_DEVICE_PREV_DIRECT_VIDEO_OUTPUT)
             .remove(KEY_WEAK_DEVICE_PREV_WIRELESS_MUSIC_BUFFER_MILLIS)
-            .remove(KEY_WEAK_DEVICE_PREV_SPRD_DECODER_TUNING)
-            .remove(KEY_WEAK_DEVICE_PREV_BT_SUSPEND_DURING_CARPLAY)
             .apply()
     }
 
@@ -826,19 +801,13 @@ object AirPlayPersistence {
     fun applyWeakDeviceProfile(context: Context) {
         saveWeakDevicePrevious(context, WeakDeviceProfile.Snapshot(
             displayScalePercent = loadDisplayScalePercent(context),
-            widthPhysicalMm = loadWidthPhysicalMm(context),
             directVideoOutput = loadDirectVideoOutput(context),
             wirelessMusicBufferMillis = loadMediaBufferMillis(context, wireless = true),
-            sprdDecoderTuning = loadSprdDecoderTuning(context),
-            btSuspendDuringCarplay = loadBtSuspendDuringCarplay(context),
         ))
         val targets = WeakDeviceProfile.targets()
         saveDisplayScalePercent(context, targets.displayScalePercent)
-        saveWidthPhysicalMm(context, targets.widthPhysicalMm)
         saveDirectVideoOutput(context, targets.directVideoOutput)
         saveMediaBufferMillis(context, wireless = true, targets.wirelessMusicBufferMillis)
-        saveSprdDecoderTuning(context, targets.sprdDecoderTuning)
-        saveBtSuspendDuringCarplay(context, targets.btSuspendDuringCarplay)
         saveWeakDeviceMode(context, true)
     }
 
@@ -846,11 +815,8 @@ object AirPlayPersistence {
     fun restoreWeakDeviceProfile(context: Context) {
         val previous = loadWeakDevicePrevious(context) ?: WeakDeviceProfile.defaults()
         saveDisplayScalePercent(context, previous.displayScalePercent)
-        saveWidthPhysicalMm(context, previous.widthPhysicalMm)
         saveDirectVideoOutput(context, previous.directVideoOutput)
         saveMediaBufferMillis(context, wireless = true, previous.wirelessMusicBufferMillis)
-        saveSprdDecoderTuning(context, previous.sprdDecoderTuning)
-        saveBtSuspendDuringCarplay(context, previous.btSuspendDuringCarplay)
         clearWeakDevicePrevious(context)
         saveWeakDeviceMode(context, false)
     }
