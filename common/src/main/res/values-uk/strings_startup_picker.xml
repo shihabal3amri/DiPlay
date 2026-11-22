@@ -3,4 +3,6 @@
     <string name="startup_picker_title">Який iPhone?</string>
     <string name="startup_picker_countdown">Підключення до %1$s за %2$d\u00A0с</string>
     <string name="startup_picker_tap">Торкніться iPhone, щоб підключитися</string>
+    <string name="settings_ask_which_iphone">Питати, який iPhone</string>
+    <string name="settings_ask_which_iphone_description">Для авто, яким користуються кілька водіїв: якщо спарено більше одного iPhone, DiPlay питає, який підключити, перед запуском бездротового CarPlay. Якщо до Bluetooth авто підключений лише один iPhone, він підключається без запитання; інакше через 8\u00A0с підключається останній використаний iPhone. Застосовується під час наступного підключення DiPlay.</string>
 </resources>

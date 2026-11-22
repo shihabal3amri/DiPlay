@@ -84,4 +84,9 @@ internal object DiPlayPreferences {
     fun saveConnectOnPhoneBluetooth(context: Context, value: Boolean) {
         prefs(context).edit().putBoolean("connect_on_phone_bluetooth", value).apply()
     }
+    /** Ask which iPhone to connect when several are paired. Off by default. */
+    fun askWhichIphone(context: Context) = prefs(context).getBoolean("ask_which_iphone", false)
+    fun saveAskWhichIphone(context: Context, value: Boolean) {
+        prefs(context).edit().putBoolean("ask_which_iphone", value).apply()
+    }
 }

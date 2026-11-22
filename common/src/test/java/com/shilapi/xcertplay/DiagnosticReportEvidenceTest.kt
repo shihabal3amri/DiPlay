@@ -70,6 +70,7 @@ class DiagnosticReportEvidenceTest {
             "Dashboard song: clusterSong=true clusterSongGate=false clusterSongOnChange=true; " +
                 "since app start: gate=off adbAccess="))
         assertTrue(lines[2], lines[2].contains(" lastWrite="))
+        assertTrue(lines[3], lines[3].startsWith("Startup iPhone question: ask_which_iphone=false; since app start: last="))
         lines.forEach(::assertKept)
     }
 

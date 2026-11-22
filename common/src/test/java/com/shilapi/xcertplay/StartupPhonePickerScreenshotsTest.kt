@@ -9,6 +9,7 @@ import android.graphics.Canvas
 import android.os.Looper
 import android.view.View
 import android.view.ViewGroup
+import android.widget.ScrollView
 import android.widget.TextView
 import com.shilapi.xcertplay.host.R
 import java.io.File
@@ -58,12 +59,12 @@ class StartupPhonePickerScreenshotsTest {
                 @Suppress("DEPRECATION")
                 activity.resources.updateConfiguration(config, activity.resources.displayMetrics)
                 val candidates = listOf(alex, sam).map {
-                    StartupPhonePicker.Candidate(it.address, it.name, isPhone = true, connected = false)
+                    StartupPhonePicker.Candidate(it.address, it.name, listOf(StartupPhonePicker.IAP2_IPHONE_UUID), isPhone = true, connected = false)
                 }
                 val ask = StartupPhonePicker.decide(candidates, shot.lastUsed) as StartupPhonePicker.Decision.Ask
                 DiPlayActivity::class.java.getDeclaredMethod(
-                    "showStartupPhonePicker", StartupPhonePicker.Decision.Ask::class.java, List::class.java,
-                ).apply { isAccessible = true }.invoke(activity, ask, listOf(alex, sam))
+                    "showStartupPhonePicker", StartupPhonePicker.Decision.Ask::class.java, List::class.java, Boolean::class.java,
+                ).apply { isAccessible = true }.invoke(activity, ask, listOf(alex, sam), false)
                 // Attaches the dialog window. Only due tasks run, so the countdown still shows 8 s.
                 shadowOf(Looper.getMainLooper()).idle()
                 val dialog = ReflectionHelpers.getField<AlertDialog>(activity, "startupPickerDialog")
@@ -74,6 +75,9 @@ class StartupPhonePickerScreenshotsTest {
                 for (expected in listOf(activity.getString(R.string.startup_picker_title), "Alex’s iPhone", "Sam’s iPhone", hint)) {
                     assertTrue("${shot.filename}: $expected in $texts", expected in texts)
                 }
+                // With three or four iPhones on a short screen, the list and countdown scroll above the buttons.
+                val hintView = allViews(decor).filterIsInstance<TextView>().first { it.text.toString() == hint }
+                assertTrue(shot.filename, generateSequence(hintView.parent) { it.parent }.any { it is ScrollView })
                 capture(dialog, shot.widthDp, shot.filename)
                 dialog.dismiss()
                 shadowOf(Looper.getMainLooper()).idle()

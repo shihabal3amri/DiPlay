@@ -3,4 +3,6 @@
     <string name="startup_picker_title">Hangi iPhone?</string>
     <string name="startup_picker_countdown">%2$d\u00A0sn içinde %1$s cihazına bağlanılıyor</string>
     <string name="startup_picker_tap">Bağlanmak için bir iPhone\'a dokunun</string>
+    <string name="settings_ask_which_iphone">Hangi iPhone olduğunu sor</string>
+    <string name="settings_ask_which_iphone_description">Birden fazla sürücünün paylaştığı araçlar için: birden fazla iPhone eşleştirilmişse DiPlay, kablosuz CarPlay başlamadan önce hangisine bağlanacağını sorar. Aracın Bluetooth\'una bağlı tek bir iPhone varsa soru sorulmadan bağlanır; aksi halde 8\u00A0sn sonra son kullanılan iPhone\'a bağlanılır. DiPlay\'in sonraki bağlantısında geçerli olur.</string>
 </resources>

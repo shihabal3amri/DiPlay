@@ -6,7 +6,8 @@ import com.shilapi.xcertplay.hud.BydOutputSettings
 
 /**
  * Settings lines for the diagnostic report header that issues needed and reports lacked: call audio
- * and the BYD call popup (#1237), multi-window resolution (#1219) and the dashboard song (#1110).
+ * and the BYD call popup (#1237), multi-window resolution (#1219), the dashboard song (#1110) and
+ * the start-up iPhone question (#1357).
  * Settings appear under their preference keys, so a report line maps straight to a backup entry.
  * Values after "since app start:" live in memory only: a report saved after a restart shows them reset.
  */
@@ -15,6 +16,7 @@ internal object DiagnosticSettingsReport {
         callSettings(context),
         "Multi-window resolution: adapt_pip_resolution=${AirPlayPersistence.loadAdaptPipResolution(context)}",
         BydOutputSettings.clusterSongDiagnosticReport(context),
+        StartupPhonePicker.diagnosticLine(DiPlayPreferences.askWhichIphone(context)),
     )
 
     fun callSettings(context: Context): String =

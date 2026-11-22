@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="startup_picker_title">أي آيفون؟</string>
+    <string name="startup_picker_title">أي iPhone؟</string>
     <string name="startup_picker_countdown">الاتصال بـ %1$s خلال %2$d\u00A0ث</string>
-    <string name="startup_picker_tap">اضغط على آيفون للاتصال</string>
+    <string name="startup_picker_tap">اضغط على iPhone للاتصال</string>
+    <string name="settings_ask_which_iphone">السؤال عن iPhone المراد الاتصال به</string>
+    <string name="settings_ask_which_iphone_description">لسيارة يتشاركها عدة سائقين: عند إقران أكثر من iPhone، يسأل DiPlay أيّها يتصل به قبل بدء CarPlay اللاسلكي. يتصل iPhone دون سؤال إذا كان الوحيد المتصل بـ Bluetooth السيارة؛ وإلا يتصل آخر iPhone مستخدم بعد 8\u00A0ث. يُطبَّق في المرة التالية التي يتصل فيها DiPlay.</string>
 </resources>
