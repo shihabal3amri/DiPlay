@@ -3,7 +3,7 @@
     <string name="existing_wifi_title">Wi-Fi existant / même réseau local</string>
     <string name="existing_wifi_description">Utilisez un routeur existant ou un Wi-Fi portable. Gardez l’iPhone et la voiture sur le même réseau, avec un accès à Internet.</string>
     <string name="existing_wifi_hint">Wi-Fi existant · Gardez les deux appareils sur le même Wi-Fi et le Bluetooth activé. Aucun point d’accès de la voiture n’est nécessaire.</string>
-    <string name="existing_wifi_instructions">Connectez la voiture et l’iPhone au même Wi-Fi externe dans les paramètres système. Saisissez ci-dessous son nom exact et son mot de passe WPA2 ; ne laissez le mot de passe vide que pour un réseau ouvert. Utilisez le mode WPA2 ou WPA2/WPA3 mixte et désactivez l’isolation des clients sur le routeur. DiPlay conserve cette connexion Wi-Fi et ne crée aucun point d’accès.</string>
+    <string name="existing_wifi_instructions">Connectez la voiture et l’iPhone au même Wi-Fi externe dans les paramètres système. Saisissez ci-dessous son nom exact et son mot de passe WPA2 ; un réseau ouvert sans mot de passe ne fonctionne pas, car l’iPhone ne démarre CarPlay sans fil que sur un réseau protégé par un mot de passe. Utilisez le mode WPA2 ou WPA2/WPA3 mixte et désactivez l’isolation des clients sur le routeur. DiPlay conserve cette connexion Wi-Fi et ne crée aucun point d’accès.</string>
     <string name="existing_wifi_details">Détails du Wi-Fi externe</string>
     <string name="existing_wifi_ssid">Nom du Wi-Fi externe (SSID)</string>
     <string name="existing_wifi_password">Mot de passe du Wi-Fi externe</string>
@@ -193,7 +193,6 @@
     <string name="could_not_save_image">Impossible d’enregistrer l’image</string>
     <string name="could_not_save_the_report">Impossible d’enregistrer le rapport</string>
     <string name="could_not_start_carplay_return_to_diplay_and_check_app_per">Impossible de démarrer CarPlay. Revenez dans DiPlay et vérifiez les autorisations de l’app.</string>
-    <string name="custom_1_1_icon">Icône 1:1 personnalisée</string>
     <string name="debug_logs">Journaux de débogage</string>
     <string name="default_icon">Icône par défaut</string>
     <string name="default_placeholder_icon">Icône de remplacement par défaut</string>
@@ -349,8 +348,8 @@
     <string name="settings_music_buffer_wired">Tampon audio (câble USB)</string>
     <string name="s_5_ghz">5 GHz</string>
     <string name="s_60_fps_smoother_motion">60 i/s · mouvements plus fluides</string>
-    <string name="s_60_lightest_load">60 % · charge la plus légère</string>
-    <string name="s_80_lighter_load">80 % · charge plus légère</string>
+    <string name="s_60_lightest_load" formatted="false">60 % · charge la plus légère</string>
+    <string name="s_80_lighter_load" formatted="false">80 % · charge plus légère</string>
     <string name="safe_area">Zone de sécurité</string>
     <string name="safe_area_waiting_for_activity_size">Zone de sécurité : en attente de la taille de l’activité</string>
     <string name="save">Enregistrer</string>
@@ -601,6 +600,8 @@
     <string name="wheel_speed_for_tunnels_description">Avec Envoyer la position à l’iPhone activé, DiPlay envoie aussi la vitesse des roues et le rapport engagé, pour que Plans puisse continuer à faire avancer votre position dans les tunnels et les parkings. Reconnecte CarPlay. Nécessite ADB via le réseau sur l’autoradio.</string>
     <string name="video_while_parked">Vidéo à l’arrêt</string>
     <string name="video_while_parked_description">iOS 27 : une vidéo envoyée vers CarPlay depuis l’iPhone est lue sur l’écran de la voiture quand celle-ci est en P. Le lecteur se ferme quand vous quittez P ; sans ADB, la vidéo reste désactivée et l’iPhone ne lit que le son. Les vidéos HTTPS simples (par exemple depuis Safari) sont lues ; les vidéos protégées par FairPlay, comme Apple TV+, nécessitent un récepteur sous licence et ne sont pas lues ici. Reconnecte CarPlay. Nécessite ADB via le réseau sur l’autoradio.</string>
+    <string name="video_off_gear_unreadable">Les vidéos ne peuvent pas être lues sur l’écran de la voiture : DiPlay ne peut pas lire le rapport engagé.</string>
+    <string name="video_gear_no_reply">L’ADB de l’autoradio n’a pas répondu à la lecture du rapport engagé.</string>
     <string name="cluster_song">Morceau sur le tableau de bord</string>
     <string name="cluster_song_description">Le titre et l’artiste du morceau CarPlay apparaissent dans la fiche musique du combiné d’instruments, avec lecture et pause. La fiche s’affiche comme la source musicale « Autre » de BYD, car le tableau de bord n’affiche pas la source propre à CarPlay. S’applique immédiatement. Nécessite ADB via le réseau sur l’autoradio.</string>
     <string name="cluster_song_gate">Activer automatiquement la fiche musique</string>
@@ -721,8 +722,9 @@
     <string name="settings_usb_charging">Recharge de l’iPhone</string>
     <string name="settings_usb_charging_normal">Normale (2,4 A)</string>
     <string name="settings_usb_charging_reduced">Réduite (1,5 A)</string>
+    <string name="settings_usb_charging_medium">Moyenne (1 A)</string>
     <string name="settings_usb_charging_low">Faible (0,5 A)</string>
-    <string name="settings_usb_charging_description">Intensité de charge que DiPlay propose à l’iPhone en USB. Si CarPlay filaire se coupe toutes les quelques secondes et que l’iPhone se reconnecte tout seul, le port USB de la voiture ne fournit peut-être pas assez de courant : essayez Réduite, puis Faible. L’iPhone se recharge alors plus lentement. S’applique à la prochaine connexion USB.</string>
+    <string name="settings_usb_charging_description">Intensité de charge que DiPlay propose à l’iPhone en USB. Si CarPlay filaire se coupe toutes les quelques secondes et que l’iPhone se reconnecte tout seul, le port USB de la voiture ne fournit peut-être pas assez de courant : essayez Réduite, puis Moyenne, puis Faible. L’iPhone se recharge alors plus lentement. S’applique à la prochaine connexion USB.</string>
     <string name="wheel_joystick_auto_off">Le joystick se désactive tout seul</string>
     <string name="wheel_joystick_auto_off_description">Après 15 secondes sans appui, et quand un itinéraire démarre, les touches reviennent à la musique et au volume.</string>
     <string name="wheel_joystick_on">Joystick activé</string>
@@ -813,6 +815,17 @@
     <string name="car_button_description">CarPlay affiche cette icône et ce nom dans sa liste d’apps. Touchez-le pour revenir à l’écran propre à la voiture. Les changements s’appliquent à la prochaine connexion de CarPlay.</string>
     <string name="car_button_saved_next_connection">Enregistré. CarPlay affichera la nouvelle icône et le nouveau nom à sa prochaine connexion.</string>
     <string name="this_head_unit_has_no_image_picker">Cet autoradio n’a pas de sélecteur d’images.</string>
+    <string name="settings_car_brand_title">Badge de la marque</string>
+    <string name="settings_car_brand_summary">Choisit le badge de la gamme BYD que CarPlay affiche dans sa liste d’apps. Le nom n’est modifié que s’il est encore celui par défaut ou celui d’un badge. Choisir un badge remplace une image personnalisée.</string>
+    <string name="settings_car_brand_default">Par défaut (BYD)</string>
+    <string name="settings_car_brand_wangchao">Dynasty</string>
+    <string name="settings_car_brand_haiyang">Ocean</string>
+    <string name="settings_car_brand_fangchengbao">Fang Cheng Bao</string>
+    <string name="settings_car_brand_denza">Denza</string>
+    <string name="settings_car_brand_yangwang">Yangwang</string>
+    <string name="settings_car_brand_linghui">Linghui</string>
+    <string name="settings_car_brand_reset_image">Revenir au badge de la marque</string>
+    <string name="settings_car_brand_reset">Rétablir le badge et le nom par défaut</string>
     <string name="settings_ambient_title">Éclairage d’ambiance (expérimental)</string>
     <string name="settings_ambient_configuration">Paramètres de l’éclairage d’ambiance</string>
     <string name="settings_ambient_static">Fixe</string>
@@ -966,7 +979,9 @@
     <string name="settings_speech_without_low_rates">Voix de navigation plus claire en USB (expérimental)</string>
     <string name="settings_speech_without_low_rates_description">En USB, l’iPhone peut envoyer les annonces de navigation et les réponses vocales de Siri en audio de qualité téléphone à 8 kHz. Cette option cesse de proposer 8 et 16 kHz pour cet audio, afin que l’iPhone choisisse une fréquence plus élevée. Si les annonces deviennent muettes, désactivez-la. Reconnecte CarPlay.</string>
     <string name="settings_call_at_call_rate">Appels à leur propre fréquence (expérimental)</string>
-    <string name="settings_call_at_call_rate_description">Propose les appels en PCM à leur propre fréquence (8, 16, 24 ou 32 kHz) au lieu d’Opus à 48 kHz, comme le fait le récepteur CarPlay d’origine. S’applique à la prochaine connexion. Si un appel n’a pas de son, désactivez cette option.</string>
+    <string name="settings_call_at_call_rate_description">Propose les appels en PCM à leur propre fréquence (8, 16, 24 ou 32 kHz) au lieu d’Opus à 48 kHz, comme le fait le récepteur CarPlay d’origine. Câble USB uniquement : en Wi-Fi, l’iPhone gardait alors tout le son de CarPlay, donc les sessions sans fil proposent les formats habituels. S’applique à la prochaine connexion. Si un appel n’a pas de son, désactivez cette option.</string>
+    <string name="settings_wheel_long_press_seek">Appui long sur suivant/précédent pour avancer ou reculer (expérimental)</string>
+    <string name="settings_wheel_long_press_seek_description">Sur les autoradios dont le volant envoie ses propres touches d’appui long pour suivant et précédent (BYD DiLink 3), un appui long avance ou recule rapidement d’environ 2,5 secondes au lieu de ne rien faire. Pas encore testé avec un iPhone. S’applique à la prochaine connexion.</string>
     <string name="bluetooth_connections_not_real">Le Bluetooth Android de cet autoradio signale une connexion, mais rien n’arrive à l’iPhone : même une connexion à un service qui n’existe pas réussit. Ici, le Bluetooth est géré par le module propre au fabricant, que les apps ne peuvent pas utiliser : CarPlay sans fil ne peut donc pas fonctionner sur cet autoradio. Essayez une connexion USB.</string>
     <string name="bluetooth_cannot_open_connections">Le Bluetooth Android de cet autoradio ne peut pas ouvrir de connexions pour les apps : son firmware omet la partie par laquelle les apps se connectent. Les appels et la musique via le Bluetooth de la voiture ne sont pas concernés, mais CarPlay sans fil ne peut pas fonctionner sur cet autoradio. Essayez une connexion USB.</string>
     <string name="bluetooth_will_not_stay_on_hint">Si le Bluetooth ne reste pas activé, cet autoradio garde le Bluetooth pour ses propres appels et sa musique, et les apps ne peuvent pas l’utiliser. CarPlay sans fil ne peut alors pas fonctionner : utilisez un câble USB.</string>
@@ -996,10 +1011,13 @@
     <string name="connection_help_usb_device_not_iphone">Utilisez un câble USB de données sur le port USB de données ou CarPlay de la voiture, débranchez les autres appareils USB et déverrouillez l’iPhone.</string>
     <string name="car_hotspot_details_differ">Les paramètres du point d’accès de la voiture diffèrent de ceux enregistrés dans DiPlay</string>
     <string name="connection_help_car_hotspot_details_differ">Dans Configuration de la connexion, touchez Modifier le point d’accès enregistré et recopiez le nom et le mot de passe depuis les paramètres du point d’accès de la voiture, puis réessayez.</string>
+    <string name="existing_wifi_needs_password">Le Wi-Fi partagé nécessite un mot de passe</string>
+    <string name="connection_help_existing_wifi_needs_password">L’iPhone ne démarre CarPlay sans fil que sur un réseau Wi-Fi protégé par un mot de passe. Saisissez le mot de passe WPA2 du routeur dans Configuration de la connexion. Si le routeur n’en a pas, définissez-en un et reconnectez-y la voiture et l’iPhone. Réessayez ensuite.</string>
     <string name="hotspot_interface_not_found">L’interface de point d’accès enregistrée dans DiPlay n’existe pas sur cette voiture</string>
     <string name="connection_help_hotspot_interface_not_found">Dans Configuration de la connexion, touchez Modifier le point d’accès enregistré, videz Interface du point d’accès (facultatif), puis réessayez.</string>
     <string name="connection_help_car_hotspot_off">Activez le point d’accès dans les paramètres de la voiture, puis réessayez.</string>
     <string name="last_connection_attempt">Dernière tentative de connexion (%1$s) : %2$s</string>
+    <string name="last_carplay_connection_problem">Dernière connexion CarPlay (%1$s) : %2$s</string>
     <string name="connection_help_hotspot">Vérifiez que le point d’accès de la voiture est activé et que son nom et son mot de passe correspondent aux paramètres de DiPlay. Si possible, utilisez 5 GHz, puis réessayez.</string>
     <string name="connection_help_iphone_wifi">Gardez le Wi-Fi et le Bluetooth activés. Sur l’iPhone, rejoignez le point d’accès de la voiture et activez Rejoindre automatiquement, puis réessayez. Enregistrez un rapport de diagnostic si l’échec persiste.</string>
     <string name="connection_help_permissions">Accordez à DiPlay les autorisations USB, Appareils à proximité ou Position demandées sur l’autoradio, puis réessayez.</string>
@@ -1016,6 +1034,8 @@
     <string name="settings_navigation_attenuation">Volume du guidage de navigation</string>
     <string name="settings_navigation_attenuation_value">%1$d dB</string>
     <string name="settings_navigation_attenuation_description">Baisse le guidage de navigation CarPlay sans modifier le volume de la musique ni des appels. S’applique immédiatement ; le volume de navigation de votre autoradio fonctionne toujours.</string>
+    <string name="settings_call_attenuation">Niveau de la voix en appel</string>
+    <string name="settings_call_attenuation_description">Baisse la voix de votre correspondant dans les appels CarPlay sans changer le volume d’appel de la voiture. S’applique immédiatement, quelle que soit la sortie utilisée pour l’appel. Laissez 0 dB sauf si vos appels sonnent saturés ou durs. Sur une BYD Han (DiLink 3), les appels étaient nets vers -12 à -16 dB lors d’un test d’écoute.</string>
     <string name="settings_car_hotspot_control">Point d’accès de la voiture</string>
     <string name="settings_auto_car_hotspot_system_description">Active le point d’accès enregistré de la voiture à l’ouverture de DiPlay et avant une connexion sans fil. DiPlay a besoin de l’accès « Modifier les paramètres système » d’Android ; ADB n’est pas nécessaire. Pour avoir le point d’accès après un redémarrage complet, activez aussi l’ouverture de DiPlay au démarrage de la voiture. Le point d’accès n’est pas désactivé automatiquement.</string>
     <string name="settings_write_settings_granted">Accès « Modifier les paramètres système » : autorisé</string>
@@ -1023,6 +1043,7 @@
     <string name="settings_write_settings_allow">Autoriser l’accès</string>
     <string name="settings_wifi_direct_scan_pause">Mettre en pause la recherche Wi-Fi de la voiture pendant CarPlay · nécessite ADB</string>
     <string name="settings_wifi_direct_scan_pause_description">En Wi-Fi Direct, la voiture recherche des réseaux Wi-Fi toutes les quelques secondes, et chaque recherche fait saccader la musique et la vidéo. Avec cette option, DiPlay met la recherche en pause pendant CarPlay. La voiture ne rejoint alors plus d’elle-même un réseau connu, comme le partage de connexion de votre téléphone, jusqu’à la fin de CarPlay ; vous pouvez toujours en rejoindre un dans les paramètres Wi-Fi de la voiture. Désactivez-la pour que la voiture se connecte automatiquement. S’applique à la prochaine connexion.</string>
+    <string name="settings_car_hotspot_scan_pause_description">Certains autoradios gardent leur propre client Wi-Fi activé à côté du point d’accès de la voiture et recherchent régulièrement des réseaux ; chaque recherche coupe brièvement la musique. Avec cette option, DiPlay met cette recherche en pause pendant CarPlay, uniquement sur ces autoradios. La voiture ne rejoint alors plus d’elle-même un réseau connu, comme le partage de connexion de votre téléphone, jusqu’à la fin de CarPlay. Désactivez-la pour que la voiture se connecte automatiquement. S’applique à la prochaine connexion.</string>
     <string name="temporary_system_bars">Barres système temporaires (5 secondes)</string>
     <string name="temporary_system_bars_description">Facultatif : balayez vers le haut avec le nombre de doigts du geste des paramètres pour afficher pendant cinq secondes les barres d’état et de navigation masquées de la voiture ; le balayage vers le bas ouvre toujours les paramètres de DiPlay. Désactivez cette option sur les autoradios dont les gestes entrent en conflit. Certains firmwares peuvent ignorer la demande.</string>
     <string name="wheel_media_play_pause">Touche lecture/pause au volant</string>
@@ -1051,4 +1072,9 @@
     <string name="cluster_projection_shape_description">Le demi-écran garde la vitesse et les indicateurs d’état que le combiné affiche normalement à côté de la carte ; le plein écran laisse la carte remplir le combiné. DiPlay règle la forme à chaque apparition de la carte CarPlay, ce qui remplace sinon la forme choisie dans la voiture. Nécessite ADB via le réseau sur l’autoradio.</string>
     <string name="settings_cluster_speedometer_album_color">Utiliser la couleur de l’album pour le fond du compteur de vitesse</string>
     <string name="settings_cluster_speedometer_album_color_description">Reprend la couleur du cadre de l’album, avec des transitions douces. Conserve l’opacité choisie.</string>
+    <string name="settings_fit_screen_shape">Contourner l’encoche et les coins arrondis</string>
+    <string name="settings_fit_screen_shape_description">Pour un téléphone ou une tablette utilisé comme autoradio. Garde les boutons et le dock de CarPlay à l’écart de l’encoche de la caméra et des coins arrondis ; les cartes remplissent toujours l’écran. Une zone de sécurité définie dans le menu de la session est prioritaire. S’applique à la prochaine connexion.</string>
+    <string name="settings_safe_area_fitted_summary">Zone de sécurité : ajustée à l’encoche et aux coins, %1$d x %2$d à (%3$d, %4$d) dans %5$d x %6$d</string>
+    <string name="settings_wifi_direct_unavailable">Non disponible</string>
+    <string name="settings_wifi_direct_unsupported_help">Choisissez Point d’accès intégré de la voiture ou Wi-Fi existant / même réseau local dans Configuration de la connexion, puis réessayez.</string>
 </resources>
