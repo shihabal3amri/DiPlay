@@ -2176,6 +2176,12 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
                     ClusterActivityOutput.stopForSettings()
                     render()
                 }
+                reconnectingToggle(card, getString(R.string.generic_cluster_mode),
+                    getString(R.string.generic_cluster_description), AirPlayPersistence.loadGenericClusterEnabled(this)) {
+                    AirPlayPersistence.saveGenericClusterEnabled(this, it)
+                    ClusterActivityOutput.stopForSettings()
+                    render()
+                }
             }
             val adbCluster = AdbClusterRouter.enabled(this)
             if (adbCluster) {

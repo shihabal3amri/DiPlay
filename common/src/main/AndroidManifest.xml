@@ -107,6 +107,7 @@
             android:icon="@drawable/ic_dp_navigation"
             android:taskAffinity="${applicationId}.cluster"
             android:excludeFromRecents="true"
+            android:launchMode="singleTask"
             android:resizeableActivity="true"
             android:allowEmbedded="true"
             android:exported="true"
