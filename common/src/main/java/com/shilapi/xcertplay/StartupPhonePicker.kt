@@ -60,8 +60,9 @@ internal object StartupPhonePicker {
 
     /**
      * An automatic question was covered and waits for DiPlay to come back on screen. Cleared by any
-     * connect(), a pick in Choose iPhone, DiPlay finishing, and an opening CarPlay screen, so that a
-     * session that opened and closed in between never leads to a wireless start on return.
+     * connect(), a pick in Choose iPhone, DiPlay finishing, a CarPlay screen coming on screen (new or
+     * reused) and a stored session, so that CarPlay that ran in between never leads to a wireless start
+     * on return.
      */
     @Volatile var coveredAutomaticQuestion = false
     /** Whether the hidden `BluetoothDevice.isConnected` answered at the last decision; null before one. */

@@ -6130,7 +6130,6 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
      * and asked again when DiPlay is back on screen; a recreated DiPlay asks again from its saved state.
      */
     private fun stopStartupPhonePicker() {
-        if (isFinishing) StartupPhonePicker.coveredAutomaticQuestion = false
         // A dialog's dismiss listener runs a moment after dismiss(): one that a tap or the countdown already
         // closed is answered, even while the field still points to it.
         val question = startupPickerDialog?.takeIf { it.isShowing } ?: return
@@ -6157,8 +6156,10 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
         handler.post {
             if (!StartupPhonePicker.coveredAutomaticQuestion || isFinishing || isDestroyed) return@post
             StartupPhonePicker.coveredAutomaticQuestion = false
-            // The switch may have been turned off meanwhile; then nothing starts by itself.
-            if (DiPlayPreferences.askWhichIphone(this) && !carPlayAlreadyOpen()) connect(true, automatic = true)
+            // As for Connect when DiPlay opens: not over the setup guide or a page DiPlay was opened on, and
+            // not while CarPlay runs. If the switch was turned off meanwhile, nothing starts by itself.
+            if (DiPlayPreferences.askWhichIphone(this) && !carPlayAlreadyOpen() && setupError == null &&
+                requestedPage(intent) == null && page != "setup") connect(true, automatic = true)
         }
     }
 

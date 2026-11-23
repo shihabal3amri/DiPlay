@@ -34,8 +34,8 @@ import org.robolectric.util.ReflectionHelpers.ClassParameter
 
 /**
  * The start-up question across DiPlay's lifecycle. Head units keep DiPlay in memory between drives, so each
- * drive asks again. Off screen, a question from a tap on Connect stops; one from an automatic start starts
- * the last iPhone used, unless CarPlay already opened, DiPlay is closing, or it is being recreated.
+ * drive asks again. Off screen nothing starts: a question from a tap on Connect stops, and one from an
+ * automatic start is asked again when DiPlay is back, unless CarPlay came on screen in between.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [29])
@@ -212,6 +212,64 @@ class StartupPhonePickerLifecycleTest {
         assertNull(CarPlayScreen.current())
 
         controller.start().resume()
+        idle()
+        assertNull(picker())
+        assertEquals(0, carPlayStarts())
+    }
+
+    @Test fun aReusedCarPlayScreenDropsACoveredQuestion() {
+        DiPlayPreferences.savePhone(context, alex.address, "Alex’s iPhone")
+        // The CarPlay screen is open behind DiPlay, waiting for USB with no session.
+        openCarPlayScreen()
+        screens.single().pause().stop()
+        coverAutomaticQuestion()
+        // The iPhone is plugged in: the USB attach brings the same screen back instead of creating one.
+        screens.single().start()
+        assertFalse(StartupPhonePicker.coveredAutomaticQuestion)
+        screens.single().stop()
+
+        controller.start().resume()
+        idle()
+        assertNull(picker())
+        assertEquals(0, carPlayStarts())
+    }
+
+    @Test fun aStoredSessionDropsACoveredQuestion() {
+        coverAutomaticQuestion()
+        CarPlayBackgroundSession.store(org.mockito.Mockito.mock(com.shilapi.xcertplay.orchestration.CarPlayController::class.java),
+            org.mockito.Mockito.mock(com.shilapi.xcertplay.media.AndroidMediaSink::class.java), 800, 480, Any(),
+            CarPlaySessionDisplay(800, 480, android.view.Surface.ROTATION_0, false, false, 800, 480)) { it() }
+        assertFalse(StartupPhonePicker.coveredAutomaticQuestion)
+    }
+
+    @Test fun aReturnWhileCarPlayRunsDoesNotAsk() {
+        DiPlayPreferences.savePhone(context, alex.address, "Alex’s iPhone")
+        coverAutomaticQuestion()
+        // The driver opens DiPlay from the launcher while a session runs in the background.
+        ReflectionHelpers.setField(CarPlayBackgroundSession, "stopAction", { done: () -> Unit -> done() })
+        controller.start().resume()
+        idle()
+        assertNull(picker())
+        assertEquals(0, carPlayStarts())
+    }
+
+    @Test fun aReturnAfterTheSwitchWasTurnedOffStartsNothing() {
+        DiPlayPreferences.savePhone(context, alex.address, "Alex’s iPhone")
+        coverAutomaticQuestion()
+        DiPlayPreferences.saveAskWhichIphone(context, false)
+        controller.start().resume()
+        idle()
+        assertNull(picker())
+        assertEquals(0, carPlayStarts())
+        assertFalse(StartupPhonePicker.coveredAutomaticQuestion)
+    }
+
+    @Test fun aReturnToASettingsShortcutDoesNotAsk() {
+        DiPlayPreferences.savePhone(context, alex.address, "Alex’s iPhone")
+        coverAutomaticQuestion()
+        controller.start()
+        controller.newIntent(android.content.Intent(context, DiPlayActivity::class.java).putExtra("page", "settings"))
+        controller.resume()
         idle()
         assertNull(picker())
         assertEquals(0, carPlayStarts())

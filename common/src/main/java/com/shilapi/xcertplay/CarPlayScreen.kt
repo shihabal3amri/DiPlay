@@ -50,8 +50,6 @@ internal object CarPlayScreen {
             }
         }
         open = WeakReference(screen)
-        // CarPlay opened, for example over USB: a question covered earlier must not start wireless later.
-        StartupPhonePicker.coveredAutomaticQuestion = false
         return false
     }
 
