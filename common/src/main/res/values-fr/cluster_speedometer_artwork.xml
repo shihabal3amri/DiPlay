@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_cluster_speedometer_artwork">Dégradé de la pochette pour le fond du compteur de vitesse</string>
+    <string name="settings_cluster_speedometer_artwork_description">Option distincte. Remplace le fond uni tant qu’elle est activée, en gardant la taille et l’opacité. Désactivée, elle rétablit la couleur unie de l’album ou le noir. L’animation est facultative.</string>
+    <string name="settings_cluster_speedometer_artwork_motion">Animer le fond du compteur de vitesse</string>
+    <string name="settings_cluster_speedometer_artwork_motion_description">Désactivé par défaut. Anime lentement le fond pendant la lecture de musique. Les changements de morceau gardent leur fondu même désactivé.</string>
+</resources>

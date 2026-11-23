@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="platform21_cluster_mode">Tâche du combiné Platform 21 (expérimental)</string>
+    <string name="platform21_cluster_description">Pour l’adaptation du contrôleur 21 du Tang DM-i 2023. Désactivé par défaut. Utilise uniquement l’écran de projection vérifié, garde une carte centrée en demi-largeur et ne modifie ni les modes du combiné d’origine ni la carte d’origine. Nécessite un ADB local autorisé au préalable. Appliquer ce paramètre reconnecte CarPlay. Cette intégration au projet principal doit être testée sur une voiture à l’arrêt.</string>
+</resources>
