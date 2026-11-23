@@ -145,6 +145,18 @@ class CarPlayMediaEngine(
         }
     }
 
+    /**
+     * [sink], noting on [session] that main-screen video reached it. Only decrypted frames count:
+     * [ScreenStream] drops the keepalives (opcode 2, no body), all that a stuck iPhone sends (#975, #249).
+     */
+    private fun mainVideoNotingSink(session: AirPlaySession): MediaSink = object : MediaSink by sink {
+        override fun onVideoFrame(type: Int, naluBytes: ByteArray, senderNanos: Long, arrivalNanos: Long) {
+            // A sealed frame with nothing in it is no video either.
+            if (naluBytes.isNotEmpty()) session.noteMainVideoReceived()
+            sink.onVideoFrame(type, naluBytes, senderNanos, arrivalNanos)
+        }
+    }
+
     override fun setIapTunnelHandler(handler: ((BlockingDuplexByteStream) -> Boolean)?) {
         iapTunnelHandler = handler
     }
@@ -173,8 +185,9 @@ class CarPlayMediaEngine(
                 session.logDebug("Video recovery: requested keyframe sent=$sent")
             }
         }
+        val frameSink = if (type == STREAM_TYPE_MAIN_SCREEN) mainVideoNotingSink(session) else sink
         val port = screen.listen(
-            object : ScreenStream.Listener by currentScreenListener(type, sink, isCurrent = { streams[streamKey] === screen }) {
+            object : ScreenStream.Listener by currentScreenListener(type, frameSink, isCurrent = { streams[streamKey] === screen }) {
                 override fun onClosed(cause: Throwable?) {
                     Log.w(
                         TAG,
