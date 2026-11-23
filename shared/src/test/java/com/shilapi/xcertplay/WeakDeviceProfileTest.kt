@@ -41,7 +41,6 @@ class WeakDeviceProfileTest {
             directVideoOutput = true,
             wirelessMusicBufferMillis = 500,
         )
-        assertEquals(snapshot, snapshot.copy())
         assertEquals(90, snapshot.displayScalePercent)
     }
 }

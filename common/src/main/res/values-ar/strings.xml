@@ -707,9 +707,9 @@
     <string name="settings_low_latency_decoder">فك ترميز منخفض التأخير (تجريبي)</string>
     <string name="settings_low_latency_decoder_description">يطلب من أجهزة فك ترميز الفيديو من Qualcomm إخراج كل إطار فور فك ترميزه بدلًا من الاحتفاظ بالإطارات التالية، ويعرض كل إطار مفكوك من سلسلة معالجة مخصصة دون انتظار وصول الإطار التالي. قد يقلل التأخير بعشرات المللي ثانية. أوقفه إذا ظهرت تشوهات في الصورة أو تجمّدت. يُطبَّق عند الاتصال التالي.</string>
     <string name="settings_weak_device_mode">وضع الشاشة الضعيفة (تجريبي)</string>
-    <string name="settings_weak_device_mode_description">زر واحد للشاشات البطيئة: يخفّض الدقة إلى 75%، ويستخدم إخراج الفيديو المباشر، ويضبط ذاكرة الموسيقى (لاسلكي) على أكثر قيمها ثباتًا. إيقافه يتراجع عن أي تغيير أُجري على تلك الإعدادات أثناء تشغيله. يُطبّق عند اتصال CarPlay التالي.</string>
+    <string name="settings_weak_device_mode_description">زر واحد للشاشات البطيئة: يخفّض الدقة إلى 75%، ويستخدم إخراج الفيديو المباشر، ويضبط ذاكرة الموسيقى (لاسلكي) على أكثر قيمها ثباتًا. أثناء تشغيله، لا تنطبق تعديلات الصورة. إيقافه يتراجع عن أي تغيير أُجري على تلك الإعدادات أثناء تشغيله. يُطبّق عند اتصال CarPlay التالي.</string>
     <string name="settings_wifi_channel_scan">فحص قنوات الواي فاي</string>
-    <string name="settings_wifi_channel_scan_description">يفحص واي فاي 2.4GHz ويوصي بأهدأ قناة من 1 و6 و11 لاتصال Wi-Fi Direct. تُحتسب فقط الشبكات التي يراها هذا الفحص.</string>
+    <string name="settings_wifi_channel_scan_description">يفحص واي فاي 2.4GHz ويوصي بأهدأ قناة من 1 و6 و11 لاتصال Wi-Fi Direct. تُحتسب فقط الشبكات على القنوات 1 و6 و11 بالضبط.</string>
     <string name="settings_wifi_channel_scan_button">افحص قنوات الواي فاي</string>
     <string name="settings_wifi_channel_scan_scanning">جارٍ فحص شبكات الواي فاي…</string>
     <string name="settings_wifi_channel_scan_empty">لم يتم العثور على شبكات في القنوات 1 و6 و11. تُحتسب فقط الشبكات الموجودة على هذه القنوات بالضبط.</string>

@@ -707,9 +707,9 @@
     <string name="settings_low_latency_decoder">Decodificación de baja latencia (experimental)</string>
     <string name="settings_low_latency_decoder_description">Pide a los decodificadores de vídeo de Qualcomm que entreguen cada fotograma en cuanto se decodifica, en lugar de retener los siguientes, y muestra cada fotograma decodificado desde un hilo dedicado sin esperar a que llegue el siguiente. Puede reducir el retardo en decenas de milisegundos. Desactívalo si la imagen muestra artefactos o se congela. Se aplica en la próxima conexión.</string>
     <string name="settings_weak_device_mode">Modo de unidad principal débil (experimental)</string>
-    <string name="settings_weak_device_mode_description">Un interruptor para unidades principales lentas: baja la Resolución al 75 %, usa la Salida de vídeo directa y pone el Búfer de música (inalámbrico) en su valor más estable. Al desactivarlo se deshacen los cambios realizados en esos ajustes mientras estaba activado. Se aplica en la próxima conexión de CarPlay.</string>
+    <string name="settings_weak_device_mode_description">Un interruptor para unidades principales lentas: baja la Resolución al 75 %, usa la Salida de vídeo directa y pone el Búfer de música (inalámbrico) en su valor más estable. Mientras está activado, los ajustes de imagen no se aplican. Al desactivarlo se deshacen los cambios realizados en esos ajustes mientras estaba activado. Se aplica en la próxima conexión de CarPlay.</string>
     <string name="settings_wifi_channel_scan">Exploración de canales Wi-Fi</string>
-    <string name="settings_wifi_channel_scan_description">Explora el Wi-Fi de 2,4 GHz y recomienda el canal más libre entre 1, 6 y 11 para Wi-Fi Direct. Solo se cuentan las redes que ve esta exploración.</string>
+    <string name="settings_wifi_channel_scan_description">Explora el Wi-Fi de 2,4 GHz y recomienda el canal más libre entre 1, 6 y 11 para Wi-Fi Direct. Solo se cuentan las redes de los canales 1, 6 y 11 exactamente.</string>
     <string name="settings_wifi_channel_scan_button">Explorar canales Wi-Fi</string>
     <string name="settings_wifi_channel_scan_scanning">Buscando redes Wi-Fi…</string>
     <string name="settings_wifi_channel_scan_empty">No se encontraron redes en los canales 1, 6 ni 11. Solo se cuentan las redes que están exactamente en esos canales.</string>

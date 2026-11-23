@@ -801,9 +801,9 @@
     <string name="settings_low_latency_decoder">저지연 디코딩 (실험 기능)</string>
     <string name="settings_low_latency_decoder_description">Qualcomm 동영상 디코더가 다음 프레임을 보류하지 않고 각 프레임을 디코딩하는 즉시 출력하도록 요청하고, 전용 스레드에서 다음 프레임을 기다리지 않고 디코딩된 프레임을 표시합니다. 지연이 수십 밀리초 줄어들 수 있습니다. 화면에 깨짐이 나타나거나 멈추면 끄세요. 다음 연결부터 적용됩니다.</string>
     <string name="settings_weak_device_mode">저사양 헤드 유닛 모드 (실험 기능)</string>
-    <string name="settings_weak_device_mode_description">느린 헤드 유닛용 스위치 하나: 해상도를 75%로 낮추고, 직접 영상 출력을 사용하며, 음악 버퍼(무선 CarPlay)를 가장 안정적인 값으로 설정합니다. 끄면 켜져 있는 동안 해당 설정에 가한 변경이 모두 되돌려집니다. 다음 CarPlay 연결부터 적용됩니다.</string>
+    <string name="settings_weak_device_mode_description">느린 헤드 유닛용 스위치 하나: 해상도를 75%로 낮추고, 직접 영상 출력을 사용하며, 음악 버퍼(무선 CarPlay)를 가장 안정적인 값으로 설정합니다. 켜져 있는 동안에는 화면 보정이 적용되지 않습니다. 끄면 켜져 있는 동안 해당 설정에 가한 변경이 모두 되돌려집니다. 다음 CarPlay 연결부터 적용됩니다.</string>
     <string name="settings_wifi_channel_scan">Wi-Fi 채널 스캔</string>
-    <string name="settings_wifi_channel_scan_description">2.4 GHz Wi-Fi를 스캔하여 Wi-Fi Direct용으로 채널 1, 6, 11 중 가장 한산한 채널을 추천합니다. 이번 스캔에서 본 네트워크만 계산됩니다.</string>
+    <string name="settings_wifi_channel_scan_description">2.4 GHz Wi-Fi를 스캔하여 Wi-Fi Direct용으로 채널 1, 6, 11 중 가장 한산한 채널을 추천합니다. 정확히 채널 1, 6, 11에 있는 네트워크만 계산됩니다.</string>
     <string name="settings_wifi_channel_scan_button">Wi-Fi 채널 스캔</string>
     <string name="settings_wifi_channel_scan_scanning">Wi-Fi 네트워크 스캔 중…</string>
     <string name="settings_wifi_channel_scan_empty">채널 1, 6, 11에서 네트워크를 찾지 못했습니다. 해당 채널에 정확히 있는 네트워크만 계산됩니다.</string>

@@ -806,10 +806,10 @@
     <string name="settings_direct_video_output_description">DiPlay画面内に描画せず、車載端末のコンポジターへCarPlay映像を直接送ります。画面更新1回分ほどの遅延を減らせる場合があります。画質調整は適用されません。CarPlayを再接続します。</string>
     <string name="settings_low_latency_decoder">低遅延デコード（実験的機能）</string>
     <string name="settings_low_latency_decoder_description">Qualcomm製の映像デコーダーに対し、フレームを保持せずデコード直後に出力するよう要求します。専用スレッドで次のフレームの到着を待たずに表示し、数十ミリ秒の遅延を減らせる場合があります。映像が乱れたり停止したりする場合はオフにしてください。次回の接続から反映されます。</string>
-    <string name="settings_weak_device_mode">低速ヘッドユニットモード（実験的機能）</string>
-    <string name="settings_weak_device_mode_description">低速ヘッドユニット向けのスイッチ1つ：解像度を75%に下げ、映像の直接出力を使い、音楽のバッファ（ワイヤレス）を最も安定した値にします。オフにすると、オンの間にこれらの設定に加えた変更がすべて元に戻ります。次回のCarPlay接続から反映されます。</string>
+    <string name="settings_weak_device_mode">低スペックヘッドユニットモード（実験的機能）</string>
+    <string name="settings_weak_device_mode_description">低スペックヘッドユニット向けのスイッチ1つ：解像度を75%に下げ、映像の直接出力を使い、音楽のバッファ（ワイヤレス）を最も安定した値にします。オンの間は画質調整は適用されません。オフにすると、オンの間にこれらの設定に加えた変更がすべて元に戻ります。次回のCarPlay接続から反映されます。</string>
     <string name="settings_wifi_channel_scan">Wi-Fiチャンネルスキャン</string>
-    <string name="settings_wifi_channel_scan_description">2.4 GHzのWi-Fiをスキャンし、Wi-Fi Direct向けにチャンネル1、6、11の中で最も空いているチャンネルを推奨します。このスキャンで見えたネットワークだけが数えられます。</string>
+    <string name="settings_wifi_channel_scan_description">2.4 GHzのWi-Fiをスキャンし、Wi-Fi Direct向けにチャンネル1、6、11の中で最も空いているチャンネルを推奨します。チャンネル1、6、11ちょうどにあるネットワークだけが数えられます。</string>
     <string name="settings_wifi_channel_scan_button">Wi-Fiチャンネルをスキャン</string>
     <string name="settings_wifi_channel_scan_scanning">Wi-Fiネットワークをスキャン中…</string>
     <string name="settings_wifi_channel_scan_empty">チャンネル1、6、11にネットワークが見つかりませんでした。これらのチャンネルにあるネットワークだけが数えられます。</string>

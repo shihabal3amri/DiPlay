@@ -806,9 +806,9 @@
     <string name="settings_low_latency_decoder">Low-latency decoding (experimental)</string>
     <string name="settings_low_latency_decoder_description">Asks Qualcomm video decoders to output each frame as soon as it is decoded instead of holding the next ones, and shows each decoded frame from a dedicated thread without waiting for the next one to arrive. Can lower the delay by tens of milliseconds. Turn it off if the picture shows artifacts or freezes. Applies at the next connection.</string>
     <string name="settings_weak_device_mode">Weak head-unit mode (experimental)</string>
-    <string name="settings_weak_device_mode_description">One switch for slow head units: lowers Resolution to 75%, uses Direct video output and sets Music buffer (wireless CarPlay) to its most stable value. Turning it off undoes any change made to those settings while it was on. Applies at the next CarPlay connection.</string>
+    <string name="settings_weak_device_mode_description">One switch for slow head units: lowers Resolution to 75%, uses Direct video output and sets Music buffer (wireless CarPlay) to its most stable value. While it is on, Picture adjustments do not apply. Turning it off undoes any change made to those settings while it was on. Applies at the next CarPlay connection.</string>
     <string name="settings_wifi_channel_scan">Wi-Fi channel scan</string>
-    <string name="settings_wifi_channel_scan_description">Scans 2.4 GHz Wi-Fi and recommends the quietest of channels 1, 6 and 11 for Wi-Fi Direct. Only the networks this scan sees are counted.</string>
+    <string name="settings_wifi_channel_scan_description">Scans 2.4 GHz Wi-Fi and recommends the quietest of channels 1, 6 and 11 for Wi-Fi Direct. Only networks on exactly channels 1, 6 and 11 are counted.</string>
     <string name="settings_wifi_channel_scan_button">Scan Wi-Fi channels</string>
     <string name="settings_wifi_channel_scan_scanning">Scanning for Wi-Fi networks…</string>
     <string name="settings_wifi_channel_scan_empty">No networks found on channels 1, 6 or 11. Only networks on exactly those channels are counted.</string>

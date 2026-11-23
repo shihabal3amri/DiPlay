@@ -784,9 +784,9 @@
     <string name="settings_low_latency_decoder">Decodifica a bassa latenza (sperimentale)</string>
     <string name="settings_low_latency_decoder_description">Chiede ai decoder video Qualcomm di emettere ogni fotogramma appena decodificato invece di trattenere i successivi, e mostra ogni fotogramma decodificato da un thread dedicato senza attendere l’arrivo del successivo. Può ridurre il ritardo di decine di millisecondi. Disattivalo se l’immagine mostra artefatti o si blocca. Si applica alla prossima connessione.</string>
     <string name="settings_weak_device_mode">Modalità unità principale debole (sperimentale)</string>
-    <string name="settings_weak_device_mode_description">Un interruttore per le unità principali lente: abbassa la Risoluzione al 75%, usa l\'Uscita video diretta e imposta il Buffer musicale (CarPlay wireless) sul valore più stabile. Disattivandolo si annullano le modifiche apportate a queste impostazioni mentre era attivo. Si applica alla prossima connessione CarPlay.</string>
+    <string name="settings_weak_device_mode_description">Un interruttore per le unità principali lente: abbassa la Risoluzione al 75%, usa l\'Uscita video diretta e imposta il Buffer musicale (CarPlay wireless) sul valore più stabile. Mentre è attivo, le regolazioni dell'immagine non si applicano. Disattivandolo si annullano le modifiche apportate a queste impostazioni mentre era attivo. Si applica alla prossima connessione CarPlay.</string>
     <string name="settings_wifi_channel_scan">Scansione canali Wi-Fi</string>
-    <string name="settings_wifi_channel_scan_description">Esegue la scansione del Wi-Fi a 2,4 GHz e consiglia il canale più libero tra 1, 6 e 11 per Wi-Fi Direct. Vengono contate solo le reti viste da questa scansione.</string>
+    <string name="settings_wifi_channel_scan_description">Esegue la scansione del Wi-Fi a 2,4 GHz e consiglia il canale più libero tra 1, 6 e 11 per Wi-Fi Direct. Vengono contate solo le reti esattamente sui canali 1, 6 e 11.</string>
     <string name="settings_wifi_channel_scan_button">Scansiona i canali Wi-Fi</string>
     <string name="settings_wifi_channel_scan_scanning">Ricerca delle reti Wi-Fi in corso…</string>
     <string name="settings_wifi_channel_scan_empty">Nessuna rete trovata sui canali 1, 6 o 11. Vengono contate solo le reti esattamente su questi canali.</string>

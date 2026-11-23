@@ -770,9 +770,9 @@
     <string name="settings_low_latency_decoder">Düşük gecikmeli kod çözme (deneysel)</string>
     <string name="settings_low_latency_decoder_description">Qualcomm video kod çözücülerinden sonraki kareleri tutmak yerine her kareyi kodu çözülür çözülmez çıkarmasını ister ve kodu çözülen her kareyi bir sonrakinin gelmesini beklemeden özel bir iş parçacığından gösterir. Gecikmeyi onlarca milisaniye azaltabilir. Resimde bozulmalar varsa veya donuyorsa kapatın. Sonraki bağlantıda uygulanır.</string>
     <string name="settings_weak_device_mode">Zayıf ana ünite modu (deneysel)</string>
-    <string name="settings_weak_device_mode_description">Yavaş ana üniteler için tek anahtar: Çözünürlüğü %75\'e düşürür, Doğrudan video çıkışı kullanır ve Müzik arabelleğini (kablosuz CarPlay) en kararlı değerine ayarlar. Kapatmak, açıkken bu ayarlarda yapılan değişiklikleri geri alır. Sonraki CarPlay bağlantısında geçerli olur.</string>
+    <string name="settings_weak_device_mode_description">Yavaş ana üniteler için tek anahtar: Çözünürlüğü %75\'e düşürür, Doğrudan video çıkışı kullanır ve Müzik arabelleğini (kablosuz CarPlay) en kararlı değerine ayarlar. Açıkken görüntü ayarlamaları geçerli değildir. Kapatmak, açıkken bu ayarlarda yapılan değişiklikleri geri alır. Sonraki CarPlay bağlantısında geçerli olur.</string>
     <string name="settings_wifi_channel_scan">Wi-Fi kanal taraması</string>
-    <string name="settings_wifi_channel_scan_description">2,4 GHz Wi-Fi tarar ve Wi-Fi Direct için 1, 6 ve 11 arasından en sakin kanalı önerir. Yalnızca bu taramanın gördüğü ağlar sayılır.</string>
+    <string name="settings_wifi_channel_scan_description">2,4 GHz Wi-Fi tarar ve Wi-Fi Direct için 1, 6 ve 11 arasından en sakin kanalı önerir. Yalnızca tam olarak 1, 6 ve 11 kanallarındaki ağlar sayılır.</string>
     <string name="settings_wifi_channel_scan_button">Wi-Fi kanallarını tara</string>
     <string name="settings_wifi_channel_scan_scanning">Wi-Fi ağları aranıyor…</string>
     <string name="settings_wifi_channel_scan_empty">1, 6 ve 11. kanallarda ağ bulunamadı. Yalnızca tam olarak bu kanallardaki ağlar sayılır.</string>

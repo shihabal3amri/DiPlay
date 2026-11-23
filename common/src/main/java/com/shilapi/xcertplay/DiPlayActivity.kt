@@ -85,6 +85,7 @@ import com.shilapi.xcertplay.network.HotspotCredentials
 import com.shilapi.xcertplay.network.WifiChannelRanker
 import com.shilapi.xcertplay.network.WifiDirectSupport
 import com.shilapi.xcertplay.network.WifiP2pChannels
+import com.shilapi.xcertplay.network.WifiP2pChannels
 import com.shilapi.xcertplay.orchestration.ManualHotspotProvisioning
 import com.shilapi.xcertplay.orchestration.ManualHotspotSecurity
 import com.shilapi.xcertplay.orchestration.ManualHotspotValidation
@@ -2051,8 +2052,8 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
                 AirPlayPersistence.saveLowLatencyDecoder(this, it)
                 markReconnectNeeded()
             }
-            // One switch for slow head units: it also moves the toggles above and below,
-            // so re-render to show their new state instead of leaving them stale.
+            // One switch for slow head units: it also moves the Direct video output toggle above,
+            // so re-render to show its new state instead of leaving it stale.
             toggle(card, getString(R.string.settings_weak_device_mode),
                 getString(R.string.settings_weak_device_mode_description),
                 AirPlayPersistence.loadWeakDeviceMode(this)) { enabled ->
@@ -3795,10 +3796,6 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
         card.addView(label(getString(R.string.settings_wifi_channel_scan_description), 14, MUTED).apply {
             setPadding(0, dp(10), 0, 0)
         })
-        card.addView(label(getString(R.string.wifi_direct_channel_summary,
-            wifiDirectChannelLabel(AirPlayPersistence.loadWifiP2pPreferredChannel(this))), 15, MUTED).apply {
-            setPadding(0, dp(10), 0, 0)
-        })
         wifiChannelScanResultLabel = label(
             wifiChannelScanSummary ?: "",
             15, MUTED,
@@ -3816,18 +3813,21 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
         if (recommended != null) {
             val current = AirPlayPersistence.loadWifiP2pPreferredChannel(this)
             if (current == WifiP2pChannels.AUTO || current == WifiP2pChannels.AUTO_5_GHZ ||
-                current == WifiP2pChannels.AUTO_2_4_GHZ || current >= 36) {
+                current >= 36) {
                 card.addView(label(getString(R.string.settings_wifi_channel_scan_band_change,
                     wifiDirectChannelLabel(current), recommended), 15, WARNING).apply {
                     setPadding(0, dp(10), 0, 0)
                 })
             }
-            wifiChannelScanApplyButton = button(getString(R.string.settings_wifi_channel_scan_apply, recommended), false) {
-                AirPlayPersistence.saveWifiP2pPreferredChannel(this, recommended)
-                markReconnectNeeded()
-                toast(getString(R.string.saved_for_your_next_connection))
+            if (recommended != current) {
+                wifiChannelScanApplyButton = button(getString(R.string.settings_wifi_channel_scan_apply, recommended), false) {
+                    AirPlayPersistence.saveWifiP2pPreferredChannel(this, recommended)
+                    markReconnectNeeded()
+                    render()
+                    toast(getString(R.string.saved_for_your_next_connection))
+                }
+                card.addView(wifiChannelScanApplyButton, matchButton(10, 60))
             }
-            card.addView(wifiChannelScanApplyButton, matchButton(10, 60))
         }
     }
 
