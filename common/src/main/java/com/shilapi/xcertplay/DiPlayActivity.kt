@@ -220,6 +220,9 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
     // Whether the question on screen came from an automatic start; such a question comes back after a recreate.
     private var startupPickerAutomatic = false
     private var askAgainAfterRecreate = false
+    // A recreated DiPlay that asks its automatic question again skips its own start in onResume, which would
+    // otherwise start CarPlay a second time or replace the wireless start with USB.
+    private var restoredAutomaticQuestion = false
     private var bluetoothSettingsVisited = false
     private var initialLaunch = true
     private var notificationTransport = true
@@ -431,6 +434,7 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
         setupFromSettings = savedInstanceState?.getBoolean("setup_from_settings") ?: false
         // Recreated while an automatic start was asking: ask again. The Bluetooth start's extra is already used up.
         if (savedInstanceState?.getBoolean(STATE_ASK_AGAIN_AUTOMATIC) == true) {
+            restoredAutomaticQuestion = true
             handler.post { if (!carPlayAlreadyOpen()) connect(true, automatic = true) }
         }
         page = savedInstanceState?.getString("page") ?: requestedPage(intent)
@@ -490,7 +494,7 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
         outState.putInt("setup_step", setupStep)
         outState.putBoolean("setup_from_settings", setupFromSettings)
         // Before Android 9 this runs before onStop, while the question is still on screen.
-        if (isChangingConfigurations && (askAgainAfterRecreate || (startupPickerDialog != null && startupPickerAutomatic))) {
+        if (isChangingConfigurations && (askAgainAfterRecreate || (startupPickerDialog?.isShowing == true && startupPickerAutomatic))) {
             outState.putBoolean(STATE_ASK_AGAIN_AUTOMATIC, true)
         }
         super.onSaveInstanceState(outState)
@@ -577,7 +581,7 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
         if (initialLaunch) {
             initialLaunch = false
             startCarHotspotOnLaunch()
-            if (setupError == null && !CarPlayBackgroundSession.hasSession() &&
+            if (setupError == null && !CarPlayBackgroundSession.hasSession() && !restoredAutomaticQuestion &&
                 DiPlayPreferences.autoConnect(this) && requestedPage(intent) == null && page != "setup") {
                 handler.post { connect(DiPlayPreferences.autoConnectWireless(this), automatic = true) }
             }
@@ -5981,8 +5985,7 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
             return
         }
         if (wireless && carHotspotOff()) { carHotspotOffDialog(); return }
-        if (wireless && !iphoneQuestionAnswered && DiPlayPreferences.askWhichIphone(this) &&
-            !CarPlayBackgroundSession.hasSession()) {
+        if (wireless && !iphoneQuestionAnswered && DiPlayPreferences.askWhichIphone(this) && !carPlayAlreadyOpen()) {
             // Runs before the single-iPhone chooser below, so a driver is asked at most once. A question
             // already on screen closes first: an iPhone may have joined Bluetooth since it appeared.
             closeStartupPhonePicker()
@@ -6110,7 +6113,9 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
      * closing or being recreated (the new instance asks again) or CarPlay has already opened.
      */
     private fun stopStartupPhonePicker() {
-        val question = startupPickerDialog ?: return
+        // A dialog's dismiss listener runs a moment after dismiss(): one that a tap or the countdown already
+        // closed is answered, even while the field still points to it.
+        val question = startupPickerDialog?.takeIf { it.isShowing } ?: return
         val fallback = startupPickerConnectWhenCovered
         askAgainAfterRecreate = startupPickerAutomatic && isChangingConfigurations
         question.dismiss()

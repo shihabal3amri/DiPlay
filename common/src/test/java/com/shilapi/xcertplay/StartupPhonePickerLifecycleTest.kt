@@ -10,6 +10,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
 import com.shilapi.xcertplay.orchestration.WirelessHotspotMode
+import com.shilapi.xcertplay.setup.SetupGuide
 import java.time.Duration
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -56,6 +57,8 @@ class StartupPhonePickerLifecycleTest {
         ReflectionHelpers.setField(CarPlayScreen, "open", null)
         AirPlayPersistence.saveWirelessHotspotMode(context, WirelessHotspotMode.EXISTING_WIFI)
         DiPlayPreferences.saveAskWhichIphone(context, true)
+        // DiPlay opens on its home page, where Connect when DiPlay opens runs, not on the setup guide.
+        SetupGuide.markSeen(context)
 
         controller = Robolectric.buildActivity(DiPlayActivity::class.java)
         activity = controller.get()
@@ -101,11 +104,13 @@ class StartupPhonePickerLifecycleTest {
         idle()
     }
 
-    /** Whether DiPlay started a CarPlay screen since the last call. */
-    private fun startedCarPlay(from: DiPlayActivity = activity): Boolean =
-        generateSequence { shadowOf(from).nextStartedActivity }.any { intent ->
+    /** How many CarPlay screens DiPlay started since the last call. Robolectric keeps one list for the app. */
+    private fun carPlayStarts(): Int =
+        generateSequence { shadowOf(activity).nextStartedActivity }.count { intent ->
             intent.component?.className in setOf(CarPlayHostActivity::class.java.name, SameTaskCarPlayHostActivity::class.java.name)
         }
+
+    private fun startedCarPlay(): Boolean = carPlayStarts() > 0
 
     private fun texts(dialog: AlertDialog): List<String> =
         allViews(dialog.window!!.decorView).filterIsInstance<TextView>().map { it.text.toString() }.toList()
@@ -187,27 +192,63 @@ class StartupPhonePickerLifecycleTest {
         assertFalse(AirPlayPersistence.loadWirelessEnabled(context))
     }
 
-    @Test fun aCarPlayScreenThatOpenedDuringTheQuestionIsLeftAlone() {
+    /** USB_DEVICE_ATTACHED opened the CarPlay screen; it may still wait for consent, with no session yet. */
+    private fun openCarPlayScreen() {
+        screens += Robolectric.buildActivity(CarPlayHostActivity::class.java).setup()
+        assertSame(screens.single().get(), CarPlayScreen.current())
+        assertFalse(CarPlayBackgroundSession.hasSession())
+    }
+
+    @Test fun aCountdownBesideAnOpenCarPlayScreenStartsNothing() {
         DiPlayPreferences.savePhone(context, alex.address, "Alex’s iPhone")
         connectWireless(automatic = true)
         val question = picker()
         assertNotNull(question)
-        // USB_DEVICE_ATTACHED opened the CarPlay screen; it may still wait for consent, with no session yet.
-        screens += Robolectric.buildActivity(CarPlayHostActivity::class.java).setup()
-        assertSame(screens.single().get(), CarPlayScreen.current())
+        openCarPlayScreen()
 
         // DiPlay in a split or card window is not stopped: the countdown ends without starting anything.
         shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(10))
         assertFalse(question!!.isShowing)
+        assertNull(picker())
         assertEquals(StartupPhonePicker.Outcome.CARPLAY_ALREADY_OPEN, StartupPhonePicker.lastOutcome)
         assertFalse(startedCarPlay())
+    }
 
-        // Covered by that screen instead, the question also starts nothing.
+    @Test fun aCarPlayScreenThatCoversTheQuestionIsLeftAlone() {
+        DiPlayPreferences.savePhone(context, alex.address, "Alex’s iPhone")
         connectWireless(automatic = true)
         assertNotNull(picker())
+        openCarPlayScreen()
+
         controller.pause().stop()
         idle()
+        assertNull(picker())
         assertEquals(StartupPhonePicker.Outcome.CARPLAY_ALREADY_OPEN, StartupPhonePicker.lastOutcome)
+        assertFalse(startedCarPlay())
+    }
+
+    @Test fun noQuestionWhileACarPlayScreenIsOpen() {
+        DiPlayPreferences.savePhone(context, alex.address, "Alex’s iPhone")
+        openCarPlayScreen()
+        connectWireless(automatic = true)
+        assertNull(picker())
+        assertNull(StartupPhonePicker.lastOutcome)
+    }
+
+    @Test fun anAnsweredQuestionIsNotTreatedAsCoveredWhileItsDismissIsPending() {
+        DiPlayPreferences.savePhone(context, alex.address, "Alex’s iPhone")
+        connectWireless(automatic = true)
+        val question = picker()!!
+        // The driver taps Sam's iPhone; DiPlay stops before the dialog's dismiss listener has run.
+        allViews(question.window!!.decorView).filterIsInstance<TextView>()
+            .first { it.text.toString() == "Sam’s iPhone" }.performClick()
+        assertSame(question, picker())
+        assertFalse(question.isShowing)
+        assertTrue(startedCarPlay())
+        controller.pause().stop()
+        idle()
+        assertEquals(StartupPhonePicker.Outcome.TAPPED, StartupPhonePicker.lastOutcome)
+        assertEquals(sam.address, DiPlayPreferences.phoneAddress(context))
         assertFalse(startedCarPlay())
     }
 
@@ -222,24 +263,84 @@ class StartupPhonePickerLifecycleTest {
         assertFalse(startedCarPlay())
     }
 
-    @Test fun aRecreatedDiPlayAsksAgainInsteadOfStarting() {
-        DiPlayPreferences.savePhone(context, alex.address, "Alex’s iPhone")
-        // The Bluetooth start: its intent extra is used up, so only the saved state brings the question back.
-        connectWireless(automatic = true)
+    private fun recreate(): DiPlayActivity {
         val old = activity
-        assertNotNull(picker(old))
-
         controller.recreate()
         idle()
         activity = controller.get()
         assertFalse(old === activity)
-        assertFalse(startedCarPlay(old))
-        assertFalse(startedCarPlay(activity))
-        val again = picker(activity)
+        return activity
+    }
+
+    @Test fun aRecreatedDiPlayAsksAgainInsteadOfStarting() {
+        DiPlayPreferences.savePhone(context, alex.address, "Alex’s iPhone")
+        // The Bluetooth start: its intent extra is used up, so only the saved state brings the question back.
+        connectWireless(automatic = true)
+        assertNotNull(picker())
+
+        val recreated = recreate()
+        assertEquals(0, carPlayStarts())
+        val again = picker(recreated)
         assertNotNull(again)
         assertTrue(again!!.isShowing)
-        assertTrue(ReflectionHelpers.getField<Boolean>(activity, "startupPickerAutomatic"))
+        assertTrue(ReflectionHelpers.getField<Boolean>(recreated, "startupPickerAutomatic"))
         assertEquals(StartupPhonePicker.Outcome.ASKED, StartupPhonePicker.lastOutcome)
+    }
+
+    @Test fun aRecreatedDiPlayStartsCarPlayOnceWithConnectWhenDiPlayOpens() {
+        DiPlayPreferences.savePhone(context, alex.address, "Alex’s iPhone")
+        DiPlayPreferences.saveAutoConnect(context, true)
+        DiPlayPreferences.saveDefaultConnectionMode(context, DefaultConnectionMode.WIRELESS)
+        connectWireless(automatic = true)
+        assertNotNull(picker())
+        // Alex's iPhone joins the car's Bluetooth while DiPlay is recreated: the new decision connects it.
+        shadowOf(alex).setConnected(true)
+
+        recreate()
+        assertEquals(1, carPlayStarts())
+        assertEquals(StartupPhonePicker.Outcome.CONNECTED_ONLY_IPHONE_ON_BLUETOOTH, StartupPhonePicker.lastOutcome)
+    }
+
+    @Test fun aRecreatedDiPlayKeepsTheWirelessQuestionWhenItsOwnStartIsUsb() {
+        DiPlayPreferences.savePhone(context, alex.address, "Alex’s iPhone")
+        DiPlayPreferences.saveAutoConnect(context, true)
+        DiPlayPreferences.saveDefaultConnectionMode(context, DefaultConnectionMode.USB)
+        AirPlayPersistence.saveWirelessEnabled(context, true)
+        // The Bluetooth start asked; Connect when DiPlay opens would start USB in a new instance.
+        connectWireless(automatic = true)
+
+        val recreated = recreate()
+        assertNotNull(picker(recreated))
+        assertEquals(0, carPlayStarts())
+        assertTrue(AirPlayPersistence.loadWirelessEnabled(context))
+    }
+
+    @Test fun beforeAndroid9TheQuestionIsSavedWhileStillOnScreen() {
+        // Android 7–8 save the state before onStop, while the question is still up.
+        DiPlayPreferences.savePhone(context, alex.address, "Alex’s iPhone")
+        connectWireless(automatic = true)
+        assertTrue(picker()!!.isShowing)
+        val state = android.os.Bundle()
+        ReflectionHelpers.setField(android.app.Activity::class.java, activity, "mChangingConfigurations", true)
+        try {
+            ReflectionHelpers.callInstanceMethod<Unit>(activity, "onSaveInstanceState",
+                ClassParameter.from(android.os.Bundle::class.java, state))
+        } finally {
+            ReflectionHelpers.setField(android.app.Activity::class.java, activity, "mChangingConfigurations", false)
+        }
+        assertTrue(state.getBoolean("startup_picker_ask_again_automatic"))
+
+        // A question from a tap on Connect is not saved.
+        connectWireless(automatic = false)
+        val tapped = android.os.Bundle()
+        ReflectionHelpers.setField(android.app.Activity::class.java, activity, "mChangingConfigurations", true)
+        try {
+            ReflectionHelpers.callInstanceMethod<Unit>(activity, "onSaveInstanceState",
+                ClassParameter.from(android.os.Bundle::class.java, tapped))
+        } finally {
+            ReflectionHelpers.setField(android.app.Activity::class.java, activity, "mChangingConfigurations", false)
+        }
+        assertFalse(tapped.getBoolean("startup_picker_ask_again_automatic"))
     }
 
     @Test fun anIphoneChosenInChooseIphoneIsNotOverridden() {
