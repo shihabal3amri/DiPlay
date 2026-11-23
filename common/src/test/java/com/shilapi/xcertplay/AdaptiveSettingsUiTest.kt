@@ -571,7 +571,7 @@ class AdaptiveSettingsUiTest {
         assertFalse(index.any { it.title == screen.getString(R.string.auto_car_hotspot_title) })
     }
 
-    @Test fun cardControlsShareOneHeightAndGap() {
+    @Test fun cardControlsShareOneMinimumHeightAndGap() {
         val screen = openSettings()
         descendants(screen.window.decorView)
             .first { it.contentDescription == screen.getString(R.string.settings_open_category,
@@ -588,7 +588,8 @@ class AdaptiveSettingsUiTest {
         assertTrue(buttons.size >= 4)
         buttons.forEach { button ->
             val lp = button.layoutParams as LinearLayout.LayoutParams
-            assertEquals(button.text.toString(), dp(60), lp.height)
+            assertEquals(button.text.toString(), ViewGroup.LayoutParams.WRAP_CONTENT, lp.height)
+            assertEquals(button.text.toString(), dp(60), button.minHeight)
             assertEquals(button.text.toString(), 0, lp.topMargin)
             assertTrue(button.text.toString(), lp.bottomMargin in setOf(0, dp(6), dp(12)))
         }
@@ -610,10 +611,18 @@ class AdaptiveSettingsUiTest {
             .first { it.contentDescription == screen.getString(R.string.settings_open_category,
                 screen.getString(R.string.settings_vehicle)) }
             .performClick()
-        val chooseImage = texts(screen).single { it.text == screen.getString(R.string.choose_image) }
-        val card = chooseImage.parent as LinearLayout
-        val preview = card.getChildAt(card.indexOfChild(chooseImage) - 1)
+        val iconTitle = texts(screen).single { it.text == screen.getString(R.string.car_button_icon) }
+        // The title sits inside the text column, which sits inside the icon preview row.
+        val preview = iconTitle.parent.parent as LinearLayout
+        val card = preview.parent as LinearLayout
+        // The first button after the preview is now the "Car brand badge · …" row.
+        val firstButton = (card.indexOfChild(preview) + 1 until card.childCount)
+            .map { card.getChildAt(it) }.first { it is android.widget.Button } as android.widget.Button
+        assertTrue(
+            firstButton.text.startsWith(screen.getString(R.string.settings_car_brand_title)),
+        )
 
+        // The gap between the preview row and its button is carried by the preview row.
         assertEquals(Math.round(12 * screen.resources.displayMetrics.density),
             (preview.layoutParams as LinearLayout.LayoutParams).bottomMargin)
     }
@@ -762,6 +771,8 @@ class AdaptiveSettingsUiTest {
         assertFalse(advanced.any { it.startsWith(text(R.string.settings_usb_charging)) })
         assertTrue(audio.any { it.startsWith(text(R.string.settings_navigation_attenuation)) })
         assertFalse(advanced.any { it.startsWith(text(R.string.settings_navigation_attenuation)) })
+        assertTrue(audio.any { it.startsWith(text(R.string.settings_call_attenuation)) })
+        assertFalse(advanced.any { it.startsWith(text(R.string.settings_call_attenuation)) })
         assertTrue(audio.any { it.startsWith(text(R.string.settings_music_buffer_wireless)) })
         assertTrue(audio.any { it.startsWith(text(R.string.settings_music_buffer_wired)) })
         listOf(R.string.main_buffered_audio, R.string.settings_car_bluetooth_audio, R.string.efficient_video, R.string.smooth_video, R.string.settings_direct_video_output, R.string.settings_low_latency_decoder, R.string.call_echo_cancellation, R.string.call_voice_filter, R.string.settings_disable_media_key_audio_focus, R.string.contrib_audio_home_toggle_audio_focus).forEach {
@@ -780,14 +791,30 @@ class AdaptiveSettingsUiTest {
         assertFalse(text(R.string.settings_ambient_title) in vehicle)
         assertFalse(text(R.string.settings_ambient_title) in display)
         assertTrue(text(R.string.side_panel) in advanced)
+        // An experimental /info switch for some cars, not the everyday day/night mode in Display (#1159).
+        assertTrue(text(R.string.settings_declare_automatic_appearance) in advanced)
         assertTrue(display.any { it.startsWith(text(R.string.settings_app_appearance)) })
         assertFalse(audio.any { it.startsWith(text(R.string.settings_app_appearance)) })
         assertFalse(vehicle.any { it.startsWith(text(R.string.settings_app_appearance)) })
         assertFalse(advanced.any { it.startsWith(text(R.string.settings_app_appearance)) })
         listOf(R.string.main_buffered_audio, R.string.efficient_video, R.string.smooth_video, R.string.settings_direct_video_output, R.string.settings_low_latency_decoder, R.string.call_echo_cancellation, R.string.call_voice_filter, R.string.settings_disable_media_key_audio_focus, R.string.right_hand_drive, R.string.car_button_in_carplay,
-            R.string.side_panel, R.string.split_screen_areas, R.string.carplay_rotation).forEach {
+            R.string.side_panel, R.string.split_screen_areas, R.string.carplay_rotation,
+            R.string.settings_declare_automatic_appearance).forEach {
             assertFalse(text(it), text(it) in display)
         }
+    }
+
+    // #1327: off BYD units the DiLink 4 routes find no projection display and only cost a stream nobody sees.
+    @Test fun diLink4ClusterRoutesLiveInAdvancedOnlyOnBydHeadUnits() {
+        val screen = openSettings()
+        val routes = listOf(R.string.adb_cluster_activity_mode, R.string.platform21_cluster_mode).map(screen::getString)
+        fun index() = ReflectionHelpers.callInstanceMethod<List<DiPlayActivity.SettingsSearchResult>>(
+            screen, "buildSettingsSearchIndex")
+
+        AirPlayPersistence.saveAdbClusterEnabled(context, true)
+        routes.forEach { title -> assertFalse(title, index().any { it.title == title }) }
+        installBydSettingsPackage()
+        routes.forEach { title -> assertEquals(title, SettingsCategory.ADVANCED, index().single { it.title == title }.category) }
     }
 
     @Test fun navigationAttenuationSliderSavesAndUpdatesActiveAudioWithoutReconnect() {
@@ -802,7 +829,8 @@ class AdaptiveSettingsUiTest {
             PendingReconnect.clear()
             ReflectionHelpers.setField(screen, "settingsCategory", SettingsCategory.AUDIO)
             ReflectionHelpers.callInstanceMethod<Unit>(screen, "render")
-            val slider = descendants(screen.window.decorView).filterIsInstance<SeekBar>().single()
+            val slider = descendants(screen.window.decorView).filterIsInstance<SeekBar>()
+                .single { it.contentDescription?.startsWith(screen.getString(R.string.settings_navigation_attenuation)) == true }
             assertEquals(20, slider.max)
             assertEquals(20, slider.progress)
             val listener = SeekBar::class.java.getDeclaredField("mOnSeekBarChangeListener")
@@ -811,6 +839,40 @@ class AdaptiveSettingsUiTest {
             listener.onProgressChanged(slider, 7, true)
             assertEquals(-13, AirPlayPersistence.loadNavigationAudioAttenuationDb(context))
             verify(sink).setNavigationAttenuationDb(-13)
+            assertEquals(0, AirPlayPersistence.loadCallAudioAttenuationDb(context))
+            assertFalse(PendingReconnect.isPending(session))
+            assertEquals(0, disconnects)
+            assertSame(session, CarPlayBackgroundSession.snapshot()?.controller)
+        } finally {
+            CarPlayBackgroundSession.clear()
+            PendingReconnect.clear()
+        }
+    }
+
+    @Test fun callVoiceLevelSliderDefaultsToZeroSavesAndUpdatesActiveCallsWithoutReconnect() {
+        val screen = openSettings()
+        val session = mock(CarPlayController::class.java)
+        val sink = mock(AndroidMediaSink::class.java)
+        var disconnects = 0
+        CarPlayBackgroundSession.store(session, sink, 800, 480, Any(),
+            CarPlaySessionDisplay(800, 480, Surface.ROTATION_0, false, false, 800, 480)) { disconnects++ }
+        CarPlayBackgroundSession.active = true
+        try {
+            PendingReconnect.clear()
+            ReflectionHelpers.setField(screen, "settingsCategory", SettingsCategory.AUDIO)
+            ReflectionHelpers.callInstanceMethod<Unit>(screen, "render")
+            val slider = descendants(screen.window.decorView).filterIsInstance<SeekBar>()
+                .single { it.contentDescription?.startsWith(screen.getString(R.string.settings_call_attenuation)) == true }
+            assertEquals(20, slider.max)
+            assertEquals(20, slider.progress)
+            val listener = SeekBar::class.java.getDeclaredField("mOnSeekBarChangeListener")
+                .apply { isAccessible = true }.get(slider) as SeekBar.OnSeekBarChangeListener
+            slider.progress = 2
+            listener.onProgressChanged(slider, 2, true)
+            assertEquals(-18, AirPlayPersistence.loadCallAudioAttenuationDb(context))
+            verify(sink).setCallAttenuationDb(-18)
+            assertEquals(0, AirPlayPersistence.loadNavigationAudioAttenuationDb(context))
+            assertFalse(AirPlayPersistence.loadCallVoiceFilter(context))
             assertFalse(PendingReconnect.isPending(session))
             assertEquals(0, disconnects)
             assertSame(session, CarPlayBackgroundSession.snapshot()?.controller)
@@ -835,7 +897,8 @@ class AdaptiveSettingsUiTest {
         ReflectionHelpers.setField(screen, "settingsCategory", SettingsCategory.AUDIO)
         ReflectionHelpers.callInstanceMethod<Unit>(screen, "render")
         layoutRoot(screen)
-        val slider = descendants(screen.window.decorView).filterIsInstance<SeekBar>().single()
+        val slider = descendants(screen.window.decorView).filterIsInstance<SeekBar>()
+            .single { it.contentDescription?.startsWith(screen.getString(R.string.settings_navigation_attenuation)) == true }
         slider.requestRectangleOnScreen(Rect(0, 0, slider.width, slider.height), true)
         layoutRoot(screen)
         val rectangle = Rect()
@@ -872,11 +935,22 @@ class AdaptiveSettingsUiTest {
             row.performClick()
             val dialog = ShadowAlertDialog.getLatestAlertDialog()
             assertEquals(screen.getString(R.string.save), dialog.getButton(AlertDialog.BUTTON_POSITIVE).text.toString())
-            shadowOf(dialog).clickOnItem(UsbChargingCurrent.entries.indexOf(UsbChargingCurrent.LOW))
+            // The labels are listed by hand, so each one must sit at its entry's index.
+            val labels = UsbChargingCurrent.entries.map {
+                screen.getString(when (it) {
+                    UsbChargingCurrent.NORMAL -> R.string.settings_usb_charging_normal
+                    UsbChargingCurrent.REDUCED -> R.string.settings_usb_charging_reduced
+                    UsbChargingCurrent.MEDIUM -> R.string.settings_usb_charging_medium
+                    UsbChargingCurrent.LOW -> R.string.settings_usb_charging_low
+                })
+            }
+            assertEquals(labels, (0 until dialog.listView.adapter.count).map { dialog.listView.adapter.getItem(it).toString() })
+            shadowOf(dialog).clickOnItem(UsbChargingCurrent.entries.indexOf(UsbChargingCurrent.MEDIUM))
             dialog.getButton(AlertDialog.BUTTON_POSITIVE).performClick()
             shadowOf(Looper.getMainLooper()).idle()
 
-            assertEquals(UsbChargingCurrent.LOW, AirPlayPersistence.loadUsbChargingCurrent(context))
+            assertEquals(UsbChargingCurrent.MEDIUM, AirPlayPersistence.loadUsbChargingCurrent(context))
+            assertEquals("${screen.getString(R.string.settings_usb_charging)} · ${screen.getString(R.string.settings_usb_charging_medium)}", row.text.toString())
             assertTrue(PendingReconnect.isPending(session))
             assertEquals(0, stops)
             assertSame(session, CarPlayBackgroundSession.snapshot()?.controller)
@@ -916,6 +990,214 @@ class AdaptiveSettingsUiTest {
             assertTrue(AirPlayPersistence.loadCallEchoCancellation(context))
             assertTrue(AirPlayPersistence.loadCallVoiceFilter(context))
         } finally {
+            CarPlayBackgroundSession.clear()
+            PendingReconnect.clear()
+        }
+    }
+
+    // #1190: it changes what the iPhone is told at connection, so it waits for the next one.
+    @Test fun wheelLongPressSeekIsAnAdvancedOptInForTheNextConnection() {
+        assertFalse(AirPlayPersistence.loadWheelLongPressSeek(context))
+        // The test framework names no DiLink 3 long-press key; a setting already on stays reachable.
+        AirPlayPersistence.saveWheelLongPressSeek(context, true)
+        val screen = openSettings()
+        val session = mock(CarPlayController::class.java)
+        var stops = 0
+        CarPlayBackgroundSession.store(session, mock(AndroidMediaSink::class.java), 800, 480, Any(),
+            CarPlaySessionDisplay(800, 480, Surface.ROTATION_0, false, false, 800, 480)) { stops++ }
+        CarPlayBackgroundSession.active = true
+        try {
+            val title = screen.getString(R.string.settings_wheel_long_press_seek)
+            assertTrue(title, title.endsWith(" (experimental)"))
+            fun switches(category: SettingsCategory): List<Switch> {
+                ReflectionHelpers.setField(screen, "settingsCategory", category)
+                ReflectionHelpers.callInstanceMethod<Unit>(screen, "render")
+                return descendants(screen.window.decorView).filterIsInstance<Switch>()
+                    .filter { it.contentDescription == title }.toList()
+            }
+            for (category in SettingsCategory.entries.filter { it != SettingsCategory.ADVANCED }) {
+                assertEquals(category.name, 0, switches(category).size)
+            }
+            PendingReconnect.clear()
+            val setting = switches(SettingsCategory.ADVANCED).single()
+            assertTrue(setting.isChecked)
+            setting.performClick()
+
+            assertFalse(AirPlayPersistence.loadWheelLongPressSeek(context))
+            assertTrue(PendingReconnect.isPending(session))
+            assertSame(session, CarPlayBackgroundSession.snapshot()?.controller)
+            assertEquals(0, stops)
+        } finally {
+            CarPlayBackgroundSession.clear()
+            PendingReconnect.clear()
+        }
+    }
+
+    @Test
+    @Config(sdk = [28, 33])
+    fun advancedMediaChangesWaitForReconnectConsent() {
+        val settings = listOf(
+            R.string.smooth_video to { AirPlayPersistence.loadSmoothVideo(context) },
+            R.string.settings_direct_video_output to { AirPlayPersistence.loadDirectVideoOutput(context) },
+            R.string.main_buffered_audio to { AirPlayPersistence.loadMainBufferedAudio(context) },
+            R.string.settings_speech_without_low_rates to { AirPlayPersistence.loadSpeechWithout8And16Khz(context) },
+        )
+        val original = settings.map { it.second() }
+        val screen = openSettings()
+        val session = mock(CarPlayController::class.java)
+        var stops = 0
+        CarPlayBackgroundSession.store(session, mock(AndroidMediaSink::class.java), 800, 480, Any(),
+            CarPlaySessionDisplay(800, 480, Surface.ROTATION_0, false, false, 800, 480)) { stops++ }
+        CarPlayBackgroundSession.active = true
+        try {
+            ReflectionHelpers.setField(screen, "settingsCategory", SettingsCategory.ADVANCED)
+            settings.forEach { (title, load) ->
+                PendingReconnect.clear()
+                ReflectionHelpers.callInstanceMethod<Unit>(screen, "render")
+                val setting = descendants(screen.window.decorView).filterIsInstance<Switch>()
+                    .single { it.contentDescription == screen.getString(title) }
+                val previous = load()
+                setting.performClick()
+                assertEquals(!previous, load())
+                assertTrue(PendingReconnect.isPending(session))
+                assertEquals(View.VISIBLE, ReflectionHelpers.getField<View>(screen, "reconnectBar").visibility)
+                assertSame(session, CarPlayBackgroundSession.snapshot()?.controller)
+                assertEquals(0, stops)
+                assertNull(shadowOf(screen).nextStartedActivity)
+            }
+        } finally {
+            AirPlayPersistence.saveSmoothVideo(context, original[0])
+            AirPlayPersistence.saveDirectVideoOutput(context, original[1])
+            AirPlayPersistence.saveMainBufferedAudio(context, original[2])
+            AirPlayPersistence.saveSpeechWithout8And16Khz(context, original[3])
+            CarPlayBackgroundSession.clear()
+            PendingReconnect.clear()
+        }
+    }
+
+    @Test
+    @Config(sdk = [28, 33])
+    fun bluetoothAudioWaitsForExplicitReconnectConsent() {
+        val before = AirPlayPersistence.loadCarBluetoothAudio(context)
+        val screen = openSettings()
+        val session = mock(CarPlayController::class.java)
+        var stops = 0
+        CarPlayBackgroundSession.store(session, mock(AndroidMediaSink::class.java), 800, 480, Any(),
+            CarPlaySessionDisplay(800, 480, Surface.ROTATION_0, false, false, 800, 480)) { stops++ }
+        CarPlayBackgroundSession.active = true
+        try {
+            ReflectionHelpers.setField(screen, "settingsCategory", SettingsCategory.ADVANCED)
+            ReflectionHelpers.callInstanceMethod<Unit>(screen, "render")
+            descendants(screen.window.decorView).filterIsInstance<Switch>()
+                .single { it.contentDescription == screen.getString(R.string.settings_car_bluetooth_audio) }
+                .performClick()
+            val dialog = ShadowAlertDialog.getLatestAlertDialog()
+            assertEquals(screen.getString(R.string.apply_and_reconnect), dialog.getButton(AlertDialog.BUTTON_POSITIVE).text)
+            assertEquals(before, AirPlayPersistence.loadCarBluetoothAudio(context))
+            dialog.getButton(AlertDialog.BUTTON_NEGATIVE).performClick()
+            shadowOf(Looper.getMainLooper()).idle()
+            assertEquals(before, AirPlayPersistence.loadCarBluetoothAudio(context))
+            assertSame(session, CarPlayBackgroundSession.snapshot()?.controller)
+            assertEquals(0, stops)
+        } finally {
+            AirPlayPersistence.saveCarBluetoothAudio(context, before)
+            CarPlayBackgroundSession.clear()
+            PendingReconnect.clear()
+        }
+    }
+
+    @Test
+    @Config(sdk = [28, 33])
+    fun bluetoothAudioAppliesOnlyAfterReconnectConsent() {
+        val before = AirPlayPersistence.loadCarBluetoothAudio(context)
+        val previousWireless = AirPlayPersistence.loadWirelessEnabled(context)
+        val screen = openSettings()
+        val appPrefs = context.getSharedPreferences("diplay", Context.MODE_PRIVATE)
+        val previousNotificationAsked = appPrefs.getBoolean("notification_asked", false)
+        appPrefs.edit().putBoolean("notification_asked", true).commit()
+        val session = mock(CarPlayController::class.java)
+        var stops = 0
+        AirPlayPersistence.saveWirelessEnabled(context, false)
+        CarPlayBackgroundSession.store(session, mock(AndroidMediaSink::class.java), 800, 480, Any(),
+            CarPlaySessionDisplay(800, 480, Surface.ROTATION_0, false, false, 800, 480)) { complete ->
+                stops++
+                CarPlayBackgroundSession.clear(session)
+                complete()
+            }
+        CarPlayBackgroundSession.active = true
+        try {
+            ReflectionHelpers.setField(screen, "settingsCategory", SettingsCategory.ADVANCED)
+            ReflectionHelpers.callInstanceMethod<Unit>(screen, "render")
+            val setting = descendants(screen.window.decorView).filterIsInstance<Switch>()
+                .single { it.contentDescription == screen.getString(R.string.settings_car_bluetooth_audio) }
+            assertEquals(before, setting.isChecked)
+            setting.performClick()
+            assertEquals(!before, setting.isChecked)
+            assertEquals(before, AirPlayPersistence.loadCarBluetoothAudio(context))
+            val dialog = ShadowAlertDialog.getLatestAlertDialog()
+            assertEquals(screen.getString(R.string.apply_and_reconnect), dialog.getButton(AlertDialog.BUTTON_POSITIVE).text)
+            ReflectionHelpers.setField(screen, "setupError", null)
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE).performClick()
+            shadowOf(Looper.getMainLooper()).idle()
+            assertEquals(!before, AirPlayPersistence.loadCarBluetoothAudio(context))
+            assertEquals(1, stops)
+        } finally {
+            AirPlayPersistence.saveWirelessEnabled(context, previousWireless)
+            AirPlayPersistence.saveCarBluetoothAudio(context, before)
+            appPrefs.edit().putBoolean("notification_asked", previousNotificationAsked).commit()
+            CarPlayBackgroundSession.clear()
+            PendingReconnect.clear()
+        }
+    }
+
+    @Test
+    @Config(sdk = [28, 33])
+    fun bluetoothAudioKeepsReconnectPendingWhenSetupBlocksIt() {
+        val before = AirPlayPersistence.loadCarBluetoothAudio(context)
+        val previousWireless = AirPlayPersistence.loadWirelessEnabled(context)
+        val screen = openSettings()
+        val appPrefs = context.getSharedPreferences("diplay", Context.MODE_PRIVATE)
+        val previousNotificationAsked = appPrefs.getBoolean("notification_asked", false)
+        appPrefs.edit().putBoolean("notification_asked", true).commit()
+        val session = mock(CarPlayController::class.java)
+        var stops = 0
+        AirPlayPersistence.saveWirelessEnabled(context, false)
+        CarPlayBackgroundSession.store(session, mock(AndroidMediaSink::class.java), 800, 480, Any(),
+            CarPlaySessionDisplay(800, 480, Surface.ROTATION_0, false, false, 800, 480)) { complete ->
+                stops++
+                CarPlayBackgroundSession.clear(session)
+                complete()
+            }
+        CarPlayBackgroundSession.active = true
+        try {
+            ReflectionHelpers.setField(screen, "settingsCategory", SettingsCategory.ADVANCED)
+            ReflectionHelpers.callInstanceMethod<Unit>(screen, "render")
+            ReflectionHelpers.setField(screen, "setupError", "Setup is incomplete")
+            descendants(screen.window.decorView).filterIsInstance<Switch>()
+                .single { it.contentDescription == screen.getString(R.string.settings_car_bluetooth_audio) }
+                .performClick()
+            ShadowAlertDialog.getLatestAlertDialog().getButton(AlertDialog.BUTTON_POSITIVE).performClick()
+            shadowOf(Looper.getMainLooper()).idle()
+
+            assertEquals(!before, AirPlayPersistence.loadCarBluetoothAudio(context))
+            assertTrue(PendingReconnect.isPending(session))
+            val reconnectBar = ReflectionHelpers.getField<View>(screen, "reconnectBar")
+            assertEquals(View.VISIBLE, reconnectBar.visibility)
+            assertSame(session, CarPlayBackgroundSession.snapshot()?.controller)
+            assertEquals(0, stops)
+
+            ReflectionHelpers.setField(screen, "setupError", null)
+            descendants(reconnectBar).filterIsInstance<TextView>()
+                .single { it.text == screen.getString(R.string.settings_reconnect_now) }
+                .performClick()
+            shadowOf(Looper.getMainLooper()).idle()
+
+            assertEquals(1, stops)
+            assertNull(CarPlayBackgroundSession.snapshot())
+        } finally {
+            AirPlayPersistence.saveWirelessEnabled(context, previousWireless)
+            AirPlayPersistence.saveCarBluetoothAudio(context, before)
+            appPrefs.edit().putBoolean("notification_asked", previousNotificationAsked).commit()
             CarPlayBackgroundSession.clear()
             PendingReconnect.clear()
         }
@@ -985,6 +1267,44 @@ class AdaptiveSettingsUiTest {
             assertEquals(0, stops)
         } finally {
             AirPlayPersistence.saveCallAtCallRate(context, false)
+            CarPlayBackgroundSession.clear()
+            PendingReconnect.clear()
+        }
+    }
+
+    @Test
+    @Config(sdk = [28, 33])
+    fun automaticAppearanceDeclarationIsOnByDefaultAndMarksTheActiveSessionForReconnectWithoutDroppingIt() {
+        assertTrue(AirPlayPersistence.loadDeclareAutomaticAppearance(context)) // nothing stored: as every release since 0.2.16
+        val screen = openSettings()
+        val session = mock(CarPlayController::class.java)
+        var stops = 0
+        CarPlayBackgroundSession.store(session, mock(AndroidMediaSink::class.java), 800, 480, Any(),
+            CarPlaySessionDisplay(800, 480, Surface.ROTATION_0, false, false, 800, 480)) { stops++ }
+        CarPlayBackgroundSession.active = true
+        try {
+            ReflectionHelpers.setField(screen, "settingsCategory", SettingsCategory.ADVANCED)
+            PendingReconnect.clear()
+            ReflectionHelpers.callInstanceMethod<Unit>(screen, "render")
+            val setting = descendants(screen.window.decorView).filterIsInstance<Switch>()
+                .single { it.contentDescription == screen.getString(R.string.settings_declare_automatic_appearance) }
+            assertTrue(setting.isChecked)
+
+            setting.performClick()
+
+            assertFalse(AirPlayPersistence.loadDeclareAutomaticAppearance(context))
+            assertTrue(PendingReconnect.isPending(session))
+            assertEquals(View.VISIBLE, ReflectionHelpers.getField<View>(screen, "reconnectBar").visibility)
+            assertSame(session, CarPlayBackgroundSession.snapshot()?.controller)
+            assertEquals(0, stops)
+
+            setting.performClick()
+
+            assertTrue(setting.isChecked)
+            assertTrue(AirPlayPersistence.loadDeclareAutomaticAppearance(context))
+            assertEquals(0, stops)
+        } finally {
+            AirPlayPersistence.saveDeclareAutomaticAppearance(context, true)
             CarPlayBackgroundSession.clear()
             PendingReconnect.clear()
         }

@@ -64,6 +64,16 @@ interface AirPlayMediaHandler {
     fun onSetupResponseSent(session: AirPlaySession) {}
     /** duckAudio (true) and unduckAudio (false): the iPhone marks the start and end of a navigation prompt. */
     fun onAudioDuck(session: AirPlaySession, ducked: Boolean) {}
+    /**
+     * False while no screen is attached that could show the main screen's frames, e.g. while CarPlay
+     * is hidden behind another app. No frame can then render to prove that a session works.
+     */
+    fun hasMainScreenOutput(): Boolean = true
+    /**
+     * How many times a screen for the main screen has been attached; it only grows. A change shows that
+     * one was attached in between, even if CarPlay was hidden again before [hasMainScreenOutput] was asked.
+     */
+    fun mainScreenOutputAttachments(): Long = 0L
 }
 
 /**
@@ -96,6 +106,9 @@ class AirPlaySession(
     @Volatile private var mainFrameRendered = false
     // Activity 重建后仍可判断当前会话的中控主视频是否已经出帧。
     val hasRenderedMainFrame: Boolean get() = mainFrameRendered && !closed.get()
+    @Volatile private var audioReceived = false
+    /** The iPhone sent decrypted main audio (music, calls, prompts, Siri; types 100, 102, 103) on this session. */
+    val hasReceivedAudio: Boolean get() = audioReceived && !closed.get()
 
     private val closed = AtomicBoolean(false)
     internal val isClosed: Boolean get() = closed.get()
@@ -140,6 +153,11 @@ class AirPlaySession(
         if (closed.get()) return
         mainFrameRendered = true
         listener.onVideoFrameRendered(this)
+    }
+
+    /** Called for every decrypted audio packet, so it only writes the first time. */
+    internal fun noteAudioReceived() {
+        if (!audioReceived) audioReceived = true
     }
 
     internal fun logTrace(message: String) = trace { message }
@@ -379,6 +397,11 @@ class AirPlaySession(
         sendHidReport(AirPlayHid.MEDIA_HID_UID, AirPlayHid.mediaReport(0))
     }
 
+    /** Presses [index] and keeps it down until [releaseMedia]; the iPhone seeks while Fast Forward or Rewind is held. */
+    fun holdMedia(index: Int) = sendHidReport(AirPlayHid.MEDIA_HID_UID, AirPlayHid.mediaReport(index))
+
+    fun releaseMedia() = sendHidReport(AirPlayHid.MEDIA_HID_UID, AirPlayHid.mediaReport(0))
+
     fun sendTelephony(index: Int) {
         sendHidReport(AirPlayHid.TELEPHONY_HID_UID, AirPlayHid.telephonyReport(index))
         sendHidReport(AirPlayHid.TELEPHONY_HID_UID, AirPlayHid.telephonyReport(0))
@@ -451,7 +474,7 @@ class AirPlaySession(
         com.shilapi.xcertplay.network.TcpLiveness.configure(socket) { debugLog(it) }
         val input = BufferedInputStream(socket.getInputStream())
         val output = BufferedOutputStream(socket.getOutputStream())
-        var accumulated = ByteArray(0)
+        val frames = ControlFrameBuffer(READ_CHUNK_BYTES)
         val buffer = ByteArray(READ_CHUNK_BYTES)
         var closeReason = "session closed"
         try {
@@ -475,10 +498,8 @@ class AirPlaySession(
                     encBuf = decrypted.rest
                     plaintext = decrypted.data
                 }
-                accumulated += plaintext
-                val parsed = RtspMessage.parseMessages(accumulated)
-                accumulated = parsed.rest
-                for (request in parsed.messages) {
+                frames.append(plaintext)
+                for (request in frames.drain()) {
                     val cseq = request.headers["cseq"] ?: "-"
                     val path = request.path.lowercase()
                     val showInDebugOverlay =
@@ -673,7 +694,8 @@ class AirPlaySession(
         val deviceId = string(dict["deviceID"])
         val wifiMac = string(dict["macAddress"]).lowercase()
         val model = string(dict["model"])
-        debugLog(AirPlayPeerDiagnostics.summary(model, string(dict["osVersion"]), string(dict["sourceVersion"])))
+        debugLog(AirPlayPeerDiagnostics.summary(model, string(dict["osVersion"]), string(dict["sourceVersion"]),
+            string(dict["osBuildVersion"])))
         if (deviceId.isNotEmpty()) deviceBtMac = deviceId
         if (name.isNotEmpty() || deviceId.isNotEmpty() || wifiMac.isNotEmpty()) {
             listener.onDeviceInfo(this, AirPlayDeviceInfo(name, deviceId, wifiMac, model))
@@ -920,7 +942,7 @@ class AirPlaySession(
             val input = BufferedInputStream(socket.getInputStream())
             val output = BufferedOutputStream(socket.getOutputStream())
             var encrypted = ByteArray(0)
-            var plaintext = ByteArray(0)
+            val frames = ControlFrameBuffer(READ_CHUNK_BYTES)
             val buffer = ByteArray(READ_CHUNK_BYTES)
             while (!closed.get()) {
                 val count = input.read(buffer)
@@ -934,10 +956,8 @@ class AirPlaySession(
                     break
                 }
                 encrypted = decrypted.rest
-                plaintext += decrypted.data
-                val parsed = RtspMessage.parseMessages(plaintext)
-                plaintext = parsed.rest
-                for (message in parsed.messages) {
+                frames.append(decrypted.data)
+                for (message in frames.drain()) {
                     if (message.method.startsWith("RTSP/") || message.method.startsWith("HTTP/")) continue
                     debugLog(
                         "airplay event rx ${message.method} ${message.path} cseq=${message.headers["cseq"] ?: "-"} body=${message.body.size}",

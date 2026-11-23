@@ -36,6 +36,12 @@ class CarPlayViewAreas private constructor(
 
     fun kindOf(index: Int): Kind = slots[index].kind
 
+    /**
+     * Whether the area in use is on a portrait screen. A split-screen window's own shape does not tell: on a
+     * screen narrower than about 2:1 a side-by-side window is taller than wide on a landscape screen (#1176).
+     */
+    val currentPortrait: Boolean get() = slots[current].portrait
+
     /** The area of [kind] with [dockEdge] (or the edge-less one) on the current screen, or null. */
     fun index(kind: Kind, dockEdge: Int?): Int? = index(kind, slots[current].portrait, dockEdge)
 
@@ -154,8 +160,8 @@ class CarPlayViewAreas private constructor(
             for (screen in screens) {
                 val window = splits[screen] ?: continue
                 // The window's own size (BYD shows its bars in split screen), kept even for the encoder.
-                val splitWidth = (screen.width * window.first).toInt().coerceIn(2, screen.width) and 1.inv()
-                val splitHeight = (screen.height * window.second).toInt().coerceIn(2, screen.height) and 1.inv()
+                val splitWidth = (screen.width * window.first).toInt().coerceIn(2, screen.width.coerceAtLeast(2)) and 1.inv()
+                val splitHeight = (screen.height * window.second).toInt().coerceIn(2, screen.height.coerceAtLeast(2)) and 1.inv()
                 for (edge in edges) {
                     areas += AirPlayViewArea(splitWidth, splitHeight, dockEdge = edge)
                     slots += Slot(Kind.SPLIT_SCREEN, screen.portrait)

@@ -31,9 +31,12 @@ internal object BydClusterBridge {
     private var lastSent: BydClusterFrame? = null
     private var ticksSinceSend = 0
     private var guidanceLogged = false
+    private var broadcastFailing = false
 
     private var guidanceActive = false
-    private var mapShown = false
+    /** Whether the host's map window is on the cluster; written under [lock], readable from any thread. */
+    @Volatile internal var mapShown = false
+        private set
 
     fun initialize(appContext: Context) = synchronized(lock) {
         if (context != null) return@synchronized
@@ -52,6 +55,11 @@ internal object BydClusterBridge {
             available = true
         }
         Log.i(TAG, "cluster adapter available=$available adapter=${adapter?.packageName} factoryTest=${factory != null}")
+        adapter?.let {
+            NavigationOutputLog.note(TAG, "cluster.adapter",
+                NavigationOutputLines.clusterAdapter(it.packageName, it.needsSimpleNavigationMode), logcat = false)
+        }
+        if (factory != null) NavigationOutputLog.note(TAG, "cluster.adapter", NavigationOutputLines.clusterFactoryTest())
         if (available && !senderStarted) {
             senderStarted = true
             Executors.newSingleThreadScheduledExecutor { runnable ->
@@ -94,6 +102,9 @@ internal object BydClusterBridge {
         if (!force && frame == lastSent) return
         factory?.let {
             it.update(frame.icon, frame.roundaboutExit, frame.distanceMeters)
+            if (lastSent == null) {
+                NavigationOutputLog.note(TAG, "cluster.guidance", NavigationOutputLines.clusterGuidanceSent("factory test output"))
+            }
             lastSent = frame
             ticksSinceSend = 0
             return
@@ -118,6 +129,8 @@ internal object BydClusterBridge {
             if (!guidanceLogged) {
                 guidanceLogged = true
                 Log.i(TAG, "cluster guidance sent $frame")
+                NavigationOutputLog.note(TAG, "cluster.guidance",
+                    NavigationOutputLines.clusterGuidanceSent(intent.`package` ?: "none"), logcat = false)
             }
         }
     }
@@ -125,6 +138,7 @@ internal object BydClusterBridge {
     private fun sendEndLocked() {
         factory?.let {
             it.clear()
+            if (lastSent != null) NavigationOutputLog.note(TAG, "cluster.guidance", NavigationOutputLines.clusterGuidanceEnded())
             lastSent = null
             guidanceLogged = false
             return
@@ -143,7 +157,7 @@ internal object BydClusterBridge {
         guidanceLogged = false
         guidanceActive = false
         applyClusterModeLocked()
-        Log.i(TAG, "cluster guidance ended")
+        NavigationOutputLog.note(TAG, "cluster.guidance", NavigationOutputLines.clusterGuidanceEnded())
     }
 
     /** The host's CarPlay map window appeared on or left the cluster display. */
@@ -205,9 +219,15 @@ internal object BydClusterBridge {
         val appContext = context ?: return false
         return try {
             appContext.sendBroadcast(intent)
+            if (broadcastFailing) {
+                broadcastFailing = false
+                NavigationOutputLog.note(TAG, "cluster.broadcast", NavigationOutputLines.clusterBroadcastRecovered())
+            }
             true
         } catch (error: RuntimeException) {
             Log.w(TAG, "cluster broadcast failed", error)
+            broadcastFailing = true
+            NavigationOutputLog.note(TAG, "cluster.broadcast", NavigationOutputLines.clusterBroadcastFailed(error), logcat = false)
             false
         }
     }

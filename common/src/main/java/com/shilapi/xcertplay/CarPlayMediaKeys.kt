@@ -19,6 +19,7 @@ import android.util.Log
 import android.view.KeyEvent
 import androidx.core.graphics.drawable.toBitmap
 import com.shilapi.xcertplay.airplay.CarPlayMediaButton
+import com.shilapi.xcertplay.airplay.LongPressSeekKeys
 import com.shilapi.xcertplay.compat.AudioFocusRequestCompat
 import com.shilapi.xcertplay.host.R
 import com.shilapi.xcertplay.hud.BydOutputSettings
@@ -42,6 +43,11 @@ internal object CarPlayMediaKeys {
         PlaybackState.ACTION_PLAY_PAUSE or PlaybackState.ACTION_SKIP_TO_NEXT or PlaybackState.ACTION_SKIP_TO_PREVIOUS
 
     private val mainHandler = Handler(Looper.getMainLooper())
+    private val seekHold = MediaSeekHold(
+        schedule = { task, delayMillis -> mainHandler.postDelayed(task, delayMillis) },
+        cancel = mainHandler::removeCallbacks,
+        note = ::noteMediaKey,
+    )
     private val artworkQueue = NowPlayingArtworkQueue(
         worker = Executors.newSingleThreadExecutor { task ->
             Thread(task, "diplay-now-playing-artwork").apply { isDaemon = true }
@@ -65,6 +71,10 @@ internal object CarPlayMediaKeys {
     private var transientFocusInterrupted = false
     private var appContext: Context? = null
     private var mediaAudioActive = false
+    /** "CarPlay audio over the car's Bluetooth" was on when the controller attached. */
+    private var carBluetoothAudio = false
+    /** The session only shows what is playing: no audio focus, no transport actions, keys only logged. */
+    private var displayOnly = false
     private var nowPlaying = CarPlayNowPlaying()
     private var elapsedUpdatedAt = 0L
     private var artwork: Bitmap? = null
@@ -79,6 +89,8 @@ internal object CarPlayMediaKeys {
         }
         appContext = context.applicationContext
         controller = next
+        // Read once per connection, as the session's audio setup reads it.
+        carBluetoothAudio = AirPlayPersistence.loadCarBluetoothAudio(context.applicationContext)
         GeelyWheelKeys.start(context)
         com.shilapi.xcertplay.media.AmbientMusicController.claimPlaybackOwner(next)
         next.playbackListener = { playing ->
@@ -145,7 +157,8 @@ internal object CarPlayMediaKeys {
                 if (nowPlaying.elapsedMillis != update.elapsedMillis) elapsedUpdatedAt = SystemClock.elapsedRealtime()
                 val metadataChanged = metadataChanged(nowPlaying, update) || artwork !== previousArtwork
                 nowPlaying = update
-                if (metadataChanged) ClusterMusicState.publish(update, artwork)
+                ensureDisplayOnlyLocked()
+                ClusterMusicState.publish(update, artwork)
                 updateInitialAlbumRecovery(expected)
                 // The iPhone repeats NowPlayingUpdate about twice a second for the position alone.
                 // Republishing the metadata each time sent a copy of the artwork through system_server
@@ -197,7 +210,7 @@ internal object CarPlayMediaKeys {
 
     private fun albumRecoveryEnabled(): Boolean {
         val context = appContext ?: return false
-        if (ClusterMusicSettings.enabled(context)) return true
+        if (ClusterMusicSettings.enabled(context) || com.shilapi.xcertplay.airplay.ClusterPlayerSettings.enabled(context)) return true
         val settings = com.shilapi.xcertplay.media.AmbientMusicSettings.load(context)
         return settings.enabled && settings.colorSource == com.shilapi.xcertplay.media.AmbientColorSource.ALBUM
     }
@@ -288,8 +301,39 @@ internal object CarPlayMediaKeys {
         val context = appContext ?: return
         if (controller == null) return
         mediaAudioActive = active
+        // Media audio after all: the full session, with focus and keys, takes over.
+        if (active && displayOnly) dropSessionLocked()
         if (active && session == null) start(context) else if (active) regainFocusLocked()
         publishPlaybackStateLocked()
+    }
+
+    /**
+     * With "CarPlay audio over the car's Bluetooth" the iPhone opens no media audio stream, so [start]
+     * never runs and other apps saw no session at all, while DiPlay still received the title and the
+     * cover (#1257). This session only shows what is playing, from the first title on: it requests no
+     * audio focus and lists no transport actions, and its callback only logs what arrives, so play,
+     * pause and skip stay with the car's own Bluetooth (AVRCP) session.
+     */
+    private fun ensureDisplayOnlyLocked() {
+        if (!carBluetoothAudio || session != null || nowPlaying.title.isNullOrBlank()) return
+        val context = appContext ?: return
+        displayOnly = true
+        session = MediaSession(context, "DiPlay CarPlay").apply {
+            setCallback(displayOnlyCallback, mainHandler)
+            setMetadata(androidMetadata(nowPlaying, shownArtworkLocked()))
+            isActive = true
+        }
+        Log.i(TAG, "display-only session active (car Bluetooth audio)")
+        WheelKeyLog.note("display-only session active (car Bluetooth audio)")
+    }
+
+    private fun dropSessionLocked() {
+        session?.let {
+            it.isActive = false
+            it.release()
+        }
+        session = null
+        displayOnly = false
     }
 
     private fun start(context: Context) {
@@ -381,11 +425,8 @@ internal object CarPlayMediaKeys {
         initialAlbumRecovery = InitialAlbumRecovery()
         ambientColorCache.clear()
         artworkQueue.clear()
-        session?.let {
-            it.isActive = false
-            it.release()
-        }
-        session = null
+        dropSessionLocked()
+        carBluetoothAudio = false
         mediaAudioActive = false
         nowPlaying = CarPlayNowPlaying()
         artwork = null
@@ -398,24 +439,28 @@ internal object CarPlayMediaKeys {
     }
 
     private fun publishPlaybackStateLocked() {
-        val playing = if (nowPlaying.elapsedMillis != null || nowPlaying.title != null) {
-            nowPlaying.playing
-        } else {
-            mediaAudioActive
-        }
-        session?.setPlaybackState(
-            PlaybackState.Builder()
-                .setActions(ACTIONS)
-                .setState(
-                    if (playing) PlaybackState.STATE_PLAYING else PlaybackState.STATE_PAUSED,
-                    nowPlaying.elapsedMillis ?: PlaybackState.PLAYBACK_POSITION_UNKNOWN,
-                    if (playing) 1f else 0f,
-                    // The iPhone sends elapsed time only on play, pause or seek, so Android must
-                    // extrapolate from when it arrived, not from this republish.
-                    elapsedUpdatedAt,
-                )
-                .build(),
-        )
+        session?.setPlaybackState(playbackState(nowPlaying, mediaAudioActive, displayOnly, elapsedUpdatedAt))
+    }
+
+    /** The session's state; a display-only session lists no actions, so apps offer no buttons for it. */
+    internal fun playbackState(
+        info: CarPlayNowPlaying,
+        mediaAudioActive: Boolean,
+        displayOnly: Boolean,
+        elapsedUpdatedAt: Long,
+    ): PlaybackState {
+        val playing = if (info.elapsedMillis != null || info.title != null) info.playing else mediaAudioActive
+        return PlaybackState.Builder()
+            .setActions(if (displayOnly) 0L else ACTIONS)
+            .setState(
+                if (playing) PlaybackState.STATE_PLAYING else PlaybackState.STATE_PAUSED,
+                info.elapsedMillis ?: PlaybackState.PLAYBACK_POSITION_UNKNOWN,
+                if (playing) 1f else 0f,
+                // The iPhone sends elapsed time only on play, pause or seek, so Android must
+                // extrapolate from when it arrived, not from this republish.
+                elapsedUpdatedAt,
+            )
+            .build()
     }
 
     private fun send(index: Int, source: String) {
@@ -433,7 +478,25 @@ internal object CarPlayMediaKeys {
 
     private fun notUsed(source: String) {
         Log.i(TAG, "media key $source not used by CarPlay")
-        WheelKeyLog.note("media key $source not used by CarPlay")
+        WheelKeyLog.noteAwaitingRelease("media $source", "media key $source not used by CarPlay")
+    }
+
+    /** [timing] goes on the key's "not used" line: when its release came after its downTime (#1190). */
+    private fun notUsedReleased(source: String, timing: String) {
+        Log.i(TAG, "media key $source not used by CarPlay$timing")
+        WheelKeyLog.released("media $source", timing)
+    }
+
+    /**
+     * A wheel long press with the long-press seek setting on (#1190): Fast Forward or Rewind, held on the
+     * iPhone by [seekHold]. Main thread.
+     */
+    private fun seek(index: Int, source: String, event: KeyEvent) =
+        seekHold.onKey(index, source, event, CarPlayVideo::onMediaKey) { synchronized(this) { controller } }
+
+    private fun noteMediaKey(message: String) {
+        Log.i(TAG, message)
+        WheelKeyLog.note(message)
     }
 
     /** A steering-wheel media key captured outside the Android key stream (Geely/Lynk). */
@@ -447,9 +510,27 @@ internal object CarPlayMediaKeys {
 
     private val callback = CarPlayMediaCallback(
         experimentalDiLink3Keys = { appContext?.let(BydOutputSettings::carPlayCallControls) == true },
+        longPressSeek = { appContext?.let(AirPlayPersistence::loadWheelLongPressSeek) == true },
+        seek = ::seek,
         notUsed = ::notUsed,
+        notUsedReleased = ::notUsedReleased,
         send = ::send,
     )
+
+    /**
+     * The display-only session sends nothing to the iPhone. A key or a launcher's button that the head
+     * unit hands it anyway is logged, so a report can tell it from a key the car kept (#610, #1257).
+     */
+    private val displayOnlyCallback = CarPlayMediaCallback(
+        experimentalDiLink3Keys = { appContext?.let(BydOutputSettings::carPlayCallControls) == true },
+        notUsed = ::notUsed,
+        notUsedReleased = ::notUsedReleased,
+    ) { _, source -> leftToCar(source) }
+
+    private fun leftToCar(source: String) {
+        Log.i(TAG, "media key $source reached the display-only session; left to the car")
+        WheelKeyLog.note("media key $source reached the display-only session; left to the car")
+    }
 
     /** Whether [next] changes what the media session's metadata shows; position and play state do not. */
     internal fun metadataChanged(previous: CarPlayNowPlaying, next: CarPlayNowPlaying): Boolean =
@@ -556,20 +637,41 @@ internal object CarPlayMediaKeys {
  * Media-session input → CarPlay presses. Hardware keys arrive as button events and keep the toggle;
  * media controllers (not hardware keys) call [onPlay] and [onPause] with an explicit intent.
  * A button that is not a CarPlay key goes to [notUsed]: a car that sends its own code for a wheel key
- * then shows that code in the report, instead of looking like a car that sent nothing (#610).
+ * then shows that code in the report, instead of looking like a car that sent nothing (#610). Its release
+ * goes to [notUsedReleased] with when it came, so the report shows whether a car sends a long press at its
+ * threshold or at the release (#1190).
+ *
+ * With [longPressSeek] on, DiLink 3's long-press next and previous keys ([seekKeys], matched by the name
+ * KeyEvent.keyCodeToString gives their code) go to [seek] as Fast Forward and Rewind, press and release alike.
  */
 internal class CarPlayMediaCallback(
     private val experimentalDiLink3Keys: () -> Boolean = { false },
+    private val longPressSeek: () -> Boolean = { false },
+    private val seekKeys: LongPressSeekKeys = CarPlayMediaButton.longPressSeekKeys,
+    private val seek: (index: Int, source: String, event: KeyEvent) -> Unit = { _, _, _ -> },
     private val notUsed: (source: String) -> Unit = {},
+    private val notUsedReleased: (source: String, timing: String) -> Unit = { _, _ -> },
+    private val uptime: () -> Long = SystemClock::uptimeMillis,
     private val send: (index: Int, source: String) -> Unit,
 ) : MediaSession.Callback() {
+    private val unusedTiming = KeyHoldTiming<Int>(uptime)
+
     override fun onMediaButtonEvent(mediaButtonIntent: Intent): Boolean {
         @Suppress("DEPRECATION")
         val event = mediaButtonIntent.getParcelableExtra<KeyEvent>(Intent.EXTRA_KEY_EVENT) ?: return false
         val press = event.action == KeyEvent.ACTION_DOWN && event.repeatCount == 0
+        seekKeys.seekFor(event.keyCode)?.takeIf { longPressSeek() }?.let { seekIndex ->
+            seek(seekIndex, KeyEvent.keyCodeToString(event.keyCode), event)
+            return true
+        }
         val index = CarPlayMediaButton.forKeyCode(event.keyCode, experimentalDiLink3Keys())
         if (index == null) {
-            if (press) notUsed(KeyEvent.keyCodeToString(event.keyCode))
+            if (press) {
+                unusedTiming.pressed(event.keyCode, event)
+                notUsed(KeyEvent.keyCodeToString(event.keyCode))
+            } else {
+                unusedTiming.after(event.keyCode, event)?.let { notUsedReleased(KeyEvent.keyCodeToString(event.keyCode), it) }
+            }
             return super.onMediaButtonEvent(mediaButtonIntent)
         }
         if (press) send(index, KeyEvent.keyCodeToString(event.keyCode))
