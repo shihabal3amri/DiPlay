@@ -85,7 +85,6 @@ import com.shilapi.xcertplay.network.HotspotCredentials
 import com.shilapi.xcertplay.network.WifiChannelRanker
 import com.shilapi.xcertplay.network.WifiDirectSupport
 import com.shilapi.xcertplay.network.WifiP2pChannels
-import com.shilapi.xcertplay.network.WifiP2pChannels
 import com.shilapi.xcertplay.orchestration.ManualHotspotProvisioning
 import com.shilapi.xcertplay.orchestration.ManualHotspotSecurity
 import com.shilapi.xcertplay.orchestration.ManualHotspotValidation
