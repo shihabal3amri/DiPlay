@@ -31,6 +31,7 @@ class SettingsTranslationsTest {
     private val experimentalSuffix = mapOf(
         "values-ar" to "(تجريبي)",
         "values-es" to "(experimental)",
+        "values-fr" to "(expérimental)",
         "values-it" to "(sperimentale)",
         "values-ja" to "（実験的機能）",
         "values-ko" to "(실험 기능)",

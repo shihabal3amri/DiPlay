@@ -1,6 +1,6 @@
 # Buffered music (CarPlay main buffered audio)
 
-Apple calls it "Enhanced buffering" ([WWDC23, Optimize CarPlay for vehicle systems](https://developer.apple.com/videos/play/wwdc2023/10150/)): for apps that support it, the iPhone sends music ahead of time and the car keeps the timing, so short wireless gaps are not heard. DiPlay implements the receiving side. It is off by default: **Settings → Display and performance → Buffered music (experimental)**, which reconnects CarPlay.
+Apple calls it "Enhanced buffering" ([WWDC23, Optimize CarPlay for vehicle systems](https://developer.apple.com/videos/play/wwdc2023/10150/)): for apps that support it, the iPhone sends music ahead of time and the car keeps the timing, so short wireless gaps are not heard. DiPlay implements the receiving side. It is off by default: **Settings → Advanced → Video and audio → Buffered music (experimental)**. The change applies at the next connection. Select **Reconnect now** to apply it during a session.
 
 ## What changes
 

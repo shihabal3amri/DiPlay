@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="card_preview_title">Aperçu de l’emplacement de la fiche de guidage</string>
+    <string name="card_preview_note">Position proportionnelle sur l’ensemble du panneau du combiné. Le bord réel de la petite fenêtre varie selon la voiture.</string>
+    <string name="card_preview_full">Plein écran</string>
+    <string name="card_preview_small">Petite fenêtre</string>
+</resources>
