@@ -174,4 +174,24 @@ class AppLocaleTest {
         AppLocale.save(context, AppLocale.SYSTEM)
         assertTrue(manager.applicationLocales.isEmpty)
     }
+
+    @Test fun frenchIsSelectableOnAndroid13() {
+        AppLocale.save(context, AppLocale.FRENCH)
+        assertEquals("fr", manager.applicationLocales.toLanguageTags())
+        assertEquals(AppLocale.FRENCH, AppLocale.preference(context))
+        assertEquals("Français", AppLocale.displayName(context, AppLocale.FRENCH))
+        assertSame(context, AppLocale.wrap(context))
+        AppLocale.save(context, AppLocale.SYSTEM)
+        assertTrue(manager.applicationLocales.isEmpty)
+    }
+
+    @Test @Config(sdk = [28, 32])
+    fun frenchWorksOnOlderAndroidAndUsesTranslatedResources() {
+        AppLocale.save(context, AppLocale.FRENCH)
+        val wrapped = AppLocale.wrap(context)
+        assertEquals("fr", wrapped.resources.configuration.locales.toLanguageTags())
+        assertEquals("Langue de l’app", wrapped.getString(R.string.language_app_language))
+        assertEquals(View.LAYOUT_DIRECTION_LTR, wrapped.resources.configuration.layoutDirection)
+        assertEquals(AppLocale.FRENCH, AppLocale.preference(context))
+    }
 }
