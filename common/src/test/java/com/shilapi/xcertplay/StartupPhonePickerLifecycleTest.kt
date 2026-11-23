@@ -84,6 +84,7 @@ class StartupPhonePickerLifecycleTest {
         ReflectionHelpers.setField(DiPlayBootstrap, "ready", bootstrapReady)
         StartupPhonePicker.lastOutcome = null
         StartupPhonePicker.connectionStateReadable = null
+        StartupPhonePicker.coveredAutomaticQuestion = false
         clearSettings()
     }
 
@@ -151,30 +152,115 @@ class StartupPhonePickerLifecycleTest {
         assertFalse(startedCarPlay())
     }
 
-    @Test fun anAutomaticStartThatGetsCoveredStartsCarPlayWithTheLastIphoneUsed() {
-        // Connect when DiPlay opens asked, then the car's home screen came over DiPlay.
-        DiPlayPreferences.savePhone(context, alex.address, "Alex’s iPhone")
+    /** Connect when DiPlay opens asked, then the car's home screen, a camera or a call came over DiPlay. */
+    private fun coverAutomaticQuestion() {
         connectWireless(automatic = true)
         assertNotNull(picker())
-        assertFalse(startedCarPlay())
-
         controller.pause().stop()
         idle()
         assertNull(picker())
-        assertEquals(StartupPhonePicker.Outcome.COVERED_STARTED_LAST_USED, StartupPhonePicker.lastOutcome)
-        assertEquals(alex.address, DiPlayPreferences.phoneAddress(context))
-        assertTrue(startedCarPlay())
+        assertEquals(StartupPhonePicker.Outcome.COVERED_WAITING, StartupPhonePicker.lastOutcome)
+        assertTrue(StartupPhonePicker.coveredAutomaticQuestion)
     }
 
-    @Test fun anAutomaticStartWithoutALastIphoneStartsNothingWhenCovered() {
-        connectWireless(automatic = true)
-        assertNotNull(picker())
-        controller.pause().stop()
+    private fun countdownText(seconds: Int) = activity.getString(
+        com.shilapi.xcertplay.host.R.string.startup_picker_countdown, "Alex’s iPhone", seconds)
+
+    @Test fun aCoveredAutomaticQuestionWaitsForDiPlayAndAsksAgain() {
+        DiPlayPreferences.savePhone(context, alex.address, "Alex’s iPhone")
+        coverAutomaticQuestion()
+        // Nothing starts while covered, however long the camera or call stays in front.
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(30))
+        assertEquals(0, carPlayStarts())
+
+        // Back on screen: the question returns as an automatic one, with a fresh countdown.
+        controller.start().resume()
+        idle()
+        val again = picker()
+        assertNotNull(again)
+        assertTrue(ReflectionHelpers.getField<Boolean>(activity, "startupPickerAutomatic"))
+        assertTrue(countdownText(8) in texts(again!!))
+        assertFalse(StartupPhonePicker.coveredAutomaticQuestion)
+        assertEquals(0, carPlayStarts())
+
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(10))
+        assertEquals(StartupPhonePicker.Outcome.COUNTDOWN, StartupPhonePicker.lastOutcome)
+        assertEquals(1, carPlayStarts())
+    }
+
+    @Test fun aCoveredQuestionWithoutALastIphoneAlsoComesBack() {
+        coverAutomaticQuestion()
+        assertEquals(0, carPlayStarts())
+        controller.start().resume()
+        idle()
+        val again = picker()
+        assertNotNull(again)
+        assertTrue(activity.getString(com.shilapi.xcertplay.host.R.string.startup_picker_tap) in texts(again!!))
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(10))
+        assertTrue(again.isShowing)
+        assertNull(DiPlayPreferences.phoneAddress(context))
+        assertEquals(0, carPlayStarts())
+    }
+
+    @Test fun aCoveredQuestionDoesNotComeBackAfterCarPlayOpenedAndClosed() {
+        DiPlayPreferences.savePhone(context, alex.address, "Alex’s iPhone")
+        coverAutomaticQuestion()
+        // The iPhone was plugged in: CarPlay ran over USB, then the driver unplugged it.
+        openCarPlayScreen()
+        assertFalse(StartupPhonePicker.coveredAutomaticQuestion)
+        screens.single().pause().stop().destroy()
+        assertNull(CarPlayScreen.current())
+
+        controller.start().resume()
         idle()
         assertNull(picker())
-        assertNull(DiPlayPreferences.phoneAddress(context))
-        assertEquals(StartupPhonePicker.Outcome.COVERED_DROPPED, StartupPhonePicker.lastOutcome)
-        assertFalse(startedCarPlay())
+        assertEquals(0, carPlayStarts())
+    }
+
+    @Test fun aPickInChooseIphoneDropsACoveredQuestion() {
+        DiPlayPreferences.savePhone(context, alex.address, "Alex’s iPhone")
+        coverAutomaticQuestion()
+        ReflectionHelpers.callInstanceMethod<Unit>(activity, "choosePhone")
+        idle()
+        shadowOf(ShadowAlertDialog.getLatestAlertDialog()).clickOnItem(1)
+        idle()
+        assertFalse(StartupPhonePicker.coveredAutomaticQuestion)
+        controller.start().resume()
+        idle()
+        assertNull(picker())
+        assertEquals(sam.address, DiPlayPreferences.phoneAddress(context))
+        assertEquals(0, carPlayStarts())
+    }
+
+    @Test fun aBluetoothStartOnReturnStartsCarPlayOnce() {
+        DiPlayPreferences.savePhone(context, alex.address, "Alex’s iPhone")
+        DiPlayPreferences.saveConnectOnPhoneBluetooth(context, true)
+        coverAutomaticQuestion()
+        // Alex's iPhone joins the car's Bluetooth and its start arrives as DiPlay comes back.
+        shadowOf(alex).setConnected(true)
+        controller.start()
+        controller.newIntent(android.content.Intent(context, DiPlayActivity::class.java)
+            .putExtra(PhoneBluetoothReceiver.EXTRA_AUTO_CONNECT, PhoneBluetoothReceiver.launchToken))
+        controller.resume()
+        idle()
+        assertEquals(StartupPhonePicker.Outcome.CONNECTED_ONLY_IPHONE_ON_BLUETOOTH, StartupPhonePicker.lastOutcome)
+        assertEquals(1, carPlayStarts())
+        assertNull(picker())
+    }
+
+    @Test fun connectWhenDiPlayOpensOnReturnStartsCarPlayOnce() {
+        DiPlayPreferences.savePhone(context, alex.address, "Alex’s iPhone")
+        coverAutomaticQuestion()
+        // DiPlay is recreated in the background, so its next onResume runs Connect when DiPlay opens.
+        DiPlayPreferences.saveAutoConnect(context, true)
+        DiPlayPreferences.saveDefaultConnectionMode(context, DefaultConnectionMode.WIRELESS)
+        shadowOf(alex).setConnected(true)
+        controller.recreate()
+        activity = controller.get()
+        controller.start().resume()
+        idle()
+        assertEquals(1, carPlayStarts())
+        assertNull(picker())
     }
 
     @Test fun aSessionThatStartedDuringTheQuestionIsLeftAlone() {
@@ -260,7 +346,15 @@ class StartupPhonePickerLifecycleTest {
         idle()
         assertNull(picker())
         assertEquals(StartupPhonePicker.Outcome.COVERED_DROPPED, StartupPhonePicker.lastOutcome)
+        assertFalse(StartupPhonePicker.coveredAutomaticQuestion)
         assertFalse(startedCarPlay())
+    }
+
+    @Test fun finishingDropsAQuestionThatWasAlreadyCovered() {
+        coverAutomaticQuestion()
+        activity.finish()
+        controller.destroy()
+        assertFalse(StartupPhonePicker.coveredAutomaticQuestion)
     }
 
     private fun recreate(): DiPlayActivity {

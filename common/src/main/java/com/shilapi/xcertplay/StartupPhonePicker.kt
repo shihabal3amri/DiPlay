@@ -47,8 +47,8 @@ internal object StartupPhonePicker {
         TAPPED("tapped"),
         COUNTDOWN("countdown"),
         CANCELLED("cancelled"),
-        /** DiPlay left the screen and the last iPhone used was started; whether CarPlay came up is not known here. */
-        COVERED_STARTED_LAST_USED("covered_started_last_used"),
+        /** Another screen covered an automatic question; it is asked again when DiPlay is back on screen. */
+        COVERED_WAITING("covered_waiting"),
         COVERED_DROPPED("covered_dropped"),
         /** CarPlay opened during the question, for example over USB, so nothing else was started. */
         CARPLAY_ALREADY_OPEN("carplay_already_open"),
@@ -57,6 +57,13 @@ internal object StartupPhonePicker {
     }
 
     @Volatile var lastOutcome: Outcome? = null
+
+    /**
+     * An automatic question was covered and waits for DiPlay to come back on screen. Cleared by any
+     * connect(), a pick in Choose iPhone, DiPlay finishing, and an opening CarPlay screen, so that a
+     * session that opened and closed in between never leads to a wireless start on return.
+     */
+    @Volatile var coveredAutomaticQuestion = false
     /** Whether the hidden `BluetoothDevice.isConnected` answered at the last decision; null before one. */
     @Volatile var connectionStateReadable: Boolean? = null
 

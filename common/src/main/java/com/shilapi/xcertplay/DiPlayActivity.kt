@@ -215,9 +215,6 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
      */
     private var iphoneQuestionAnswered = false
     private var startupPickerDialog: AlertDialog? = null
-    // Set while the question came from an automatic start and has a last-used iPhone: if another screen
-    // covers DiPlay, that iPhone connects, as it did before the question existed.
-    private var startupPickerConnectWhenCovered: BluetoothDevice? = null
     // Whether the question on screen came from an automatic start; such a question comes back after a recreate.
     private var startupPickerAutomatic = false
     private var askAgainAfterRecreate = false
@@ -587,6 +584,7 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
                 handler.post { connect(DiPlayPreferences.autoConnectWireless(this), automatic = true) }
             }
         }
+        askCoveredQuestionAgain()
     }
     override fun onPause() {
         appearanceUpdatesResumed = false
@@ -600,6 +598,7 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
     }
 
     override fun onDestroy() {
+        if (isFinishing) StartupPhonePicker.coveredAutomaticQuestion = false
         // Dismissing also stops its countdown, so it cannot connect for a destroyed screen.
         startupPickerDialog?.dismiss()
         settingsSearchPopup?.dismiss()
@@ -5988,6 +5987,8 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
 
     /** [automatic] is true when DiPlay starts CarPlay by itself, without a tap on Connect. */
     private fun connect(wireless: Boolean, automatic: Boolean) {
+        // Any start replaces a question that was covered earlier.
+        StartupPhonePicker.coveredAutomaticQuestion = false
         startupHotspotCancelled = true
         if (wireless && pendingCarHotspotSetup) { toast(getString(R.string.save_your_hotspot_details_in_connection_setup_first)); page = "connection"; render(); return }
         if (setupError != null) { toast(setupError!!); return }
@@ -6074,6 +6075,7 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
                 DiPlayPreferences.savePhone(this, device.address, device.name ?: "iPhone")
                 // The driver's own pick answers the start-up question until DiPlay next comes on screen.
                 iphoneQuestionAnswered = true
+                StartupPhonePicker.coveredAutomaticQuestion = false
                 val start = pendingWireless; pendingWireless = false
                 render()
                 if (start) connect(true)
@@ -6123,26 +6125,41 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
         CarPlayScreen.current()?.lifecycle?.currentState?.isAtLeast(Lifecycle.State.STARTED) == true
 
     /**
-     * DiPlay leaves the screen with the question up. A question from a tap on Connect stops. One from an
-     * automatic start connects the last iPhone used, as before the question existed, unless DiPlay is
-     * closing or being recreated (the new instance asks again) or CarPlay has already opened.
+     * DiPlay leaves the screen with the question up, and nothing starts from here: a reversing camera,
+     * a call or the launcher may already be in front. A question from an automatic start is remembered
+     * and asked again when DiPlay is back on screen; a recreated DiPlay asks again from its saved state.
      */
     private fun stopStartupPhonePicker() {
+        if (isFinishing) StartupPhonePicker.coveredAutomaticQuestion = false
         // A dialog's dismiss listener runs a moment after dismiss(): one that a tap or the countdown already
         // closed is answered, even while the field still points to it.
         val question = startupPickerDialog?.takeIf { it.isShowing } ?: return
-        val fallback = startupPickerConnectWhenCovered
         askAgainAfterRecreate = startupPickerAutomatic && isChangingConfigurations
         question.dismiss()
         val outcome = when {
             isChangingConfigurations -> StartupPhonePicker.Outcome.RECREATED
             isFinishing -> StartupPhonePicker.Outcome.COVERED_DROPPED
             carPlayAlreadyOpen() -> StartupPhonePicker.Outcome.CARPLAY_ALREADY_OPEN
-            fallback != null -> StartupPhonePicker.Outcome.COVERED_STARTED_LAST_USED
+            startupPickerAutomatic -> StartupPhonePicker.Outcome.COVERED_WAITING
             else -> StartupPhonePicker.Outcome.COVERED_DROPPED
         }
         StartupPhonePicker.lastOutcome = outcome
-        if (outcome == StartupPhonePicker.Outcome.COVERED_STARTED_LAST_USED && fallback != null) pickStartupPhone(fallback)
+        if (outcome == StartupPhonePicker.Outcome.COVERED_WAITING) StartupPhonePicker.coveredAutomaticQuestion = true
+    }
+
+    /**
+     * Back on screen after an automatic question was covered: asks again with a fresh countdown. It runs
+     * after any start already posted (Connect when DiPlay opens, a Bluetooth start), and those clear the
+     * reminder in connect(), so CarPlay never starts twice.
+     */
+    private fun askCoveredQuestionAgain() {
+        if (!StartupPhonePicker.coveredAutomaticQuestion) return
+        handler.post {
+            if (!StartupPhonePicker.coveredAutomaticQuestion || isFinishing || isDestroyed) return@post
+            StartupPhonePicker.coveredAutomaticQuestion = false
+            // The switch may have been turned off meanwhile; then nothing starts by itself.
+            if (DiPlayPreferences.askWhichIphone(this) && !carPlayAlreadyOpen()) connect(true, automatic = true)
+        }
     }
 
     /** A paired device's name, with the end of its address when another device has the same name. */
@@ -6216,7 +6233,6 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
                 handler.removeCallbacks(countdown)
                 if (startupPickerDialog === dialog) {
                     startupPickerDialog = null
-                    startupPickerConnectWhenCovered = null
                     startupPickerAutomatic = false
                 }
             }
@@ -6224,7 +6240,6 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
         // A stray touch beside the dialog must not cancel the countdown while driving off.
         dialog.setCanceledOnTouchOutside(false)
         startupPickerDialog = dialog
-        startupPickerConnectWhenCovered = fallback.takeIf { automatic }
         startupPickerAutomatic = automatic
         askAgainAfterRecreate = false
         dialog.show()
