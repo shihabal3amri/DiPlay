@@ -502,7 +502,7 @@
     <string name="adb_dashboard_does_not_send_map">儀表板：%1$s，因此 iPhone 不會傳送地圖。</string>
     <string name="adb_not_approved">DiPlay 尚未獲得授權。點一下「檢查 ADB 存取權限」，然後在車機螢幕上允許 DiPlay。</string>
     <string name="adb_off">網路 ADB 已關閉。請在車機的開發人員選項中開啟。</string>
-    <string name="adb_network_not_answering">USB 偵錯已開啟，但網路 ADB 沒有回應。請在車機的開發人員選項中開啟網路 ADB；如果已經開啟，請關閉後再重新開啟。</string>
+    <string name="adb_network_not_answering">USB 偵錯已開啟，但網路 ADB 沒有回應。請在車機的開發人員選項中開啟網路 ADB；如果已經開啟，請關閉後再重新開啟。如果沒有這個選項，請用 USB 連接電腦，在電腦上執行「adb tcpip 5555」；車機每次重新啟動後都要重新執行。</string>
     <string name="adb_pairing_only">此車機僅提供需要配對的無線除錯，DiPlay 目前不支援。</string>
     <string name="navi_mode_off">關閉</string>
     <string name="navi_mode_turn_on_by_navi">導航時開啟</string>

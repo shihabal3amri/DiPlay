@@ -543,7 +543,7 @@
     <string name="adb_dashboard_does_not_send_map">Dashboard: %1$s, so the iPhone does not send the map.</string>
     <string name="adb_not_approved">DiPlay is not approved yet. Tap Check ADB access, then allow DiPlay on the car screen.</string>
     <string name="adb_off">ADB over network is off. Turn it on in the head unit’s developer options.</string>
-    <string name="adb_network_not_answering">USB debugging is on, but ADB over network does not answer. Turn ADB over network on in the head unit’s developer options. If it is already on, turn it off and on again.</string>
+    <string name="adb_network_not_answering">USB debugging is on, but ADB over network does not answer. Turn ADB over network on in the head unit’s developer options. If it is already on, turn it off and on again. If there is no such option, run “adb tcpip 5555” from a computer connected over USB, again after each head unit restart.</string>
     <string name="adb_pairing_only">This head unit offers only wireless debugging with pairing, which DiPlay does not support yet.</string>
     <string name="navi_mode_off">Off</string>
     <string name="navi_mode_turn_on_by_navi">Turn on by navi</string>

@@ -544,7 +544,7 @@
     <string name="adb_dashboard_does_not_send_map">Cụm đồng hồ: %1$s, nên iPhone không gửi bản đồ.</string>
     <string name="adb_not_approved">DiPlay chưa được chấp thuận. Nhấn Kiểm tra quyền truy cập ADB, rồi cho phép DiPlay trên màn hình xe.</string>
     <string name="adb_off">ADB qua mạng đang tắt. Hãy bật nó trong tùy chọn nhà phát triển của hệ thống giải trí.</string>
-    <string name="adb_network_not_answering">Gỡ lỗi USB đang bật, nhưng ADB qua mạng không phản hồi. Hãy bật ADB qua mạng trong tùy chọn nhà phát triển của hệ thống giải trí. Nếu đã bật, hãy tắt rồi bật lại.</string>
+    <string name="adb_network_not_answering">Gỡ lỗi USB đang bật, nhưng ADB qua mạng không phản hồi. Hãy bật ADB qua mạng trong tùy chọn nhà phát triển của hệ thống giải trí. Nếu đã bật, hãy tắt rồi bật lại. Nếu không có tùy chọn này, hãy chạy “adb tcpip 5555” từ máy tính kết nối qua USB và chạy lại sau mỗi lần hệ thống giải trí khởi động lại.</string>
     <string name="adb_pairing_only">Hệ thống giải trí này chỉ có gỡ lỗi không dây với ghép nối, mà DiPlay chưa hỗ trợ.</string>
     <string name="navi_mode_off">Tắt</string>
     <string name="navi_mode_turn_on_by_navi">Bật theo dẫn đường</string>
