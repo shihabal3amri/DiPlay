@@ -47,8 +47,13 @@ internal object StartupPhonePicker {
         TAPPED("tapped"),
         COUNTDOWN("countdown"),
         CANCELLED("cancelled"),
-        COVERED_CONNECTED_LAST_USED("covered_connected_last_used"),
+        /** DiPlay left the screen and the last iPhone used was started; whether CarPlay came up is not known here. */
+        COVERED_STARTED_LAST_USED("covered_started_last_used"),
         COVERED_DROPPED("covered_dropped"),
+        /** CarPlay opened during the question, for example over USB, so nothing else was started. */
+        CARPLAY_ALREADY_OPEN("carplay_already_open"),
+        /** DiPlay was recreated; an automatic question is asked again. */
+        RECREATED("recreated"),
     }
 
     @Volatile var lastOutcome: Outcome? = null
