@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="startup_picker_title">哪部 iPhone？</string>
+    <string name="startup_picker_countdown">%2$d\u00A0秒后连接到 %1$s</string>
+    <string name="startup_picker_tap">点按一部 iPhone 进行连接</string>
+    <string name="settings_ask_which_iphone">询问连接哪部 iPhone</string>
+    <string name="settings_ask_which_iphone_description">适合多位驾驶者共用的车辆：配对了多部 iPhone 时，DiPlay 会在启动无线 CarPlay 前询问要连接哪一部。只有一部 iPhone 连着车辆蓝牙时直接连接，不再询问；否则 8\u00A0秒后连接上次使用的 iPhone。下次 DiPlay 连接时生效。</string>
+</resources>

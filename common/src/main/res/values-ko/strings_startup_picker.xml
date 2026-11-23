@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="startup_picker_title">어느 iPhone?</string>
+    <string name="startup_picker_countdown">%2$d초 후 %1$s에 연결</string>
+    <string name="startup_picker_tap">연결할 iPhone을 누르세요</string>
+    <string name="settings_ask_which_iphone">연결할 iPhone 묻기</string>
+    <string name="settings_ask_which_iphone_description">여러 운전자가 함께 쓰는 차량용: iPhone이 두 대 이상 페어링되어 있으면 무선 CarPlay를 시작하기 전에 연결할 iPhone을 묻습니다. 차량 Bluetooth에 연결된 iPhone이 한 대뿐이면 묻지 않고 연결하고, 그렇지 않으면 8초 후 마지막으로 사용한 iPhone에 연결합니다. 다음에 DiPlay가 연결할 때부터 적용됩니다.</string>
+</resources>

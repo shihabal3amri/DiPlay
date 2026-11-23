@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="startup_picker_title">iPhone nào?</string>
+    <string name="startup_picker_countdown">Đang kết nối với %1$s sau %2$d\u00A0giây</string>
+    <string name="startup_picker_tap">Chạm vào một iPhone để kết nối</string>
+    <string name="settings_ask_which_iphone">Hỏi iPhone nào</string>
+    <string name="settings_ask_which_iphone_description">Dành cho xe có nhiều người lái dùng chung: khi có nhiều hơn một iPhone đã ghép nối, DiPlay hỏi kết nối iPhone nào trước khi bắt đầu CarPlay không dây. Nếu chỉ một iPhone đang kết nối Bluetooth của xe, iPhone đó kết nối mà không hỏi; nếu không, iPhone dùng gần nhất sẽ kết nối sau 8\u00A0giây. Áp dụng ở lần kết nối tiếp theo của DiPlay.</string>
+</resources>

@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="startup_picker_title">哪一部 iPhone？</string>
+    <string name="startup_picker_countdown">%2$d\u00A0秒後連線到 %1$s</string>
+    <string name="startup_picker_tap">點按一部 iPhone 進行連線</string>
+    <string name="settings_ask_which_iphone">詢問要連線哪部 iPhone</string>
+    <string name="settings_ask_which_iphone_description">適合多位駕駛共用的車輛：配對了多部 iPhone 時，DiPlay 會在啟動無線 CarPlay 前詢問要連線哪一部。只有一部 iPhone 連著車輛藍牙時直接連線，不再詢問；否則 8\u00A0秒後連線上次使用的 iPhone。下次 DiPlay 連線時生效。</string>
+</resources>

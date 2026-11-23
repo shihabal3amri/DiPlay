@@ -94,6 +94,7 @@ object SettingsBackupCodec {
     private val DIPLAY_KEYS = setOf(
         "auto_connect",
         "connect_on_phone_bluetooth",
+        "ask_which_iphone",
         "default_connection_mode",
         "settings_force_full_layout",
         "app_appearance_button",
@@ -103,7 +104,7 @@ object SettingsBackupCodec {
     )
     // The diplay file's getBoolean / getInt / getString keys; settings_gesture_fingers is shared with the main file.
     private val DIPLAY_BOOLEAN_KEYS = setOf(
-        "auto_connect", "connect_on_phone_bluetooth", "settings_force_full_layout",
+        "auto_connect", "connect_on_phone_bluetooth", "ask_which_iphone", "settings_force_full_layout",
     )
     private val DIPLAY_INT_KEYS = setOf("settings_gesture_fingers")
     private val DIPLAY_STRING_KEYS = setOf("default_connection_mode")

@@ -768,6 +768,8 @@ class AdaptiveSettingsUiTest {
         assertFalse(vehicle.any { it.startsWith(text(R.string.carplay_dock)) })
 
         assertTrue(connection.any { it.startsWith(text(R.string.settings_usb_charging)) })
+        assertTrue(text(R.string.settings_ask_which_iphone) in connection)
+        assertFalse(text(R.string.settings_ask_which_iphone) in advanced)
         assertFalse(advanced.any { it.startsWith(text(R.string.settings_usb_charging)) })
         assertTrue(audio.any { it.startsWith(text(R.string.settings_navigation_attenuation)) })
         assertFalse(advanced.any { it.startsWith(text(R.string.settings_navigation_attenuation)) })

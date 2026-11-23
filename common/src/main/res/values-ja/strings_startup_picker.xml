@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="startup_picker_title">どのiPhone？</string>
+    <string name="startup_picker_countdown">%2$d\u00A0秒後に %1$s に接続します</string>
+    <string name="startup_picker_tap">接続するiPhoneをタップ</string>
+    <string name="settings_ask_which_iphone">接続するiPhoneを確認</string>
+    <string name="settings_ask_which_iphone_description">複数のドライバーで共有する車向け：複数のiPhoneがペアリングされているとき、ワイヤレスCarPlayを開始する前に接続するiPhoneを確認します。車のBluetoothに接続中のiPhoneが1台だけなら確認せずに接続し、それ以外は8\u00A0秒後に前回使ったiPhoneに接続します。次回DiPlayが接続するときから適用されます。</string>
+</resources>

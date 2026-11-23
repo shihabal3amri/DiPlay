@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="startup_picker_title">Which iPhone?</string>
+    <string name="startup_picker_countdown">Connecting to %1$s in %2$d\u00A0s</string>
+    <string name="startup_picker_tap">Tap an iPhone to connect</string>
+    <string name="settings_ask_which_iphone">Ask which iPhone</string>
+    <string name="settings_ask_which_iphone_description">For a car shared by several drivers: when more than one iPhone is paired, DiPlay asks which one to connect before wireless CarPlay starts. An iPhone that is alone on the car\'s Bluetooth connects without the question; otherwise the last iPhone used connects after 8\u00A0s. Applies the next time DiPlay connects.</string>
+</resources>

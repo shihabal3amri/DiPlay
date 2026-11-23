@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="startup_picker_title">Quale iPhone?</string>
+    <string name="startup_picker_countdown">Connessione a %1$s tra %2$d\u00A0s</string>
+    <string name="startup_picker_tap">Tocca un iPhone per connetterti</string>
+    <string name="settings_ask_which_iphone">Chiedi quale iPhone</string>
+    <string name="settings_ask_which_iphone_description">Per un’auto condivisa da più conducenti: se è associato più di un iPhone, DiPlay chiede quale connettere prima di avviare CarPlay wireless. Un iPhone che è l’unico collegato al Bluetooth dell’auto si connette senza domanda; altrimenti l’ultimo iPhone usato si connette dopo 8\u00A0s. Si applica alla prossima connessione di DiPlay.</string>
+</resources>

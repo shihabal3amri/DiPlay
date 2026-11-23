@@ -1232,6 +1232,9 @@ open class CarPlayHostActivity : ComponentActivity() {
     override fun onStart() {
         super.onStart()
         isActivityStarted = true
+        // CarPlay came on screen, new or reused (a USB attach brings back the open screen): a question
+        // covered earlier in DiPlay must not start wireless later.
+        StartupPhonePicker.coveredAutomaticQuestion = false
         logThemeState(ThemeModeDiagnostics.Source.START, resources.configuration)
         mainHandler.removeCallbacks(pollConfiguration)
         mainHandler.post(pollConfiguration)
@@ -7338,6 +7341,7 @@ internal object CarPlayBackgroundSession {
     @Synchronized
     fun store(controller: CarPlayController, sink: AndroidMediaSink, width: Int, height: Int,
         owner: Any, display: CarPlaySessionDisplay, stop: (() -> Unit) -> Unit) {
+        StartupPhonePicker.coveredAutomaticQuestion = false
         if (this.controller !== controller) {
             callPopupReady = false
             hotspotReady = null
