@@ -523,10 +523,8 @@ class WheelKeyService : AccessibilityService() {
         fun connected(): Boolean = running != null
 
         /** The allowed list did not start the service, so the driver may restart DiPlay instead. */
-        fun restartOffered(): Boolean = restartOffered(connected(), unboundAfterRestore)
-
-        internal fun restartOffered(connected: Boolean, unboundAfterRestore: Boolean): Boolean =
-            !connected && unboundAfterRestore
+        fun restartOffered(context: Context): Boolean =
+            unboundAfterRestore && !connected() && enabledInSettings(context)
 
         /** The window uses this to avoid duplicating an event that the bound input filter processed. */
         internal fun observedDoubleSiri(event: KeyEvent): Boolean =
@@ -580,14 +578,16 @@ class WheelKeyService : AccessibilityService() {
          * Android starts the service some time after the write, so whether it did is known only now. A service
          * that did not start is looked up in Android's own lists, over the same adb connection (#1355).
          */
-        internal fun settle(context: Context, shell: (String) -> String?, sleep: (Long) -> Unit = Thread::sleep): Boolean {
-            // It may also have started while the lists were read.
-            val state = if (waitUntilBound(::connected, sleep)) null else WheelKeyServiceState.read(context, shell)
-            if (state == null || connected()) {
+        internal fun settle(context: Context, shell: (String) -> String?, sleep: (Long) -> Unit = Thread::sleep,
+            bound: () -> Boolean = ::connected): Boolean {
+            val state = if (waitUntilBound(bound, sleep)) null else WheelKeyServiceState.read(context, shell)
+            if (state != null) unboundAfterRestore = true
+            // Asked after the write above: a start that this misses comes later and clears it (onServiceConnected).
+            if (state == null || bound()) {
+                unboundAfterRestore = false
                 note("wheel key service allowed over adb, started")
                 return true
             }
-            unboundAfterRestore = true
             context.getSharedPreferences(RESTORE_PREFS, Context.MODE_PRIVATE).edit()
                 .putString("state", state.toString())
                 .putLong("stateAt", System.currentTimeMillis())

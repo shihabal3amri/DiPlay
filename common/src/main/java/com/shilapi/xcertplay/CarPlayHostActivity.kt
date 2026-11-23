@@ -1246,7 +1246,7 @@ open class CarPlayHostActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
-        WheelKeyServiceReset.cancelRestartAfterBoot()
+        WheelKeyServiceReset.cancelPendingRestart()
         WheelKeyService.restoreIfNeeded(this)
         hostAppearanceResumed = true
         updateCallPopupGuard()

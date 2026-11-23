@@ -1,11 +1,13 @@
 package com.shilapi.xcertplay
 
 import com.shilapi.xcertplay.host.R
+import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.robolectric.Robolectric
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
 import org.robolectric.annotation.Config
@@ -14,6 +16,15 @@ import org.robolectric.annotation.Config
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [29], manifest = Config.NONE)
 class WheelKeyServiceStateTest {
+    /** A start of the service clears what [WheelKeyService.settle] keeps for the process. */
+    @After fun tearDown() {
+        Robolectric.buildService(WheelKeyService::class.java).create().get().let {
+            it.javaClass.getDeclaredMethod("onServiceConnected").apply { isAccessible = true }.invoke(it)
+            it.onDestroy()
+        }
+        WheelKeyLog.reset()
+    }
+
     private val ours = "com.shihab.diplay/com.shilapi.xcertplay.WheelKeyService"
     private val usb = "com.shihab.diplay/com.shilapi.xcertplay.UsbAutoConfirmService"
     private val other = "car.package/car.package.Accessibility"

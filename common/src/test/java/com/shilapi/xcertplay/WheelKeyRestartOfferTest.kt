@@ -1,5 +1,6 @@
 package com.shilapi.xcertplay
 
+import android.app.AlertDialog
 import android.content.ComponentName
 import android.content.Intent
 import android.graphics.Bitmap
@@ -12,10 +13,14 @@ import android.view.ViewGroup
 import android.widget.Button
 import android.widget.ScrollView
 import android.widget.TextView
+import com.shilapi.xcertplay.adb.LocalAdb
 import com.shilapi.xcertplay.host.R
 import java.io.File
 import java.io.FileOutputStream
 import java.time.Duration
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicInteger
 import org.junit.After
 import org.junit.Assert.*
 import org.junit.Before
@@ -41,6 +46,7 @@ class WheelKeyRestartOfferTest {
     @Before fun setUp() {
         bind()
         unbind()
+        WheelKeyServiceReset.resetForTest()
         WheelKeyLog.reset()
         val context = RuntimeEnvironment.getApplication()
         WheelZoomSettings.setMediaPlayPause(context, true)
@@ -55,6 +61,7 @@ class WheelKeyRestartOfferTest {
     @After fun tearDown() {
         bind()
         unbind()
+        WheelKeyServiceReset.resetForTest()
         WheelZoomSettings.setMediaPlayPause(activity, false)
         WheelKeyLog.reset()
         activity.finish()
@@ -88,24 +95,104 @@ class WheelKeyRestartOfferTest {
         var dumps = 0
         assertTrue(WheelKeyService.settle(activity, { dumps++; null }, { if (service == null) bind() }))
         assertEquals(0, dumps)
-        assertFalse(WheelKeyService.restartOffered())
+        assertFalse(WheelKeyService.restartOffered(activity))
         assertTrue(WheelKeyLog.report(true).last().endsWith("  wheel key service allowed over adb, started"))
     }
 
     @Test fun aServiceThatStartsWhileTheListsAreReadIsReportedAsStarted() {
         assertTrue(WheelKeyService.settle(activity, { bind(); null }, {}))
-        assertFalse(WheelKeyService.restartOffered())
+        assertFalse(WheelKeyService.restartOffered(activity))
     }
 
     @Test fun theRestartIsOfferedAfterAFailedWriteUntilTheServiceStarts() {
-        assertFalse(WheelKeyService.restartOffered())
+        assertFalse(WheelKeyService.restartOffered(activity))
         fail()
-        assertTrue(WheelKeyService.restartOffered())
+        assertTrue(WheelKeyService.restartOffered(activity))
         bind()
-        assertFalse(WheelKeyService.restartOffered())
+        assertFalse(WheelKeyService.restartOffered(activity))
         // The start cleared it: a later stop is a new story.
         unbind()
-        assertFalse(WheelKeyService.restartOffered())
+        assertFalse(WheelKeyService.restartOffered(activity))
+    }
+
+    @Test fun aServiceThatStartsRightAfterItWasAskedForIsNotLeftAsFailed() {
+        var read = false
+        WheelKeyService.settle(activity, { read = true; null }, {}) {
+            WheelKeyService.connected().also { if (read && service == null) bind() }
+        }
+        unbind()
+        assertFalse(WheelKeyService.restartOffered(activity))
+    }
+
+    @Test fun aServiceFoundOnTheLastCheckIsReportedAsStarted() {
+        var read = false
+        assertTrue(WheelKeyService.settle(activity, { read = true; null }, {}) { read })
+        assertFalse(WheelKeyService.restartOffered(activity))
+        assertTrue(WheelKeyLog.report(true).last().endsWith("  wheel key service allowed over adb, started"))
+    }
+
+    @Test fun aServiceThatTheDriverTurnedOffIsOffAndNothingElse() {
+        openVehicleSettings()
+        fail()
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(2))
+        assertNotNull(restartButton())
+        Settings.Secure.putString(activity.contentResolver, Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES, "")
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(2))
+        assertFalse(WheelKeyService.restartOffered(activity))
+        assertNull(restartButton())
+        val shown = texts().map { it.text.toString() }.toList()
+        assertTrue(activity.getString(R.string.wheel_keys_service_off) in shown)
+        assertFalse(activity.getString(R.string.settings_wheel_keys_restart_description) in shown)
+    }
+
+    @Test fun aSecondConfirmationDoesNothingWhileTheFirstOneRuns() {
+        val answer = CountDownLatch(1)
+        val connects = AtomicInteger()
+        WheelKeyServiceReset.openAdb = {
+            object : WheelKeyServiceReset.Adb {
+                override fun connect(mayAsk: Boolean): LocalAdb.Access {
+                    connects.incrementAndGet()
+                    answer.await(10, TimeUnit.SECONDS)
+                    return LocalAdb.Access.NOT_APPROVED
+                }
+                override fun shell(command: String): String? = null
+                override fun close() = Unit
+            }
+        }
+        openVehicleSettings()
+        fail()
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(2))
+        val first = restartButton()!!
+        // A double tap opens the question twice.
+        first.performClick()
+        val question = ShadowDialog.getLatestDialog() as AlertDialog
+        first.performClick()
+        val again = ShadowDialog.getLatestDialog() as AlertDialog
+        question.getButton(AlertDialog.BUTTON_POSITIVE).performClick()
+        shadowOf(Looper.getMainLooper()).idle()
+        await { connects.get() == 1 }
+        again.getButton(AlertDialog.BUTTON_POSITIVE).performClick()
+        shadowOf(Looper.getMainLooper()).idle()
+        await { Thread.getAllStackTraces().keys.count { it.name == "diplay-wheel-keys-restart" } == 1 }
+        assertEquals(1, connects.get())
+
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(2))
+        assertNull(restartButton())
+        val running = texts().filterIsInstance<Button>().single { it.text.toString() == activity.getString(R.string.adb_checking) }
+        assertFalse(running.isEnabled)
+
+        answer.countDown()
+        await { !WheelKeyServiceReset.restarting() }
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(2))
+        assertTrue(restartButton()!!.isEnabled)
+    }
+
+    private fun await(done: () -> Boolean) {
+        val end = System.nanoTime() + TimeUnit.SECONDS.toNanos(5)
+        while (!done()) {
+            assertTrue("timed out", System.nanoTime() < end)
+            Thread.sleep(5)
+        }
     }
 
     @Test fun theButtonAppearsOnTheOpenPageAfterAFailedWriteAndAsksBeforeItDoesAnything() {

@@ -116,16 +116,14 @@ class WheelKeyServiceResetTest {
     }
 
     @Test fun aLaunchWithoutABootBroadcastConnectsAtOnce() {
-        assertFalse(WheelKeyServiceReset.restartAfterBoot(context) { fail("restartAfterBoot took the connection over") })
-        WheelKeyServiceReset.bootLaunch()
-        assertFalse("not proven on this car", WheelKeyServiceReset.restartAfterBoot(context) { fail("held") })
+        assertFalse(WheelKeyServiceReset.restartAfterBoot(context, { true }) { fail("restartAfterBoot took the connection over") })
     }
 
     @Test fun theRecordIsStoredBeforeTheCommandAndTheServicesStartIsItsProof() {
-        assertTrue(WheelKeyServiceReset.restart(context, { command ->
+        assertTrue(WheelKeyServiceReset.restart(app = context, shell = { command ->
             if ("force-stop" in command) assertEquals(Outcome.PENDING, WheelKeyServiceReset.load(context).outcome)
             shell(command)
-        }, {}))
+        }, endSession = {}))
         assertEquals(1, sent().size)
         val record = WheelKeyServiceReset.load(context)
         assertEquals(Outcome.PENDING, record.outcome)
@@ -165,14 +163,14 @@ class WheelKeyServiceResetTest {
     @Test fun carPlayEndsOnlyWhenTheRestartCanFollow() {
         val order = mutableListOf<String>()
         exit = 1
-        assertFalse(WheelKeyServiceReset.restart(context, ::shell) { order += "session ended" })
+        assertFalse(WheelKeyServiceReset.restart(app = context, shell = ::shell) { order += "session ended" })
         assertEquals(emptyList<String>(), order)
         assertEquals(emptyList<String>(), sent())
         assertEquals(Outcome.NONE, WheelKeyServiceReset.load(context).outcome)
 
         exit = 0
         commands.clear()
-        assertTrue(WheelKeyServiceReset.restart(context, { command ->
+        assertTrue(WheelKeyServiceReset.restart(app = context, shell = { command ->
             if ("force-stop" in command) order += "restart"
             shell(command)
         }) { order += "session ended" })
@@ -181,7 +179,7 @@ class WheelKeyServiceResetTest {
 
     @Test fun aCommandThatFailedKeepsTheProofAndStartsTheGap() {
         prefs.edit().putLong("atElapsed", -1).putLong("at", 5).putString("outcome", "BOUND").commit()
-        assertFalse(WheelKeyServiceReset.restart(context, { command -> if ("force-stop" in command) null else shell(command) }, {}))
+        assertFalse(WheelKeyServiceReset.restart(context, { command -> if ("force-stop" in command) null else shell(command) }) {})
         val record = WheelKeyServiceReset.load(context)
         assertEquals(Outcome.BOUND, record.outcome)
         assertTrue(record.atElapsed >= 0)
@@ -211,8 +209,10 @@ class WheelKeyServiceResetTest {
     }
 
     @Test fun aConnectionThatAlreadyStartedStopsTheAutomaticRestart() {
+        prefs.edit().putLong("atElapsed", proven.atElapsed).putLong("at", proven.atMillis).putString("outcome", "BOUND").commit()
         assertFalse(WheelKeyServiceReset.restartIfStuck(context, { true }, ::shell, { true }) { false })
         assertEquals(emptyList<String>(), sent())
+        assertEquals("a restart that was not sent leaves no trace", proven, WheelKeyServiceReset.load(context))
         assertFalse(WheelKeyServiceReset.restartIfStuck(context, { false }, { fail("adb is not ready"); null }, { true }) { true })
     }
 
@@ -236,12 +236,13 @@ class WheelKeyServiceResetTest {
     }
 
     @Test fun usbAutoConfirmIsKeptOnlyWhenItWasOn() {
-        assertTrue(WheelKeyServiceReset.restart(context, ::shell, {}))
+        assertTrue(WheelKeyServiceReset.restart(context, ::shell) {})
         assertFalse("UsbAutoConfirmService" in sent().single())
+        WheelKeyServiceReset.resetForTest()
         Settings.Secure.putString(context.contentResolver, Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES,
             android.content.ComponentName(context, UsbAutoConfirmService::class.java).flattenToString())
         commands.clear()
-        assertTrue(WheelKeyServiceReset.restart(context, ::shell, {}))
+        assertTrue(WheelKeyServiceReset.restart(context, ::shell) {})
         assertTrue("UsbAutoConfirmService" in sent().single())
     }
 

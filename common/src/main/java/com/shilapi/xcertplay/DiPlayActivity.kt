@@ -222,8 +222,8 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
     private var rootScroll: ScrollView? = null
     private var settingsRailScroll: ScrollView? = null
     private var reconnectBar: View? = null
-    /** What the wheel key service card shows: whether the service runs, and whether a restart is offered. */
-    private var renderedWheelKeyService: Pair<Boolean, Boolean>? = null
+    /** What the wheel key service card shows: whether the service runs, and whether a restart is offered or under way. */
+    private var renderedWheelKeyService: Triple<Boolean, Boolean, Boolean>? = null
     private var readinessCard: LinearLayout? = null
     private var searchIndexSink: MutableList<String>? = null
     private var settingsSearchBox: EditText? = null
@@ -555,8 +555,15 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
             initialLaunch = false
             startCarHotspotOnLaunch()
             // Held for a few seconds at most, and only on a car that proved to need the restart.
-            if (!WheelKeyServiceReset.restartAfterBoot(this, ::connectOnLaunch)) connectOnLaunch()
+            val held = page == "home" && WheelKeyServiceReset.restartAfterBoot(this, ::homeInFront, ::connectAfterHold)
+            if (!held) connectOnLaunch()
         }
+    }
+    // In the seconds since the launch the driver may have opened another page or app, which CarPlay must not cover.
+    private fun homeInFront() = !isFinishing && page == "home" &&
+        lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.RESUMED)
+    private fun connectAfterHold() {
+        if (homeInFront()) connectOnLaunch()
     }
     private fun connectOnLaunch() {
         if (!isFinishing && !isDestroyed && setupError == null && !CarPlayBackgroundSession.hasSession() &&
@@ -4522,11 +4529,17 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
 
     /** Restarting DiPlay, once the allowed list alone did not start the service. */
     private fun wheelKeyRestartControls(card: LinearLayout) {
-        if (!WheelKeyService.restartOffered()) return
+        if (!WheelKeyService.restartOffered(this)) return
         card.addView(label(getString(R.string.settings_wheel_keys_restart_description), 14, MUTED)
             .apply { setPadding(0, dp(SETTINGS_BLOCK_GAP_DP), 0, 0) })
         card.addView(actionButton(getString(R.string.settings_wheel_keys_restart), false) {
             confirmWheelKeyRestart()
+        }.apply {
+            if (WheelKeyServiceReset.restarting()) {
+                isEnabled = false
+                setTextColor(MUTED)
+                text = getString(R.string.adb_checking)
+            }
         }, settingsButtonLayout())
     }
 
@@ -4540,7 +4553,8 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
                 Thread({
                     val access = WheelKeyServiceReset.restart(app, ::endSessionForRestart)
                     runOnUiThread {
-                        if (!isFinishing && !isDestroyed && access != com.shilapi.xcertplay.adb.LocalAdb.Access.READY) {
+                        if (!isFinishing && !isDestroyed && access != null &&
+                            access != com.shilapi.xcertplay.adb.LocalAdb.Access.READY) {
                             toast(getString(R.string.wheel_keys_adb_failed, access.name))
                         }
                     }
@@ -4560,7 +4574,8 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
         ended.await(SESSION_END_MILLIS, java.util.concurrent.TimeUnit.MILLISECONDS)
     }
 
-    private fun wheelKeyServiceShown() = WheelKeyService.connected() to WheelKeyService.restartOffered()
+    private fun wheelKeyServiceShown() = Triple(
+        WheelKeyService.connected(), WheelKeyService.restartOffered(this), WheelKeyServiceReset.restarting())
 
     /** The service starts, or fails to, seconds after its card was drawn. */
     private fun refreshWheelKeyService() {
@@ -6011,7 +6026,7 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
 
     private fun connect(wireless: Boolean) {
         startupHotspotCancelled = true
-        WheelKeyServiceReset.cancelRestartAfterBoot()
+        WheelKeyServiceReset.cancelPendingRestart()
         if (wireless && pendingCarHotspotSetup) { toast(getString(R.string.save_your_hotspot_details_in_connection_setup_first)); page = "connection"; render(); return }
         if (setupError != null) { toast(setupError!!); return }
         if (wireless && AirPlayPersistence.loadWirelessHotspotMode(this) == WirelessHotspotMode.MANUAL &&
