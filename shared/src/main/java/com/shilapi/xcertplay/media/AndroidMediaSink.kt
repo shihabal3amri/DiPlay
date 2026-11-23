@@ -1905,7 +1905,7 @@ private class AudioRenderer(
     private var ambientEnvelope = AmbientMusicEnvelope()
     private val ambientBass = AmbientMusicBassAnalyzer(format.sampleRate, pcmChannels)
     private val ambientBands = AmbientMusicBandAnalyzer(format.sampleRate, pcmChannels)
-    private var ambientRendererToken = 0L
+    @Volatile private var ambientRendererToken = 0L
     private var writtenFramesThisWindow = 0L
     private var writeErrorsThisWindow = 0
     private var lastWriteErrorCode: Int? = null
@@ -2185,10 +2185,9 @@ private class AudioRenderer(
             }
         }
         applyNavigationAttenuation()
-        if (ambientMedia) {
-            ambientRendererToken = AmbientMusicController.openRenderer(ambientSinkToken, ambientEnvelope) {
-                built.playbackHeadPosition to (running && built.playState == AudioTrack.PLAYSTATE_PLAYING)
-            }
+        // A rebuild passes the lamps on itself, once it knows which track stays; see reopenAmbient().
+        if (ambientMedia && !rebuildPending) {
+            ambientRendererToken = AmbientMusicController.openRenderer(ambientSinkToken, ambientEnvelope) { ambientPlayback(built) }
         }
         diagnosticStage = "track-attributes"
         trackAttributes = audioTrackAttributesForFocus(built, attributes)
@@ -2227,6 +2226,9 @@ private class AudioRenderer(
                 "focus=${if (audioFocusEnabled) "on" else "off"}",
         )
     }
+
+    private fun ambientPlayback(track: AudioTrack): Pair<Int, Boolean> =
+        track.playbackHeadPosition to (running && track.playState == AudioTrack.PLAYSTATE_PLAYING)
 
     /** 0 uses usage-based routing; 1–20 attempt legacy stream types supported by the head unit. */
     private fun channelOverride(channel: AudioChannel): Int = when (channel) {
@@ -2731,7 +2733,6 @@ private class AudioRenderer(
         prebufferBytes = 0
         totalWrittenFrames = 0L
         bufferProgress = AudioBufferProgress(frameBytes)
-        ambientEnvelope = AmbientMusicEnvelope()
         lastPlaybackHeadFrames = null
         statsLastUnderruns = 0
         underrunsAfterLastWrite = 0
@@ -2745,6 +2746,7 @@ private class AudioRenderer(
         }
         val rebuilt = track
         val recreated = rebuilt != null && rebuilt !== old
+        reopenAmbient(rebuilt ?: old)
         if (recreated) {
             audioFocusCoordinator.replace(old, rebuilt!!)
             runCatching { old.release() }
@@ -2753,6 +2755,19 @@ private class AudioRenderer(
         }
         awaitingRebuiltTrack = true
         runCatching { report(MediaAudioLines.rebuilt(recreated)) }
+    }
+
+    /**
+     * Worker, while rebuilding: [track], the new one or the kept one, counts its frames from zero, so the lamps follow
+     * it with an empty envelope. Skipped once close() or a newer stream has taken the lamps from this one.
+     */
+    private fun reopenAmbient(track: AudioTrack) {
+        if (!ambientMedia || !running) return
+        val envelope = AmbientMusicEnvelope()
+        val token = AmbientMusicController.reopenRenderer(ambientSinkToken, ambientRendererToken, envelope) { ambientPlayback(track) }
+        if (token == 0L) return
+        ambientRendererToken = token
+        ambientEnvelope = envelope
     }
 
     /** Worker: once per music stream, the volume it started with and, once it has settled, where it plays. */

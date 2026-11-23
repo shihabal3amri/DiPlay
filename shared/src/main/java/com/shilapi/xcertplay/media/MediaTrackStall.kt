@@ -4,8 +4,9 @@ package com.shilapi.xcertplay.media
  * Notices a music track that says it plays while the car takes no audio from it (#1229).
  *
  * On a DiLink 3.0 (Android 9) the track stayed PLAYING with its head at 0 for over a minute: the buffer filled,
- * and after that every write returned 0 at once. Android's own blocking write waits for room instead, so a car
- * that stops taking audio there holds the renderer's worker inside one write.
+ * and after that every write returned 0 at once. That is also what Android's blocking write does when the native
+ * track is not active; only while it is active does the write wait for room, so a car that stops taking audio from
+ * an active track holds the renderer's worker inside one write.
  *
  * Both need [STALL_NS] of unbroken evidence: refused writes with no frame accepted and the head in one place, or
  * packets that keep arriving while one write stays blocked. A track that ran dry, is paused or only plays slowly

@@ -8,11 +8,15 @@ import com.shilapi.xcertplay.airplay.AudioFormat
 import com.shilapi.xcertplay.airplay.AudioStreamId
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.CountDownLatch
+import java.util.concurrent.ExecutorService
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicLong
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNotSame
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -177,6 +181,145 @@ class MediaTrackRebuildTest {
         assertEquals(1, reports.count { it.startsWith("Audio: car consumes CarPlay audio after the rebuild") })
     }
 
+    @Test fun aNewTrackThatCannotBeBuiltKeepsTheOldOne() {
+        CarTrack.consumes = { false }
+        open()
+        CarTrack.refuseBuild = true
+        play(4_000)
+        assertTrue(reports.toString(), reports.any { it.startsWith("Audio: renderer failed") && it.contains("stage=track-build") })
+        assertTrue(reports.toString(), reports.contains("Audio: media track rebuilt recreated=false"))
+        assertEquals(1, CarTrack.tracks.size)
+        assertFalse(track(0).released)
+
+        CarTrack.consumes = { true }
+        play(2_000)
+        assertTrue(track(0).playing)
+        assertTrue(track(0).head > 0)
+        assertEquals(1, reports.count { it.startsWith("Audio: car consumes CarPlay audio after the rebuild") })
+    }
+
+    @Test fun theLampsFollowTheRebuiltTrack() {
+        CarTrack.consumes = { it > 0 }
+        open()
+        val before = get("ambientEnvelope")
+        assertLampsFollow(0)
+        play(6_000)
+        assertEquals(2, CarTrack.tracks.size)
+        assertNotSame(before, get("ambientEnvelope"))
+        assertLampsFollow(1)
+    }
+
+    @Test fun theLampsFollowTheKeptTrackWhenTheHeadUnitHasNoBufferSize() =
+        theLampsFollowTheKeptTrack { CarTrack.minBufferSize = AudioTrack.ERROR_BAD_VALUE }
+
+    @Test fun theLampsFollowTheKeptTrackWhenTheNewOneCannotBeBuilt() =
+        theLampsFollowTheKeptTrack { CarTrack.refuseBuild = true }
+
+    private fun theLampsFollowTheKeptTrack(refuse: () -> Unit) {
+        CarTrack.consumes = { false }
+        open()
+        val before = get("ambientEnvelope")
+        refuse()
+        play(4_000)
+        CarTrack.consumes = { true }
+        play(2_000)
+        assertTrue(reports.contains("Audio: media track rebuilt recreated=false"))
+        assertEquals(1, CarTrack.tracks.size)
+        assertTrue(track(0).head > 0)
+        // The kept track counts from zero again, so what it was given before the rebuild is not in the way.
+        assertNotSame(before, get("ambientEnvelope"))
+        assertLampsFollow(0)
+    }
+
+    /** The lamps read the envelope this renderer writes to, and the position of the track at [index]. */
+    private fun assertLampsFollow(index: Int) {
+        settleLamps()
+        assertTrue(activeLampRenderer() != 0L)
+        assertEquals(get("ambientRendererToken"), activeLampRenderer())
+        assertSame(get("ambientEnvelope"), lamps("envelope"))
+        @Suppress("UNCHECKED_CAST")
+        val playback = lamps("playback") as () -> Pair<Int, Boolean>
+        assertEquals(track(index).head to track(index).playing, playback())
+    }
+
+    @Test fun aStreamClosedWhileItsTrackIsRebuiltLeavesTheLampsToTheNextSong() {
+        CarTrack.consumes = { false }
+        open()
+        writeUntilRebuildIsPending()
+        // The skip arrives in the middle of the rebuild: after its own checks, before the new track is there.
+        var next: Any? = null
+        CarTrack.onMinBufferSize = {
+            CarTrack.onMinBufferSize = {}
+            sink.onAudioStopped(AudioStreamId(100, "media"))
+            next = renderer("media")
+            type.getDeclaredMethod("createTrack").apply { isAccessible = true }.invoke(next)
+        }
+        call("recoverStalledTrack")
+        assertNotSame(renderer, next)
+        assertEquals(false, get("running"))
+        val token = field("ambientRendererToken").get(next)
+        assertNotEquals(0L, token)
+        assertEquals(token, activeLampRenderer())
+        settleLamps()
+        assertSame(field("ambientEnvelope").get(next), lamps("envelope"))
+
+        call("release")
+        settleLamps()
+        assertEquals(token, activeLampRenderer())
+        assertSame(field("ambientEnvelope").get(next), lamps("envelope"))
+        renderer = next!!
+    }
+
+    @Test fun aStreamClosedWhileItsTrackIsRebuiltTakesNoLamps() {
+        CarTrack.consumes = { false }
+        open()
+        writeUntilRebuildIsPending()
+        CarTrack.onMinBufferSize = { (renderer as java.io.Closeable).close() }
+        call("recoverStalledTrack")
+        settleLamps()
+        assertEquals(0L, activeLampRenderer())
+        assertNull(lamps("playback"))
+    }
+
+    @Test fun onlyTheStreamThatOwnsTheLampsPassesThemOn() {
+        val lampSink = AndroidMediaSink::class.java.getDeclaredField("ambientSinkToken")
+            .apply { isAccessible = true }.getLong(sink)
+        val closed = AmbientMusicController.openRenderer(lampSink, AmbientMusicEnvelope()) { 1 to true }
+        AmbientMusicController.closeRenderer(closed)
+        assertEquals(0L, AmbientMusicController.reopenRenderer(lampSink, closed, AmbientMusicEnvelope()) { 2 to true })
+        assertEquals(0L, AmbientMusicController.reopenRenderer(lampSink, 0L, AmbientMusicEnvelope()) { 2 to true })
+        assertEquals(0L, activeLampRenderer())
+
+        val nextEnvelope = AmbientMusicEnvelope()
+        val next = AmbientMusicController.openRenderer(lampSink, nextEnvelope) { 3 to true }
+        assertEquals(0L, AmbientMusicController.reopenRenderer(lampSink, closed, AmbientMusicEnvelope()) { 2 to true })
+        AmbientMusicController.closeRenderer(closed)
+        settleLamps()
+        assertEquals(next, activeLampRenderer())
+        assertSame(nextEnvelope, lamps("envelope"))
+
+        val rebuilt = AmbientMusicController.reopenRenderer(lampSink, next, AmbientMusicEnvelope()) { 4 to true }
+        assertTrue(rebuilt != 0L && rebuilt != next)
+        assertEquals(rebuilt, activeLampRenderer())
+        AmbientMusicController.closeRenderer(rebuilt)
+    }
+
+    private fun lamps(name: String): Any? = AmbientMusicController::class.java.getDeclaredField(name)
+        .apply { isAccessible = true }.get(AmbientMusicController)
+    private fun activeLampRenderer() = (lamps("activeRenderer") as AtomicLong).get()
+    private fun settleLamps() { (lamps("executor") as ExecutorService).submit {}.get(5, TimeUnit.SECONDS) }
+
+    /** A stalled track whose worker has not reached its rebuild yet. */
+    private fun writeUntilRebuildIsPending() {
+        var packets = 0
+        while (get("rebuildPending") != true) {
+            assertTrue("No stall after $packets packets", packets++ < 500)
+            write()
+            nowNs += 20_000_000L
+        }
+        assertEquals(1, stallLines().size)
+    }
+
     @Test fun guidanceAndCallsAreNeverRebuilt() {
         CarTrack.consumes = { false }
         for (audioType in listOf("default", "telephony", "speechRecognition")) {
@@ -193,10 +336,32 @@ class MediaTrackRebuildTest {
     @Test fun aClosedRendererIsNotRebuilt() {
         CarTrack.consumes = { false }
         open()
-        play(2_000)
+        writeUntilRebuildIsPending()
         (renderer as java.io.Closeable).close()
+        call("recoverStalledTrack")
+        assertEquals(false, get("rebuildPending"))
         play(10_000)
-        assertTrue(stallLines().isEmpty())
+        assertEquals(1, stallLines().size)
+        assertTrue(reports.none { it.startsWith("Audio: media track rebuilt") })
+        assertEquals(1, CarTrack.tracks.size)
+    }
+
+    @Test fun aRendererClosedDuringItsLastRefusedWriteReportsNoStall() {
+        CarTrack.consumes = { false }
+        open()
+        // A head unit on which close()'s pause fails, so the track still says it plays.
+        CarTrack.pauseFails = true
+        val stallNs = MediaTrackStall.STALL_NS
+        var firstRefusedNs = 0L
+        CarTrack.onRefused = {
+            if (firstRefusedNs == 0L) firstRefusedNs = nowNs
+            if (nowNs - firstRefusedNs >= stallNs) (renderer as java.io.Closeable).close()
+        }
+        play(6_000)
+        assertEquals(false, get("running"))
+        assertTrue(track(0).playing)
+        assertTrue(stallLines().toString(), stallLines().isEmpty())
+        assertEquals(false, get("rebuildPending"))
         assertEquals(1, CarTrack.tracks.size)
     }
 
@@ -309,7 +474,11 @@ class MediaTrackRebuildTest {
         val volumes = mutableListOf<Float>()
         private val index: Int by lazy { synchronized(tracks) { if (this !in tracks) tracks.add(this); tracks.indexOf(this) } }
 
-        @Implementation fun getState(): Int { index; return AudioTrack.STATE_INITIALIZED }
+        @Implementation fun getState(): Int {
+            if (refuseBuild && this !in tracks) return AudioTrack.STATE_UNINITIALIZED
+            index
+            return AudioTrack.STATE_INITIALIZED
+        }
         @Implementation fun getBufferSizeInFrames() = CAPACITY_FRAMES
         @Implementation fun getSampleRate() = 48_000
         @Implementation fun getUnderrunCount() = 0
@@ -318,7 +487,10 @@ class MediaTrackRebuildTest {
         @Implementation fun setPlaybackRate(rate: Int) = AudioTrack.SUCCESS
         @Implementation fun setStereoVolume(left: Float, right: Float): Int { volumes.add(left); return AudioTrack.SUCCESS }
         @Implementation fun play() { playing = true }
-        @Implementation fun pause() { synchronized(this) { playing = false; (this as Object).notifyAll() } }
+        @Implementation fun pause() {
+            check(!pauseFails)
+            synchronized(this) { playing = false; (this as Object).notifyAll() }
+        }
         @Implementation fun flush() { head = 0; written = 0L }
         @Implementation fun release() { released = true; playing = false }
         @Implementation fun write(bytes: ByteArray, offset: Int, size: Int, mode: Int): Int = synchronized(this) {
@@ -331,6 +503,7 @@ class MediaTrackRebuildTest {
                 room = 0
             }
             val frames = minOf(room, size / 4)
+            if (frames == 0) onRefused()
             written += frames
             frames * 4
         }
@@ -343,6 +516,11 @@ class MediaTrackRebuildTest {
             @Volatile var blockWhenFull = false
             @Volatile var onBlocked: () -> Unit = {}
             var minBufferSize = 4096
+            var onMinBufferSize: () -> Unit = {}
+            var onRefused: () -> Unit = {}
+            /** Whether a track that is not built yet fails to initialize, so AudioTrack.Builder.build() throws. */
+            var refuseBuild = false
+            var pauseFails = false
 
             fun reset() {
                 tracks.clear()
@@ -350,9 +528,16 @@ class MediaTrackRebuildTest {
                 blockWhenFull = false
                 onBlocked = {}
                 minBufferSize = 4096
+                onMinBufferSize = {}
+                onRefused = {}
+                refuseBuild = false
+                pauseFails = false
             }
 
-            @JvmStatic @Implementation fun getMinBufferSize(rate: Int, channels: Int, format: Int) = minBufferSize
+            @JvmStatic @Implementation fun getMinBufferSize(rate: Int, channels: Int, format: Int): Int {
+                onMinBufferSize()
+                return minBufferSize
+            }
         }
     }
 
