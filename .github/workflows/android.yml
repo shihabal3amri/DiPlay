@@ -37,4 +37,3 @@ jobs:
             samples/home/build/reports/tests/
             samples/home/build/reports/lint-results-debug.html
             samples/maphost/build/reports/lint-results-debug.html
-
