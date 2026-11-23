@@ -107,7 +107,9 @@ class WheelKeyService : AccessibilityService() {
     override fun onServiceConnected() {
         lastObservedDoubleSiriEvent = null
         running = this
+        unboundAfterRestore = false
         NavigationWheelSettings.recordAuthorization(this)
+        WheelKeyServiceReset.serviceBound(this)
         CarPlayCallKeys.install(this)
         // Lets the watcher for other apps' calls run whenever this accessibility service does.
         PhoneAudioRoute.attach(this)
@@ -509,11 +511,22 @@ class WheelKeyService : AccessibilityService() {
         private const val RESTORE_RETRY_MILLIS = 10_000L
         private const val RESTORE_ATTEMPTS = 6
         private const val RESTORE_PREFS = "wheel_key_restore"
+        private const val SETTLE_STEP_MILLIS = 250L
+        private const val SETTLE_STEPS = 20
         @Volatile private var running: WheelKeyService? = null
         @Volatile private var lastObservedDoubleSiriEvent: WheelKeyEventFingerprint? = null
         private val restoring = AtomicBoolean(false)
 
+        /** An allowed service that adb wrote back did not start; only its start in this process clears it. */
+        @Volatile private var unboundAfterRestore = false
+
         fun connected(): Boolean = running != null
+
+        /** The allowed list did not start the service, so the driver may restart DiPlay instead. */
+        fun restartOffered(): Boolean = restartOffered(connected(), unboundAfterRestore)
+
+        internal fun restartOffered(connected: Boolean, unboundAfterRestore: Boolean): Boolean =
+            !connected && unboundAfterRestore
 
         /** The window uses this to avoid duplicating an event that the bound input filter processed. */
         internal fun observedDoubleSiri(event: KeyEvent): Boolean =
@@ -556,14 +569,44 @@ class WheelKeyService : AccessibilityService() {
             val allowed = applyServiceSettings(context, adb::shell) {
                 mayAsk || wanted(context)
             }
-            if (allowed && mayAsk) NavigationWheelSettings.recordAuthorization(context)
-            if (allowed) note("wheel key service allowed over adb")
-            if (allowed) access else LocalAdb.Access.UNREACHABLE
+            if (!allowed) return@use LocalAdb.Access.UNREACHABLE
+            if (mayAsk) NavigationWheelSettings.recordAuthorization(context)
+            Log.i(TAG, "wheel key service allowed over adb")
+            settle(context, adb::shell)
+            access
+        }
+
+        /**
+         * Android starts the service some time after the write, so whether it did is known only now. A service
+         * that did not start is looked up in Android's own lists, over the same adb connection (#1355).
+         */
+        internal fun settle(context: Context, shell: (String) -> String?, sleep: (Long) -> Unit = Thread::sleep): Boolean {
+            // It may also have started while the lists were read.
+            val state = if (waitUntilBound(::connected, sleep)) null else WheelKeyServiceState.read(context, shell)
+            if (state == null || connected()) {
+                note("wheel key service allowed over adb, started")
+                return true
+            }
+            unboundAfterRestore = true
+            context.getSharedPreferences(RESTORE_PREFS, Context.MODE_PRIVATE).edit()
+                .putString("state", state.toString())
+                .putLong("stateAt", System.currentTimeMillis())
+                .apply()
+            note("wheel key service allowed over adb, not started: $state")
+            return false
+        }
+
+        internal fun waitUntilBound(bound: () -> Boolean, sleep: (Long) -> Unit): Boolean {
+            repeat(SETTLE_STEPS) {
+                if (bound()) return true
+                sleep(SETTLE_STEP_MILLIS)
+            }
+            return bound()
         }
 
         private const val GRANT_EXIT = "DIPLAY_WHEEL_EXIT"
         private const val CRASH_RESET_PAUSE_SECONDS = 1
-        private fun checkedShell(command: String, shell: (String) -> String?): String? {
+        internal fun checkedShell(command: String, shell: (String) -> String?): String? {
             val lines = shell("( $command ); result=\$?; printf '\\n$GRANT_EXIT:%s\\n' \"\$result\"")
                 ?.trimEnd()?.lines() ?: return null
             if (lines.lastOrNull() != "$GRANT_EXIT:0") return null
@@ -624,6 +667,7 @@ class WheelKeyService : AccessibilityService() {
          * a DiPlay screen opens or comes back to the front, so the keys work without a visit to the settings.
          * The front check matters when the service stays unbound after the retries at startup: the keys
          * stayed on "Allowed, starting…" with the car's adb working until DiPlay was restarted (#606).
+         * Where even that does not start it, see [WheelKeyServiceReset].
          */
         fun restoreIfNeeded(context: Context) {
             val app = context.applicationContext
@@ -635,6 +679,7 @@ class WheelKeyService : AccessibilityService() {
                         restore = { enableOverAdb(app, mayAsk = false) },
                         sleep = Thread::sleep,
                     ) { attempt, access ->
+                        // A write that adb accepted has had its time to start the service by now (settle).
                         Log.i(TAG, "wheel key service restore attempt=$attempt adb=$access bound=${connected()}")
                         // Without its number, a run of attempts that end the same way is one line of the report.
                         WheelKeyLog.note("wheel key service restore attempt adb=$access bound=${connected()}")
@@ -685,8 +730,12 @@ class WheelKeyService : AccessibilityService() {
             val last = if (at == 0L) "none" else
                 "attempt=${prefs.getInt("attempt", 0)} adb=${prefs.getString("adb", null)} " +
                     "ageMs=${System.currentTimeMillis() - at}"
+            val state = prefs.getString("state", null)?.let {
+                "[$it ageMs=${System.currentTimeMillis() - prefs.getLong("stateAt", 0L)}]"
+            } ?: "none"
             return "Wheel key service: wanted=${wanted(context)} allowedInSettings=${enabledInSettings(context)} " +
-                "bound=${connected()} lastRestore=$last " +
+                "bound=${connected()} lastRestore=$last stateAfterLastFailedRestore=$state " +
+                "lastRestart=${WheelKeyServiceReset.report(context)} " +
                 "siriDoublePress=${WheelZoomSettings.siriDoublePress(context)} " +
                 "siriDoubleIntervalMs=${WheelZoomSettings.siriDoublePressIntervalMillis(context)} " +
                 "siriTriggerDelayMs=${WheelZoomSettings.siriTriggerDelayMillis(context)}"

@@ -703,6 +703,11 @@
     <string name="wheel_keys_adb_failed">ADB không khả dụng: %1$s</string>
     <string name="wheel_keys_open_settings">Mở cài đặt hỗ trợ tiếp cận</string>
     <string name="wheel_keys_no_settings">Hệ thống giải trí này không có màn hình cài đặt hỗ trợ tiếp cận. Hãy dùng nút ADB.</string>
+    <string name="settings_wheel_keys_restart">Khởi động lại DiPlay để chạy dịch vụ · ADB</string>
+    <string name="settings_wheel_keys_restart_description">DiPlay đã cho phép lại dịch vụ, nhưng Android không khởi động nó. Khởi động lại DiPlay qua ADB của xe có thể khắc phục. CarPlay sẽ ngắt kết nối.</string>
+    <string name="settings_wheel_keys_restart_title">Khởi động lại DiPlay?</string>
+    <string name="settings_wheel_keys_restart_message">DiPlay sẽ đóng rồi mở lại. Nếu CarPlay đang kết nối, nó sẽ ngắt kết nối. Chỉ thực hiện khi đang đỗ xe. Nếu thành công, phím vô lăng hoạt động lại khoảng 10 giây sau khi DiPlay mở.\n\nSau khi đã thành công một lần, DiPlay sẽ tự làm như vậy khi xe khởi động DiPlay mà dịch vụ lại bị kẹt: một lần cho mỗi lần khởi động và chỉ trước khi CarPlay kết nối.</string>
+    <string name="settings_wheel_keys_restart_confirm">Khởi động lại DiPlay</string>
     <string name="wheel_zoom_behaviour">Phím chế độ</string>
     <string name="wheel_zoom_behaviour_toggle">chuyển đổi cho đến khi nhấn lại</string>
     <string name="wheel_zoom_behaviour_timed">thu phóng trong 5 giây</string>

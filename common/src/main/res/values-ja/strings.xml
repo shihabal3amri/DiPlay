@@ -702,6 +702,11 @@
     <string name="wheel_keys_adb_failed">ADBが使用できません：%1$s</string>
     <string name="wheel_keys_open_settings">ユーザー補助設定を開く</string>
     <string name="wheel_keys_no_settings">この車載端末にはユーザー補助設定画面がありません。ADBボタンを使用してください。</string>
+    <string name="settings_wheel_keys_restart">DiPlayを再起動してサービスを開始 · ADB</string>
+    <string name="settings_wheel_keys_restart_description">DiPlayはサービスを再び許可しましたが、Androidが起動しませんでした。車のADBでDiPlayを再起動すると解決する場合があります。CarPlayは切断されます。</string>
+    <string name="settings_wheel_keys_restart_title">DiPlayを再起動しますか？</string>
+    <string name="settings_wheel_keys_restart_message">DiPlayはいったん終了し、再び開きます。CarPlayが接続中の場合は切断されます。必ず停車中に行ってください。成功すると、DiPlayが開いてから約10秒でステアリングスイッチが使えるようになります。\n\n一度成功すると、車の始動時にDiPlayが開き、サービスが再び止まっている場合、DiPlayが同じ操作を自動で行います。始動ごとに1回、CarPlayの接続前に限ります。</string>
+    <string name="settings_wheel_keys_restart_confirm">DiPlayを再起動</string>
     <string name="wheel_zoom_behaviour">モード切替キー</string>
     <string name="wheel_zoom_behaviour_toggle">次に押すまで切り替えたまま</string>
     <string name="wheel_zoom_behaviour_timed">5秒間だけ地図を拡大・縮小</string>

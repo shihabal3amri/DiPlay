@@ -633,6 +633,11 @@
     <string name="wheel_keys_adb_failed">ADB недоступний: %1$s</string>
     <string name="wheel_keys_open_settings">Відкрити спеціальні можливості</string>
     <string name="wheel_keys_no_settings">На цьому головному пристрої немає екрана спеціальних можливостей. Скористайтеся кнопкою ADB.</string>
+    <string name="settings_wheel_keys_restart">Перезапустити DiPlay, щоб запустити службу · ADB</string>
+    <string name="settings_wheel_keys_restart_description">DiPlay знову дозволив службу, але Android її не запустив. Перезапуск DiPlay через ADB автомобіля може це виправити. CarPlay від’єднається.</string>
+    <string name="settings_wheel_keys_restart_title">Перезапустити DiPlay?</string>
+    <string name="settings_wheel_keys_restart_message">DiPlay закриється й відкриється знову. Якщо CarPlay під’єднано, він від’єднається. Робіть це лише на стоянці. Якщо це допоможе, кнопки керма запрацюють приблизно через 10 секунд після відкриття DiPlay.\n\nПісля першого успіху DiPlay робитиме те саме сам, коли автомобіль запускає DiPlay, а служба знову зависла: один раз за запуск і лише до під’єднання CarPlay.</string>
+    <string name="settings_wheel_keys_restart_confirm">Перезапустити DiPlay</string>
     <string name="wheel_zoom_behaviour">Кнопка режиму</string>
     <string name="wheel_zoom_behaviour_toggle">перемикає до наступного натискання</string>
     <string name="wheel_zoom_behaviour_timed">масштаб на 5 секунд</string>

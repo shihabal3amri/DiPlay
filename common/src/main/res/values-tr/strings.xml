@@ -668,6 +668,11 @@
     <string name="wheel_keys_adb_failed">ADB kullanılamıyor: %1$s</string>
     <string name="wheel_keys_open_settings">Erişilebilirlik ayarlarını aç</string>
     <string name="wheel_keys_no_settings">Bu ana ünitede erişilebilirlik ayarları ekranı yok. ADB düğmesini kullanın.</string>
+    <string name="settings_wheel_keys_restart">Hizmeti başlatmak için DiPlay\'i yeniden başlat · ADB</string>
+    <string name="settings_wheel_keys_restart_description">DiPlay hizmete yeniden izin verdi, ancak Android onu başlatmadı. DiPlay\'i aracın ADB\'si üzerinden yeniden başlatmak bunu düzeltebilir. CarPlay bağlantısı kesilir.</string>
+    <string name="settings_wheel_keys_restart_title">DiPlay yeniden başlatılsın mı?</string>
+    <string name="settings_wheel_keys_restart_message">DiPlay kapanır ve yeniden açılır. CarPlay bağlıysa bağlantısı kesilir. Bunu yalnızca park halindeyken yapın. İşe yararsa direksiyon tuşları, DiPlay açıldıktan yaklaşık 10 saniye sonra geri gelir.\n\nBir kez işe yaradıktan sonra, araç DiPlay\'i başlattığında hizmet yine takılmışsa DiPlay aynısını kendisi yapar: her çalıştırmada bir kez ve yalnızca CarPlay bağlanmadan önce.</string>
+    <string name="settings_wheel_keys_restart_confirm">DiPlay\'i yeniden başlat</string>
     <string name="wheel_zoom_behaviour">Mod tuşu</string>
     <string name="wheel_zoom_behaviour_toggle">tekrar basılana kadar değiştirir</string>
     <string name="wheel_zoom_behaviour_timed">5 saniye boyunca yakınlaştır</string>
