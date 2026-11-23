@@ -24,7 +24,9 @@ import com.shilapi.xcertplay.network.WifiChannelRanker
  * location services are on, so a scan without those reports [Outcome.NeedsLocation]
  * instead of an empty result. When the car's Wi-Fi client is off, the scan reports
  * [Outcome.WifiOff] instead of asking the driver to try again. A refused or
- * timed-out scan reports [Outcome.ScanFailed]; note that [WifiManager.getScanResults]
+ * timed-out scan reports [Outcome.ScanFailed]; so does a broadcast that arrives
+ * with `EXTRA_RESULTS_UPDATED=false`, instead of ranking the cached list.
+ * Note that [WifiManager.getScanResults]
  * may return cached results from an earlier scan, so a successful scan can still
  * describe the neighbourhood a minute ago.
  */
@@ -89,11 +91,20 @@ class WifiChannelScanner(context: Context) {
             onOutcome(outcome)
         }
         timeoutRunnable = Runnable {
-            finish(scannedOutcome(manager))
+            // A scan that never answers is a failed scan, not an empty one:
+            // ranking the cached list would show "No networks found" instead.
+            finish(Outcome.ScanFailed)
         }
         receiver = object : BroadcastReceiver() {
             override fun onReceive(context: Context, intent: Intent) {
-                finish(scannedOutcome(manager))
+                // Android also sends this broadcast when the scan fails, with
+                // EXTRA_RESULTS_UPDATED=false. The extra is absent below API 29,
+                // where a broadcast still means results arrived.
+                if (!intent.getBooleanExtra(WifiManager.EXTRA_RESULTS_UPDATED, true)) {
+                    finish(Outcome.ScanFailed)
+                } else {
+                    finish(scannedOutcome(manager))
+                }
             }
         }
         val filter = IntentFilter(WifiManager.SCAN_RESULTS_AVAILABLE_ACTION)

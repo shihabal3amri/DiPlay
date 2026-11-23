@@ -26,6 +26,7 @@ import android.media.AudioFormat
 import android.media.AudioTrack
 import android.media.MediaFormat
 import android.net.Uri
+import android.net.wifi.WifiManager
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
@@ -2058,16 +2059,6 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
                 AirPlayPersistence.saveLowLatencyDecoder(this, it)
                 markReconnectNeeded()
             }
-            // One switch for slow head units: it also moves the Direct video output toggle above,
-            // so re-render to show its new state instead of leaving it stale.
-            toggle(card, getString(R.string.settings_weak_device_mode),
-                getString(R.string.settings_weak_device_mode_description),
-                AirPlayPersistence.loadWeakDeviceMode(this)) { enabled ->
-                if (enabled) AirPlayPersistence.applyWeakDeviceProfile(this)
-                else AirPlayPersistence.restoreWeakDeviceProfile(this)
-                markReconnectNeeded()
-                render()
-            }
             toggle(card, getString(R.string.call_echo_cancellation), getString(R.string.call_echo_cancellation_description),
                 AirPlayPersistence.loadCallEchoCancellation(this)) {
                 AirPlayPersistence.saveCallEchoCancellation(this, it)
@@ -3802,6 +3793,18 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
         })
     }
 
+    /**
+     * Null when the platform cannot answer: `is5GHzBandSupported` is API 29+, so on
+     * API 27 the call throws NoSuchMethodError and runCatching (which catches
+     * Throwable) returns null — the same pattern WifiP2pGroupManager already uses.
+     * Callers treat null as "unknown" and keep the current behaviour; only an
+     * explicit false skips the band warning.
+     */
+    private fun wifi5GhzSupported(): Boolean? =
+        runCatching {
+            (getSystemService(Context.WIFI_SERVICE) as? WifiManager)?.is5GHzBandSupported
+        }.getOrNull()
+
     /** Wi-Fi channel scanner next to the Wi-Fi Direct channel control: one scan, a ranked summary, and an apply action. */
     private fun wifiChannelScanControls(card: LinearLayout) {
         card.addView(label(getString(R.string.settings_wifi_channel_scan), 22, TEXT, true).apply {
@@ -3823,11 +3826,17 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
             isEnabled = !wifiChannelScanInProgress && !CarPlayBackgroundSession.hasSession()
         }
         card.addView(wifiChannelScanButton, matchButton(10, 60))
+        // The button is greyed out while a session runs; say why instead of leaving it silent.
+        if (CarPlayBackgroundSession.hasSession()) {
+            card.addView(label(getString(R.string.settings_wifi_channel_scan_session_running), 14, MUTED).apply {
+                setPadding(0, dp(10), 0, 0)
+            })
+        }
         val recommended = wifiChannelScanRecommendedChannel
         if (recommended != null) {
             val current = AirPlayPersistence.loadWifiP2pPreferredChannel(this)
-            if (current == WifiP2pChannels.AUTO || current == WifiP2pChannels.AUTO_5_GHZ ||
-                current >= 36) {
+            if ((current == WifiP2pChannels.AUTO || current == WifiP2pChannels.AUTO_5_GHZ ||
+                current >= 36) && wifi5GhzSupported() != false) {
                 card.addView(label(getString(R.string.settings_wifi_channel_scan_band_change,
                     wifiDirectChannelLabel(current), recommended), 15, WARNING).apply {
                     setPadding(0, dp(10), 0, 0)
@@ -3872,7 +3881,11 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
                     wifiChannelScanRecommendedChannel = outcome.recommendedChannel
                 }
             }
-            render()
+            // The scan outlives the page: re-render only while the scanner is still
+            // shown. render() also cancels wheel-key learning, so a late re-render
+            // would steal the driver's place on another page. The summary and the
+            // recommendation are stored, so they render when the driver comes back.
+            if (wifiChannelScanResultLabel?.isAttachedToWindow == true) render()
         }
     }
 
@@ -6324,7 +6337,6 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
         appendLine("Wheel long-press seek: ${if (AirPlayPersistence.loadWheelLongPressSeek(appContext)) "on" else "off"}; " +
             "long-press keys ${CarPlayMediaButton.longPressSeekKeys.describe()}")
         appendLine("MTK decoder tuning preference: ${if (AirPlayPersistence.loadMtkDecoderTuning(appContext)) "enabled" else "disabled"}")
-        appendLine("Weak head-unit mode: ${if (AirPlayPersistence.loadWeakDeviceMode(appContext)) "enabled" else "disabled"}")
         appendLine("CarPlay size: ${AirPlayPersistence.loadWidthPhysicalMm(appContext).let { mm -> "${com.shilapi.xcertplay.airplay.CarPlaySize.exact(mm)?.label ?: "Custom"}, $mm mm" }}")
         appendLine("Saved resolution preference (may differ from active session): ${AirPlayPersistence.loadDisplayScalePercent(appContext)}%")
         DiagnosticSettingsReport.lines(appContext).forEach { line -> DiagnosticRedactor.redact(line)?.let { appendLine(it) } }
