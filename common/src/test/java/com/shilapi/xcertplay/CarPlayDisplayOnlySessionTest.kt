@@ -147,6 +147,27 @@ class CarPlayDisplayOnlySessionTest {
         assertTrue(report, report.contains("media key pause reached the display-only session; left to the car"))
     }
 
+    @Test fun unusedKeysInTheDisplayOnlySessionKeepTheirReleaseTimingInTheReport() {
+        WheelKeyLog.reset()
+        val controller = attach(song)
+        val callback: MediaSession.Callback = ReflectionHelpers.getField(CarPlayMediaKeys, "displayOnlyCallback")
+
+        // A wheel long press that CarPlay does not use.
+        listOf(KeyEvent.ACTION_DOWN to 1_000L, KeyEvent.ACTION_UP to 1_900L).forEach { (action, at) ->
+            callback.onMediaButtonEvent(
+                Intent(Intent.ACTION_MEDIA_BUTTON).putExtra(
+                    Intent.EXTRA_KEY_EVENT,
+                    KeyEvent(1_000L, at, action, KeyEvent.KEYCODE_MEDIA_FAST_FORWARD, 0),
+                ),
+            )
+        }
+
+        verify(controller, never()).sendMediaButton(anyInt())
+        val report = WheelKeyLog.report(bound = true).joinToString("\n")
+        val key = KeyEvent.keyCodeToString(KeyEvent.KEYCODE_MEDIA_FAST_FORWARD)
+        assertTrue(report, report.contains("media key $key not used by CarPlay; released at +"))
+    }
+
     private fun attach(nowPlaying: CarPlayNowPlaying): CarPlayController {
         val controller = mock(CarPlayController::class.java).also(controllers::add)
         `when`(controller.nowPlayingSnapshot()).thenReturn(nowPlaying)

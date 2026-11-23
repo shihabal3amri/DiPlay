@@ -524,6 +524,7 @@ internal object CarPlayMediaKeys {
     private val displayOnlyCallback = CarPlayMediaCallback(
         experimentalDiLink3Keys = { appContext?.let(BydOutputSettings::carPlayCallControls) == true },
         notUsed = ::notUsed,
+        notUsedReleased = ::notUsedReleased,
     ) { _, source -> leftToCar(source) }
 
     private fun leftToCar(source: String) {
