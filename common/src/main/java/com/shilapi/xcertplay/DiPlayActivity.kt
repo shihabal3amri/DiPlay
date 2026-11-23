@@ -2053,6 +2053,8 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
                 AirPlayPersistence.saveCallEchoCancellation(this, it)
                 markReconnectNeeded()
             }
+            toggle(card, getString(R.string.settings_call_media_output), getString(R.string.settings_call_media_output_description),
+                AirPlayPersistence.loadCallMediaOutput(this)) { AirPlayPersistence.saveCallMediaOutput(this, it) }
             toggle(card, getString(R.string.call_voice_filter), getString(R.string.call_voice_filter_description),
                 AirPlayPersistence.loadCallVoiceFilter(this)) {
                 AirPlayPersistence.saveCallVoiceFilter(this, it)
