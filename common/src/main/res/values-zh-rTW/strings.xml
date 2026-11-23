@@ -568,6 +568,9 @@
     <string name="video_play">播放</string>
     <string name="video_pause">暫停</string>
     <string name="video_cannot_play">此影片無法在車機螢幕上播放。受保護的影片（例如 Apple TV+）需要取得授權的接收器。</string>
+    <string name="video_cannot_load">影片已停止載入。請檢查連線後再試一次。</string>
+    <string name="video_cannot_play_here">此影片無法在車機螢幕上播放：車機無法讀取或解碼其格式。</string>
+    <string name="video_cannot_play_on_car">此影片無法在車機螢幕上播放。</string>
     <string name="safe_area_mapping_summary">安全區域：%1$d x %2$d，位於 (%3$d, %4$d)，畫面 %5$d x %6$d</string>
     <string name="navigation_widget_label">CarPlay 導航</string>
     <string name="navigation_widget_description">來自 CarPlay 的下一個轉彎、距離、到達時間和歌曲</string>
@@ -752,13 +755,15 @@
     <string name="carplay_rotation_smoother">較流暢（1920）</string>
     <string name="cluster_size_smallest">較小 · 地圖範圍較廣、細節較多</string>
     <string name="main_buffered_audio">緩衝音樂（實驗性）</string>
-    <string name="main_buffered_audio_description">支援此功能的應用程式（例如 Apple Music）可預先傳送約兩分鐘的音樂，因此短暫的 Wi-Fi 中斷不會影響播放。其他應用程式仍使用一般串流。變更後會重新連線至 CarPlay。</string>
+    <string name="main_buffered_audio_description">支援此功能的應用程式（例如 Apple Music）可預先傳送約兩分鐘的音樂，因此短暫的 Wi-Fi 中斷不會影響播放。其他應用程式仍使用一般串流。下次連線時生效。</string>
     <string name="bt_suspend_delay">藍牙暫停延時</string>
     <string name="bt_suspend_delay_option">連線 %1$d 秒後</string>
-    <string name="bt_suspend_during_carplay">CarPlay 期間暫停車機藍牙 · 需要 ADB</string>
-    <string name="bt_suspend_during_carplay_description">手機與車機保持免提連線時，來電會同時彈出車機藍牙電話和 CarPlay 電話。開啟後：CarPlay 連線期間透過 ADB 暫停車機藍牙，來電只在 CarPlay 回應；藍牙關閉期間，CarPlay 通話改走中控喇叭和車機麥克風，不再走電話免提。CarPlay 結束或下次無線連線握手前會自動恢復藍牙。配對不受影響。變更在下次連線時生效。</string>
+    <string name="bt_suspend_during_carplay">CarPlay 期間暫停車機藍牙</string>
+    <string name="bt_suspend_during_carplay_description">手機與車機保持免提連線時，來電會同時彈出車機藍牙電話和 CarPlay 電話。開啟後：CarPlay 連線期間暫停車機藍牙，來電只在 CarPlay 回應；藍牙關閉期間，CarPlay 通話改走中控喇叭和車機麥克風，不再走電話免提。CarPlay 結束或下次無線連線握手前會自動恢復藍牙。配對不受影響。變更在下次連線時生效。Android 13 及更高版本需要 ADB。</string>
     <string name="settings_car_bluetooth_audio">透過車輛藍牙播放 CarPlay 音訊（實驗性）</string>
-    <string name="settings_car_bluetooth_audio_description">DiPlay 不向 iPhone 提供 CarPlay 音訊，因此音樂、導航和通話應透過 iPhone 與車輛的藍牙連線傳輸。請保持 iPhone 與車輛配對，並將車輛音源設為藍牙。如果聲音改從 iPhone 播放，請關閉此選項。變更後會重新連線至 CarPlay。</string>
+    <string name="settings_car_bluetooth_audio_description">DiPlay 不向 iPhone 提供 CarPlay 音訊，因此音樂、導航和通話應透過 iPhone 與車輛的藍牙連線傳輸。請保持 iPhone 與車輛配對，並將車輛音源設為藍牙。如果聲音改從 iPhone 播放，請關閉此選項。在工作階段期間套用此變更會重新連線 CarPlay。</string>
+    <string name="settings_car_music_link_drop">CarPlay 期間中斷車機藍牙音樂（實驗性）</string>
+    <string name="settings_car_music_link_drop_description">在部分車機上，車輛自身與 iPhone 的藍牙音樂連線會在 CarPlay 音樂開始時立即將其暫停。開啟後，CarPlay 執行期間 DiPlay 只中斷與本次工作階段 iPhone 的音樂連線，CarPlay 結束後嘗試重新連線；在部分車機上無法做到，CarPlay 結束後車機藍牙音樂可能保持中斷。車輛藍牙通話和配對保持不變。CarPlay 音訊透過車輛藍牙播放時不起作用。有線連線時使用在 DiPlay 中選擇的 iPhone。下次連線時生效。</string>
     <string name="call_echo_cancellation">通話回音消除（實驗性）</string>
     <string name="call_echo_cancellation_description">嘗試減少 CarPlay 通話中傳送給對方的喇叭回音。效果取決於車用主機。下次連線至 CarPlay 時生效。</string>
     <string name="call_voice_filter">更清晰的通話人聲（實驗性）</string>
@@ -768,13 +773,13 @@
     <string name="phone_audio_route_apps">其他應用程式的 VoIP 通話使用車機電話音訊（實驗性）</string>
     <string name="phone_audio_route_apps_description">當 WhatsApp、Telegram、Zoom 等其他應用程式處於語音或視訊通話時執行相同操作。語音訊息和一般錄音不受影響，因為車機在此狀態下會靜音一般麥克風。需要 DiPlay 保持執行，因此同時會開啟方向盤按鍵無障礙服務。預設關閉。</string>
     <string name="smooth_video">流暢影片（實驗性）</string>
-    <string name="smooth_video_description">依 iPhone 為每一幀標記的時間加上一段短延遲顯示 CarPlay 主畫面，而不是解碼後立即顯示。延遲會自動調整，讓大多數畫面能及時解碼；仍未按時準備好的畫面會立即顯示。捲動可能更平順，但觸控反應會變慢。畫面調整不適用。變更後會重新連線至 CarPlay。</string>
+    <string name="smooth_video_description">依 iPhone 為每一幀標記的時間加上一段短延遲顯示 CarPlay 主畫面，而不是解碼後立即顯示。延遲會自動調整，讓大多數畫面能及時解碼；仍未按時準備好的畫面會立即顯示。捲動可能更平順，但觸控反應會變慢。畫面調整不適用。下次連線時生效。</string>
     <string name="settings_mtk_decoder_tuning">MTK 解碼器低延遲（實驗性）</string>
     <string name="settings_mtk_decoder_tuning_description">偵測到所選影片格式可使用 %1$s。有專用 MTK 低延遲解碼器時優先使用；舊版 OMX 解碼器則先嘗試無重新排序加低延遲，再嘗試僅低延遲。解碼器拒絕設定或執行失敗時會自動回退。它可能降低畫面延遲，但部分韌體可能卡頓或解碼失敗。下次連線至 CarPlay 時生效。</string>
     <string name="settings_direct_video_output">直接影片輸出（實驗性）</string>
-    <string name="settings_direct_video_output_description">將 CarPlay 畫面直接交給車機的系統合成器，而不是在 DiPlay 視窗內繪製。可將延遲降低約一次螢幕更新。畫面調整不適用。會重新連線至 CarPlay。</string>
+    <string name="settings_direct_video_output_description">將 CarPlay 畫面直接交給車機的系統合成器，而不是在 DiPlay 視窗內繪製。可將延遲降低約一次螢幕更新。畫面調整不適用。下次連線時生效。</string>
     <string name="settings_low_latency_decoder">低延遲解碼（實驗性）</string>
-    <string name="settings_low_latency_decoder_description">要求高通影片解碼器在每一幀解碼後立即輸出，而不是保留後續幀，並由專用執行緒立即顯示每個已解碼的幀，無需等待下一幀到達。可將延遲降低數十毫秒。如果畫面出現破圖或凍結，請關閉。下次連線時生效。</string>
+    <string name="settings_low_latency_decoder_description">要求影片解碼器在每一幀解碼後立即輸出，而不是保留後續幀，並由專用執行緒立即顯示每個已解碼的幀，無需等待下一幀到達。低延遲要求本身僅適用於高通解碼器；在包括 Spreadtrum 在內的其他解碼器上，此選項仍會啟用專用輸出執行緒。可將延遲降低數十毫秒。如果畫面出現破圖或凍結，請關閉。下次連線時生效。</string>
     <string name="settings_fps_counter">FPS 計數器</string>
     <string name="settings_fps_counter_description">在 CarPlay 右上角顯示計數器：每秒顯示的幀數（50 以上為綠色，30 以上為黃色，低於 30 為紅色）、每秒從 iPhone 接收的幀數以及解碼時間。畫面靜止時幀數很少，因為 iPhone 不會傳送幀。</string>
     <string name="manual_grant_cmd_hint">或在電腦上執行以下 ADB 指令：</string>
@@ -939,11 +944,13 @@
     <string name="settings_carplay_same_task_description">適用於在卡片或畫中畫視窗中顯示 DiPlay 的桌面，例如迪友桌面卡片、嘟嘟桌面畫中畫。CarPlay 會像 0.2.11 及更早版本一樣在 DiPlay 自己的視窗中開啟，不再另外以全螢幕開啟。下次開啟 CarPlay 時生效，不會中斷連線。</string>
     <string name="settings_hotspot_name_non_english">熱點名稱含中文或其他非英文字元時，部分車機廣播的名稱 iPhone 找不到，CarPlay 會停在「正在準備 CarPlay…」。如出現這種情況，請把車機熱點改為英文字母和數字的名稱。</string>
     <string name="settings_speech_without_low_rates">USB 下更清晰的導航語音（實驗性）</string>
-    <string name="settings_speech_without_low_rates_description">USB 連線時，iPhone 可能以 8 kHz 電話音質傳送導航播報和 Siri 的語音回答。開啟後不再為這類聲音提供 8 和 16 kHz，讓 iPhone 選擇更高的取樣率。如果播報沒有聲音，請關閉。會重新連線 CarPlay。</string>
+    <string name="settings_speech_without_low_rates_description">USB 連線時，iPhone 可能以 8 kHz 電話音質傳送導航播報和 Siri 的語音回答。開啟後不再為這類聲音提供 8 和 16 kHz，讓 iPhone 選擇更高的取樣率。如果播報沒有聲音，請關閉。下次連線時生效。</string>
     <string name="settings_call_at_call_rate">通話使用其自身取樣率（實驗性）</string>
     <string name="settings_call_at_call_rate_description">以通話自身的取樣率（8、16、24 或 32 kHz）的 PCM 提供通話音訊，而不是 48 kHz 的 Opus，與原廠 CarPlay 接收器一致。僅限 USB 傳輸線：透過 Wi-Fi 時 iPhone 會把所有 CarPlay 聲音留在手機上，因此無線連線提供一般格式。下次連線時生效。如果通話沒有聲音，請關閉此項。</string>
     <string name="settings_wheel_long_press_seek">長按下一首／上一首快轉倒轉（實驗性）</string>
     <string name="settings_wheel_long_press_seek_description">在方向盤為長按「下一首」和「上一首」送出單獨按鍵的車機上（比亞迪 DiLink 3），長按會快轉或倒轉約 2.5 秒，而不是沒有反應。尚未在 iPhone 上測試。下次連線時生效。</string>
+    <string name="settings_declare_automatic_appearance">告知 iPhone CarPlay 外觀為自動（實驗性）</string>
+    <string name="settings_declare_automatic_appearance_description">iPhone 連線時告知它 CarPlay 及其地圖會自動選擇淺色或深色，DiPlay 自 0.2.16 起一直這樣做。如果 CarPlay 不跟隨「CarPlay 日夜模式」設定，請關閉此項。下次連線時生效。</string>
     <string name="bluetooth_connections_not_real">此車機的系統藍牙回報「已連線」，但實際上沒有連到 iPhone：連一個不存在的服務也回報成功。這裡的藍牙由廠商自己的模組處理，App 無法使用，所以此車機無法使用無線 CarPlay。請嘗試使用 USB 連線。</string>
     <string name="bluetooth_cannot_open_connections">此車機的系統藍牙無法替 App 建立連線：韌體沒有提供 App 連線要用的那一部分。車機自己的藍牙通話和音樂不受影響，但此車機無法使用無線 CarPlay。請嘗試使用 USB 連線。</string>
     <string name="bluetooth_will_not_stay_on_hint">如果藍牙在那裡開不起來，或開了又自己關掉，代表這台車機的藍牙只供它自己的通話和音樂使用，App 無法使用。這種情況下無法使用無線 CarPlay，請改用 USB 線。</string>
@@ -993,6 +1000,8 @@
     <string name="settings_mfi_target_description">只有車機上插著 CH341 認證轉接器時才選擇 USB/CH341。沒有轉接器時請選擇「本機離線」。下次連線時生效。</string>
     <string name="settings_call_speakerphone">通話使用揚聲器</string>
     <string name="settings_call_speakerphone_description">適用於當作車機的 Android 手機或平板：CarPlay 通話從揚聲器播放而不是聽筒，並使用免持麥克風。車機上請保持關閉。從下一次通話開始生效。</string>
+    <string name="settings_call_media_output">通話改走媒體輸出（實驗性）</string>
+    <string name="settings_call_media_output_description">適用於音樂有聲音、CarPlay 通話卻沒有聲音的車機：通話以播放音樂的方式播放，不進入 Android 的通話模式，並用一般麥克風錄音。Android 內建的通話回音消除與降噪不會運作，若對方聽到回音，請開啟「通話回音消除」。通話音量跟著媒體音量。開啟「CarPlay 通話使用車機電話音訊」時，這個設定不會生效。通話已經有聲音時請保持關閉。從下一次通話開始生效。</string>
     <string name="settings_navigation_attenuation">導航提示音量</string>
     <string name="settings_navigation_attenuation_value">%1$d dB</string>
     <string name="settings_navigation_attenuation_description">只降低 CarPlay 導航提示音量，不影響音樂與通話。調整立即生效，仍可使用車機本身的導航音量。</string>
@@ -1040,4 +1049,5 @@
     <string name="settings_safe_area_fitted_summary">安全區域：已避開瀏海和圓角，%1$d x %2$d，位於 (%3$d, %4$d)，畫面 %5$d x %6$d</string>
     <string name="settings_wifi_direct_unavailable">無法使用</string>
     <string name="settings_wifi_direct_unsupported_help">請在「連線設定」選擇「車載熱點」或「現有 Wi-Fi / 同一區域網路」，再重試。</string>
+    <string name="wired_teardown_pending">USB 清理仍在進行中。請拔除 iPhone，稍候，然後點按「%1$s」。</string>
 </resources>
