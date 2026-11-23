@@ -1,7 +1,7 @@
 name: Android checks
 on:
   push:
-    branches: [main, 'feature/**', 'fix/**', 'standalone-apk']
+    branches: [main]
   pull_request:
   workflow_dispatch:
 permissions:
@@ -37,3 +37,4 @@ jobs:
             samples/home/build/reports/tests/
             samples/home/build/reports/lint-results-debug.html
             samples/maphost/build/reports/lint-results-debug.html
+
