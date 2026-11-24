@@ -2078,7 +2078,8 @@ class CarPlayController(
 
     /**
      * Notes at [session]'s start whether CarPlay is on screen, so a screen attached and left again
-     * before the handoff watchdog fires still counts against audio-only proof (see [wirelessSessionUsable]).
+     * before the handoff watchdog fires still counts against audio or unrendered video as proof
+     * (see [wirelessSessionUsable]).
      */
     private fun observeWirelessScreen(generation: Int, session: AirPlaySession) {
         wirelessConnectionProof.observeScreen(generation, session, mainScreenOutput())
@@ -2174,15 +2175,17 @@ class CarPlayController(
             }
             // Session establishment alone also occurs on black-screen failures. A rendered frame
             // proves that projection is usable when the optional tunneled control is absent; while
-            // CarPlay has been hidden all session no frame can render, and audio from the iPhone
-            // proves it (#1215).
+            // CarPlay has been hidden all session no frame can render, and audio or main-screen
+            // video from the iPhone proves it (#1215).
+            val session = activeSession
             if (wirelessSessionUsable(generation, screen)) {
                 if (!wirelessActiveReported.compareAndSet(false, true)) return
                 wirelessHandoffFellBack.set(true)
-                val proof = if (wirelessConnectionProof.hasRenderedFrame(generation)) {
-                    "rendered video"
-                } else {
-                    "iPhone audio while CarPlay is hidden"
+                val proof = when {
+                    wirelessConnectionProof.hasRenderedFrame(generation) -> "rendered video"
+                    session?.hasReceivedMainVideo == true && !session.hasReceivedAudio ->
+                        "iPhone video while CarPlay is hidden"
+                    else -> "iPhone audio while CarPlay is hidden"
                 }
                 // The Bluetooth link is the only iAP2 channel here. Closing it would stop NowPlaying,
                 // route guidance and call updates for the rest of the session, so keep it until the
@@ -2191,11 +2194,11 @@ class CarPlayController(
                     "preserving AirPlay and keeping the Bluetooth bootstrap for iAP2 control")
                 onStatus(CarPlayStatus.WirelessActiveFallback, generation)
             } else {
-                val session = activeSession
                 debugLog(
                     "wireless handoff found no working session: session=${session != null} " +
                         "renderedFrame=${wirelessConnectionProof.hasRenderedFrame(generation)} " +
-                        "audio=${session?.hasReceivedAudio == true} screenAttached=${screen.attached} " +
+                        "audio=${session?.hasReceivedAudio == true} video=${session?.hasReceivedMainVideo == true} " +
+                        "screenAttached=${screen.attached} " +
                         "screenAttachedDuringSession=${wirelessConnectionProof.screenShown(generation)}",
                 )
                 closeWirelessStack(generation = generation)
@@ -2207,7 +2210,9 @@ class CarPlayController(
     /** See [WirelessConnectionProof.isUsable]. Call with [wirelessResourceLock] held. */
     private fun wirelessSessionUsable(generation: Int, screen: MainScreenOutput): Boolean {
         val session = activeSession ?: return false
-        return wirelessConnectionProof.isUsable(generation, session, session.hasReceivedAudio, screen)
+        return wirelessConnectionProof.isUsable(
+            generation, session, session.hasReceivedAudio, session.hasReceivedMainVideo, screen,
+        )
     }
 
 

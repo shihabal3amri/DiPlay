@@ -72,16 +72,23 @@ internal class WirelessConnectionProof<S : Any> {
     /**
      * Whether [session], the current one, has shown that CarPlay works. A rendered frame shows it.
      * While no screen is attached (e.g. CarPlay hidden behind another app) no frame can render, so
-     * audio the iPhone sent on the session ([audioReceived]) shows it instead, but only if no screen
-     * was attached at any point during the session ([observeScreen], also given [screen] here). A dead
-     * session sends neither. Audio is not enough once a screen was attached and no frame rendered:
-     * a session that plays sound behind a black screen still fails, even if the user leaves that
-     * screen before the check. Once accepted, the session stays accepted.
+     * audio ([audioReceived]) or main-screen video ([videoReceived], frames only, no keepalives) that
+     * the iPhone sent on the session shows it instead, but only if no screen was attached at any point
+     * during the session ([observeScreen], also given [screen] here). A dead session sends neither.
+     * Neither is enough once a screen was attached and no frame rendered: a session that plays sound or
+     * receives video behind a black screen still fails, even if the user leaves that screen before the
+     * check. Once accepted, the session stays accepted.
      */
-    @Synchronized fun isUsable(generation: Int, session: S, audioReceived: Boolean, screen: MainScreenOutput): Boolean {
+    @Synchronized fun isUsable(
+        generation: Int,
+        session: S,
+        audioReceived: Boolean,
+        videoReceived: Boolean,
+        screen: MainScreenOutput,
+    ): Boolean {
         if (this.generation != generation || this.session !== session) return false
         observeScreen(generation, session, screen)
-        if (rendered || (audioReceived && !screenShown)) usable = true
+        if (rendered || ((audioReceived || videoReceived) && !screenShown)) usable = true
         return usable
     }
 
