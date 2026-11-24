@@ -882,7 +882,9 @@ object AirPlayPersistence {
             wirelessMusicBufferMillis = loadMediaBufferMillis(context, wireless = true),
         ))
         val targets = WeakDeviceProfile.targets()
-        saveDisplayScalePercent(context, targets.displayScalePercent)
+        // A slower unit may already run below 75%: the mode must never raise
+        // the resolution it claims to lower.
+        saveDisplayScalePercent(context, minOf(loadDisplayScalePercent(context), targets.displayScalePercent))
         saveDirectVideoOutput(context, targets.directVideoOutput)
         saveMediaBufferMillis(context, wireless = true, targets.wirelessMusicBufferMillis)
         saveWeakDeviceMode(context, true)

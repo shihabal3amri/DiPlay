@@ -46,6 +46,16 @@ class WeakDeviceProfilePersistenceTest {
         assertEquals(700, AirPlayPersistence.loadMediaBufferMillis(context, wireless = false))
     }
 
+    @Test fun applyKeepsALowerResolutionAndRestoresIt() {
+        AirPlayPersistence.saveDisplayScalePercent(context, 50)
+
+        AirPlayPersistence.applyWeakDeviceProfile(context)
+        assertEquals(50, AirPlayPersistence.loadDisplayScalePercent(context))
+
+        AirPlayPersistence.restoreWeakDeviceProfile(context)
+        assertEquals(50, AirPlayPersistence.loadDisplayScalePercent(context))
+    }
+
     @Test fun restoreWithNoSnapshotFallsBackToTheDefaults() {
         AirPlayPersistence.restoreWeakDeviceProfile(context)
         assertEquals(100, AirPlayPersistence.loadDisplayScalePercent(context))

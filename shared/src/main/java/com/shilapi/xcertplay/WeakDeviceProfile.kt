@@ -1,6 +1,5 @@
 package com.shilapi.xcertplay
 
-import com.shilapi.xcertplay.airplay.CarPlayDisplayScale
 import com.shilapi.xcertplay.media.MediaAudioBuffer
 
 /**
@@ -41,11 +40,4 @@ object WeakDeviceProfile {
         directVideoOutput = false,
         wirelessMusicBufferMillis = MediaAudioBuffer.DEFAULT_MILLIS,
     )
-
-    /** True when every target value is one the settings screens accept. */
-    fun targetsAreValid(): Boolean {
-        val targets = targets()
-        return targets.displayScalePercent in CarPlayDisplayScale.MIN_PERCENT..CarPlayDisplayScale.MAX_PERCENT &&
-            targets.wirelessMusicBufferMillis in MediaAudioBuffer.wirelessPresets
-    }
 }

@@ -816,8 +816,8 @@
     <string name="settings_direct_video_output_description">DiPlay画面内に描画せず、車載端末のコンポジターへCarPlay映像を直接送ります。画面更新1回分ほどの遅延を減らせる場合があります。画質調整は適用されません。次回の接続から反映されます。</string>
     <string name="settings_low_latency_decoder">低遅延デコード（実験的機能）</string>
     <string name="settings_low_latency_decoder_description">映像デコーダーに対し、フレームを保持せずデコード直後に出力するよう要求します。低遅延の要求自体はQualcomm製デコーダーにのみ適用されます。Spreadtrumを含む他のデコーダーでは、この設定でも専用スレッドが有効になります。専用スレッドで次のフレームの到着を待たずに表示し、数十ミリ秒の遅延を減らせる場合があります。映像が乱れたり停止したりする場合はオフにしてください。次回の接続から反映されます。</string>
-    <string name="settings_weak_device_mode">低スペックヘッドユニットモード（実験的機能）</string>
-    <string name="settings_weak_device_mode_description">低スペックヘッドユニット向けのスイッチ1つ：解像度を75%に下げ、映像の直接出力を使い、音楽のバッファ（ワイヤレス）を最も安定した値にします。オンの間は画質調整は適用されません。オフにすると、オンの間にこれらの設定に加えた変更がすべて元に戻ります。次回のCarPlay接続から反映されます。</string>
+    <string name="settings_weak_device_mode">低スペック車載端末モード（実験的機能）</string>
+    <string name="settings_weak_device_mode_description">低スペックの車載端末向けのスイッチ1つ：解像度が75%より高い場合は75%に下げ、映像の直接出力を使い、音楽のバッファ（ワイヤレス）を最も安定した値にします（音楽の再生と一時停止が遅くなります）。オンの間は画質調整は適用されません。オフにすると、オンの間にこれらの設定に加えた変更がすべて元に戻ります。次回のCarPlay接続から反映されます。</string>
     <string name="settings_fps_counter">FPSカウンター</string>
     <string name="settings_fps_counter_description">CarPlay右上に表示FPS（50以上は緑、30以上は黄、それ未満は赤）、iPhoneからの受信FPS、デコード時間を表示します。静止画面ではiPhoneが送るフレームが少ないため数値も小さくなります。</string>
     <string name="fps_counter_text">%1$d FPS\n受信 %2$d · %3$s</string>

@@ -10,8 +10,10 @@ import org.junit.Test
 class WeakDeviceProfileTest {
     @Test
     fun `targets lower the display scale inside the accepted range`() {
-        assertTrue(WeakDeviceProfile.targetsAreValid())
-        assertEquals(75, WeakDeviceProfile.targets().displayScalePercent)
+        val targets = WeakDeviceProfile.targets()
+        assertTrue(targets.displayScalePercent in CarPlayDisplayScale.MIN_PERCENT..CarPlayDisplayScale.MAX_PERCENT &&
+            targets.wirelessMusicBufferMillis in MediaAudioBuffer.wirelessPresets)
+        assertEquals(75, targets.displayScalePercent)
         assertTrue(WeakDeviceProfile.TARGET_DISPLAY_SCALE_PERCENT in
             CarPlayDisplayScale.MIN_PERCENT..CarPlayDisplayScale.MAX_PERCENT)
     }
