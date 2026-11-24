@@ -248,7 +248,7 @@ class WirelessHandoffWatchdogTest {
         assertTrue(statuses.single() is CarPlayStatus.Failed)
         verify(bootstrap).close()
         assertTrue(diagnostics.any {
-            it.contains("handoff found no working session") && it.contains("renderedFrame=false audio=false screenAttached=false")
+            it.contains("handoff found no working session") && it.contains("renderedFrame=false audio=false video=false screenAttached=false")
         })
     }
 
@@ -275,7 +275,7 @@ class WirelessHandoffWatchdogTest {
         verify(bootstrap).close()
         assertTrue(diagnostics.any {
             it.contains("handoff found no working session") &&
-                it.contains("audio=true screenAttached=false screenAttachedDuringSession=true")
+                it.contains("audio=true video=false screenAttached=false screenAttachedDuringSession=true")
         })
     }
 
@@ -310,6 +310,88 @@ class WirelessHandoffWatchdogTest {
         assertEquals(1, hotspotCloses)
     }
 
+    @Test fun hiddenSessionReceivingVideoIsKeptWithItsBluetoothControl() {
+        // #1215 with the music paused: main-screen video arrives, but CarPlay is hidden and nothing can show it.
+        screenAttached = false
+        sessionStarts()
+        assertFalse(keepControlAlive(0))
+        videoReceived()
+        timeout()
+        timeout()
+        assertTrue(flag("wirelessActiveReported").get())
+        assertEquals(0, hotspotCloses)
+        assertSame(session, ReflectionHelpers.getField(controller, "activeSession"))
+        assertEquals(listOf(CarPlayStatus.WirelessActiveFallback), statuses)
+        verify(bootstrap, never()).close()
+        assertTrue(diagnostics.any { it.contains("handoff fallback after iPhone video while CarPlay is hidden") })
+        assertTrue(keepControlAlive(0))
+        // Opening CarPlay later must not drop the only iAP2 channel of a session already kept.
+        screenAttached = true
+        assertTrue(keepControlAlive(0))
+        assertEquals(0, confirmations)
+    }
+
+    @Test fun audioNamesTheProofWhenTheHiddenSessionReceivedBoth() {
+        screenAttached = false
+        sessionStarts()
+        audioReceived()
+        videoReceived()
+        timeout()
+        assertEquals(listOf(CarPlayStatus.WirelessActiveFallback), statuses)
+        assertTrue(diagnostics.any { it.contains("handoff fallback after iPhone audio while CarPlay is hidden") })
+    }
+
+    @Test fun videoBehindAVisibleScreenWithoutAFrameStillFails() {
+        videoReceived()
+        assertFalse(keepControlAlive(0))
+        timeout()
+        assertFalse(flag("wirelessActiveReported").get())
+        assertEquals(1, hotspotCloses)
+        assertTrue(statuses.single() is CarPlayStatus.Failed)
+        verify(bootstrap).close()
+        assertTrue(diagnostics.any {
+            it.contains("handoff found no working session") &&
+                it.contains("renderedFrame=false audio=false video=true screenAttached=true")
+        })
+    }
+
+    @Test fun videoCannotKeepASessionThatShowedABlackScreenBeforeCarPlayWasLeft() {
+        sessionStarts()
+        videoReceived()
+        screenAttached = false
+        assertFalse(keepControlAlive(0))
+        timeout()
+        assertFalse(flag("wirelessActiveReported").get())
+        assertEquals(1, hotspotCloses)
+        assertTrue(statuses.single() is CarPlayStatus.Failed)
+        verify(bootstrap).close()
+        assertTrue(diagnostics.any {
+            it.contains("handoff found no working session") &&
+                it.contains("audio=false video=true screenAttached=false screenAttachedDuringSession=true")
+        })
+    }
+
+    @Test fun aScreenOpenedAndLeftBetweenChecksStillCountsAgainstVideo() {
+        screenAttached = false
+        sessionStarts()
+        videoReceived()
+        screenAttachments++ // CarPlay opened and left again; no check ran while it was on screen
+        timeout()
+        assertFalse(flag("wirelessActiveReported").get())
+        assertTrue(statuses.single() is CarPlayStatus.Failed)
+        assertEquals(1, hotspotCloses)
+    }
+
+    @Test fun videoFromAnEndedSessionCannotKeepTheHandoff() {
+        screenAttached = false
+        videoReceived()
+        session.close()
+        timeout()
+        assertTrue(statuses.single() is CarPlayStatus.Failed)
+        assertEquals(1, hotspotCloses)
+    }
+
+    private fun videoReceived() = ReflectionHelpers.setField(session, "mainVideoReceived", true)
     private fun audioReceived() = ReflectionHelpers.setField(session, "audioReceived", true)
     /** What the controller notes when the session starts (onSessionActive). */
     private fun sessionStarts() {

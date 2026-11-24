@@ -151,7 +151,7 @@ object AppLocale {
         else -> language
     }
 
-    private fun locale(language: String): Locale? = when (language) {
+    internal fun locale(language: String): Locale? = when (language) {
         ENGLISH -> Locale.ENGLISH
         SIMPLIFIED_CHINESE -> Locale.SIMPLIFIED_CHINESE
         TRADITIONAL_CHINESE -> Locale.TRADITIONAL_CHINESE

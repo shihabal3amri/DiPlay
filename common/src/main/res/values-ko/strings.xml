@@ -538,7 +538,7 @@
     <string name="adb_dashboard_does_not_send_map">계기판: %1$s, iPhone이 지도를 보내지 않습니다.</string>
     <string name="adb_not_approved">DiPlay가 아직 승인되지 않았습니다. ‘ADB 접근 확인’을 누른 다음 차량 화면에서 DiPlay를 허용하세요.</string>
     <string name="adb_off">네트워크 ADB가 꺼져 있습니다. 헤드 유닛의 개발자 옵션에서 켜세요.</string>
-    <string name="adb_network_not_answering">USB 디버깅은 켜져 있지만 네트워크 ADB가 응답하지 않습니다. 헤드 유닛의 개발자 옵션에서 네트워크 ADB를 켜세요. 이미 켜져 있다면 껐다가 다시 켜세요.</string>
+    <string name="adb_network_not_answering">USB 디버깅은 켜져 있지만 네트워크 ADB가 응답하지 않습니다. 헤드 유닛의 개발자 옵션에서 네트워크 ADB를 켜세요. 이미 켜져 있다면 껐다가 다시 켜세요. 이 옵션이 없으면 USB로 연결한 컴퓨터에서 “adb tcpip 5555”를 실행하세요. 헤드 유닛을 다시 시작할 때마다 필요합니다.</string>
     <string name="adb_pairing_only">이 헤드 유닛은 페어링 방식의 무선 디버깅만 지원하며 DiPlay는 아직 이를 지원하지 않습니다.</string>
     <string name="navi_mode_off">끄기</string>
     <string name="navi_mode_turn_on_by_navi">내비로 켜기</string>
@@ -699,6 +699,11 @@
     <string name="wheel_keys_adb_failed">ADB를 사용할 수 없음: %1$s</string>
     <string name="wheel_keys_open_settings">접근성 설정 열기</string>
     <string name="wheel_keys_no_settings">이 헤드 유닛에는 접근성 설정 화면이 없습니다. ADB 버튼을 사용하세요.</string>
+    <string name="settings_wheel_keys_restart">서비스를 시작하려면 DiPlay 다시 시작 · ADB</string>
+    <string name="settings_wheel_keys_restart_description">DiPlay가 서비스를 다시 허용했지만 Android가 시작하지 않았습니다. 차량의 ADB로 DiPlay를 다시 시작하면 해결될 수 있습니다. CarPlay 연결이 끊어집니다.</string>
+    <string name="settings_wheel_keys_restart_title">DiPlay를 다시 시작할까요?</string>
+    <string name="settings_wheel_keys_restart_message">DiPlay가 닫혔다가 다시 열립니다. CarPlay가 연결되어 있으면 연결이 끊어집니다. 주차 중에만 하세요. 성공하면 DiPlay가 열리고 약 10초 후 핸들 키가 다시 작동합니다.\n\n한 번 성공한 뒤에는 차량 시동 시 DiPlay가 열렸는데 서비스가 다시 멈춰 있으면 DiPlay가 같은 작업을 자동으로 합니다. 시동할 때마다 한 번, CarPlay가 연결되기 전에만 합니다.</string>
+    <string name="settings_wheel_keys_restart_confirm">DiPlay 다시 시작</string>
     <string name="wheel_zoom_behaviour">모드 키</string>
     <string name="wheel_zoom_behaviour_toggle">다시 누를 때까지 전환 상태 유지</string>
     <string name="wheel_zoom_behaviour_timed">5초 동안 확대/축소</string>

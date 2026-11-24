@@ -468,7 +468,7 @@
     <string name="adb_dashboard_does_not_send_map">Приборная панель: %1$s, поэтому iPhone не передаёт карту.</string>
     <string name="adb_not_approved">DiPlay ещё не разрешён. Нажмите «Проверить доступ ADB» и разрешите DiPlay на экране машины.</string>
     <string name="adb_off">ADB по сети выключен. Включите его в параметрах разработчика головного устройства.</string>
-    <string name="adb_network_not_answering">Отладка по USB включена, но ADB по сети не отвечает. Включите ADB по сети в параметрах разработчика головного устройства. Если он уже включён, выключите его и включите снова.</string>
+    <string name="adb_network_not_answering">Отладка по USB включена, но ADB по сети не отвечает. Включите ADB по сети в параметрах разработчика головного устройства. Если он уже включён, выключите его и включите снова. Если такого параметра нет, выполните «adb tcpip 5555» с компьютера, подключённого по USB; после каждой перезагрузки головного устройства это нужно повторить.</string>
     <string name="adb_pairing_only">Это головное устройство поддерживает только беспроводную отладку с сопряжением, которую DiPlay пока не поддерживает.</string>
     <string name="navi_mode_off">Выкл.</string>
     <string name="navi_mode_turn_on_by_navi">Включать при навигации</string>
@@ -621,6 +621,11 @@
     <string name="wheel_keys_adb_failed">ADB недоступен: %1$s</string>
     <string name="wheel_keys_open_settings">Открыть специальные возможности</string>
     <string name="wheel_keys_no_settings">На этом головном устройстве нет экрана специальных возможностей. Используйте кнопку ADB.</string>
+    <string name="settings_wheel_keys_restart">Перезапустить DiPlay, чтобы запустить службу · ADB</string>
+    <string name="settings_wheel_keys_restart_description">DiPlay снова разрешил службу, но Android её не запустил. Перезапуск DiPlay через ADB автомобиля может это исправить. CarPlay отключится.</string>
+    <string name="settings_wheel_keys_restart_title">Перезапустить DiPlay?</string>
+    <string name="settings_wheel_keys_restart_message">DiPlay закроется и откроется снова. Если CarPlay подключён, он отключится. Делайте это только на стоянке. Если это поможет, кнопки руля заработают примерно через 10 секунд после открытия DiPlay.\n\nПосле первого успеха DiPlay будет делать то же самое сам, когда автомобиль запускает DiPlay, а служба снова зависла: один раз за запуск и только до подключения CarPlay.</string>
+    <string name="settings_wheel_keys_restart_confirm">Перезапустить DiPlay</string>
     <string name="wheel_zoom_behaviour">Кнопка режима</string>
     <string name="wheel_zoom_behaviour_toggle">переключает до следующего нажатия</string>
     <string name="wheel_zoom_behaviour_timed">масштаб на 5 секунд</string>

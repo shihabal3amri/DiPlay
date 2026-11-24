@@ -535,7 +535,7 @@
     <string name="adb_dashboard_does_not_send_map">Cruscotto: %1$s, quindi l’iPhone non invia la mappa.</string>
     <string name="adb_not_approved">DiPlay non è ancora approvato. Tocca Verifica l’accesso ADB, poi consenti DiPlay sullo schermo dell’auto.</string>
     <string name="adb_off">ADB via rete è disattivato. Attivalo nelle opzioni sviluppatore della head unit.</string>
-    <string name="adb_network_not_answering">Il debug USB è attivo, ma ADB via rete non risponde. Attiva ADB via rete nelle opzioni sviluppatore della head unit. Se è già attivo, disattivalo e riattivalo.</string>
+    <string name="adb_network_not_answering">Il debug USB è attivo, ma ADB via rete non risponde. Attiva ADB via rete nelle opzioni sviluppatore della head unit. Se è già attivo, disattivalo e riattivalo. Se questa opzione non c’è, esegui “adb tcpip 5555” da un computer collegato via USB, e di nuovo dopo ogni riavvio della head unit.</string>
     <string name="adb_pairing_only">Questa head unit offre solo il debug wireless con associazione, che DiPlay non supporta ancora.</string>
     <string name="navi_mode_off">Disattivata</string>
     <string name="navi_mode_turn_on_by_navi">Attiva con navi</string>
@@ -680,6 +680,11 @@
     <string name="wheel_keys_adb_failed">ADB non è disponibile: %1$s</string>
     <string name="wheel_keys_open_settings">Apri impostazioni di accessibilità</string>
     <string name="wheel_keys_no_settings">Questa head unit non ha una schermata di impostazioni di accessibilità. Usa il pulsante ADB.</string>
+    <string name="settings_wheel_keys_restart">Riavvia DiPlay per avviare il servizio · ADB</string>
+    <string name="settings_wheel_keys_restart_description">DiPlay ha consentito di nuovo il servizio, ma Android non lo ha avviato. Riavviare DiPlay tramite l’ADB dell’auto può risolvere il problema. CarPlay si disconnette.</string>
+    <string name="settings_wheel_keys_restart_title">Riavviare DiPlay?</string>
+    <string name="settings_wheel_keys_restart_message">DiPlay si chiude e si riapre. Se CarPlay è connesso, si disconnette. Fallo solo a veicolo fermo. Se funziona, i tasti del volante tornano circa 10 secondi dopo l’apertura di DiPlay.\n\nDopo che ha funzionato una volta, DiPlay fa lo stesso da solo quando l’auto avvia DiPlay e il servizio è di nuovo bloccato: una volta per avvio e solo prima che CarPlay si connetta.</string>
+    <string name="settings_wheel_keys_restart_confirm">Riavvia DiPlay</string>
     <string name="wheel_zoom_behaviour">Tasto modalità</string>
     <string name="wheel_zoom_behaviour_toggle">alterna finché non viene premuto di nuovo</string>
     <string name="wheel_zoom_behaviour_timed">zoom per 5 secondi</string>

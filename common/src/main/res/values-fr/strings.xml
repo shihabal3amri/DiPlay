@@ -544,7 +544,7 @@
     <string name="adb_dashboard_does_not_send_map">Tableau de bord : %1$s, donc l’iPhone n’envoie pas la carte.</string>
     <string name="adb_not_approved">DiPlay n’est pas encore autorisé. Touchez Vérifier l’accès ADB, puis autorisez DiPlay sur l’écran de la voiture.</string>
     <string name="adb_off">ADB via le réseau est désactivé. Activez-le dans les options pour les développeurs de l’autoradio.</string>
-    <string name="adb_network_not_answering">Le débogage USB est activé, mais ADB via le réseau ne répond pas. Activez ADB via le réseau dans les options pour les développeurs de l’autoradio. S’il est déjà activé, désactivez-le puis réactivez-le.</string>
+    <string name="adb_network_not_answering">Le débogage USB est activé, mais ADB via le réseau ne répond pas. Activez ADB via le réseau dans les options pour les développeurs de l’autoradio. S’il est déjà activé, désactivez-le puis réactivez-le. Si cette option n’existe pas, exécutez « adb tcpip 5555 » depuis un ordinateur connecté en USB, puis de nouveau après chaque redémarrage de l’autoradio.</string>
     <string name="adb_pairing_only">Cet autoradio ne propose que le débogage sans fil avec association, que DiPlay ne prend pas encore en charge.</string>
     <string name="navi_mode_off">Désactivé</string>
     <string name="navi_mode_turn_on_by_navi">Activé par la navigation</string>
@@ -702,6 +702,11 @@
     <string name="wheel_keys_adb_failed">ADB n’est pas disponible : %1$s</string>
     <string name="wheel_keys_open_settings">Ouvrir les paramètres d’accessibilité</string>
     <string name="wheel_keys_no_settings">Cet autoradio n’a pas d’écran de paramètres d’accessibilité. Utilisez le bouton ADB.</string>
+    <string name="settings_wheel_keys_restart">Redémarrer DiPlay pour lancer le service · ADB</string>
+    <string name="settings_wheel_keys_restart_description">DiPlay a de nouveau autorisé le service, mais Android ne l’a pas lancé. Redémarrer DiPlay via l’ADB de la voiture peut résoudre ce problème. CarPlay se déconnecte.</string>
+    <string name="settings_wheel_keys_restart_title">Redémarrer DiPlay ?</string>
+    <string name="settings_wheel_keys_restart_message">DiPlay se ferme puis se rouvre. Si CarPlay est connecté, il se déconnecte. Ne le faites qu’à l’arrêt. Si cela fonctionne, les commandes au volant reviennent environ 10 secondes après l’ouverture de DiPlay.\n\nUne fois que cela a fonctionné, DiPlay fait la même chose de lui-même lorsque la voiture lance DiPlay et que le service est de nouveau bloqué : une fois par démarrage, et seulement avant la connexion de CarPlay.</string>
+    <string name="settings_wheel_keys_restart_confirm">Redémarrer DiPlay</string>
     <string name="wheel_zoom_behaviour">Touche de mode</string>
     <string name="wheel_zoom_behaviour_toggle">bascule jusqu’au prochain appui</string>
     <string name="wheel_zoom_behaviour_timed">zoom pendant 5 secondes</string>

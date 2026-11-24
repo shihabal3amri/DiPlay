@@ -468,7 +468,7 @@
     <string name="adb_dashboard_does_not_send_map">لوحة العدادات: %1$s، لذا لا يرسل iPhone الخريطة.</string>
     <string name="adb_not_approved">لم تتم الموافقة على DiPlay بعد. اضغط «التحقق من الوصول عبر ADB» ثم اسمح لـ DiPlay على شاشة السيارة.</string>
     <string name="adb_off">ADB عبر الشبكة متوقف. شغّله من خيارات المطوّر في وحدة القيادة.</string>
-    <string name="adb_network_not_answering">تصحيح أخطاء USB مفعّل، لكن ADB عبر الشبكة لا يستجيب. شغّل ADB عبر الشبكة من خيارات المطوّر في وحدة القيادة. إذا كان مشغّلًا بالفعل، فأوقفه ثم شغّله من جديد.</string>
+    <string name="adb_network_not_answering">تصحيح أخطاء USB مفعّل، لكن ADB عبر الشبكة لا يستجيب. شغّل ADB عبر الشبكة من خيارات المطوّر في وحدة القيادة. إذا كان مشغّلًا بالفعل، فأوقفه ثم شغّله من جديد. إذا لم يكن هذا الخيار موجودًا، فنفّذ الأمر “adb tcpip 5555” من كمبيوتر متصل عبر USB، وكرّره بعد كل إعادة تشغيل لوحدة القيادة.</string>
     <string name="adb_pairing_only">توفر وحدة القيادة هذه تصحيح الأخطاء اللاسلكي مع الإقران فقط، وهو ما لا يدعمه DiPlay بعد.</string>
     <string name="navi_mode_off">إيقاف</string>
     <string name="navi_mode_turn_on_by_navi">التشغيل عند الملاحة</string>
@@ -621,6 +621,11 @@
     <string name="wheel_keys_adb_failed">ADB غير متاح: %1$s</string>
     <string name="wheel_keys_open_settings">فتح إعدادات تسهيل الاستخدام</string>
     <string name="wheel_keys_no_settings">لا تحتوي هذه الوحدة على شاشة إعدادات تسهيل الاستخدام. استخدم زر ADB.</string>
+    <string name="settings_wheel_keys_restart">إعادة تشغيل DiPlay لبدء الخدمة · ADB</string>
+    <string name="settings_wheel_keys_restart_description">سمح DiPlay بالخدمة مجددًا، لكن Android لم يشغّلها. قد تحل إعادة تشغيل DiPlay عبر ADB في السيارة هذه المشكلة. سينقطع اتصال CarPlay.</string>
+    <string name="settings_wheel_keys_restart_title">إعادة تشغيل DiPlay؟</string>
+    <string name="settings_wheel_keys_restart_message">سيُغلق DiPlay ثم يُفتح مجددًا. إذا كان CarPlay متصلًا فسينقطع. افعل ذلك فقط والسيارة متوقفة. إذا نجح ذلك، تعود أزرار المقود بعد نحو 10 ثوانٍ من فتح DiPlay.\n\nبعد نجاحه مرة واحدة، يفعل DiPlay الشيء نفسه تلقائيًا عندما تشغّل السيارة DiPlay وتتعطل الخدمة مجددًا: مرة واحدة عند كل تشغيل، وقبل اتصال CarPlay فقط.</string>
+    <string name="settings_wheel_keys_restart_confirm">إعادة تشغيل DiPlay</string>
     <string name="wheel_zoom_behaviour">زر الوضع</string>
     <string name="wheel_zoom_behaviour_toggle">يبدّل حتى الضغط مرة أخرى</string>
     <string name="wheel_zoom_behaviour_timed">تكبير لمدة 5 ثوانٍ</string>
