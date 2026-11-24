@@ -26,6 +26,7 @@ import android.media.AudioFormat
 import android.media.AudioTrack
 import android.media.MediaFormat
 import android.net.Uri
+import android.net.wifi.WifiManager
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
@@ -82,6 +83,7 @@ import com.shilapi.xcertplay.network.CarHotspotSavedCredentials
 import com.shilapi.xcertplay.network.CarHotspotSettings
 import com.shilapi.xcertplay.network.CarHotspotTethering
 import com.shilapi.xcertplay.network.HotspotCredentials
+import com.shilapi.xcertplay.network.WifiChannelRanker
 import com.shilapi.xcertplay.network.WifiDirectSupport
 import com.shilapi.xcertplay.network.WifiP2pChannels
 import com.shilapi.xcertplay.orchestration.ManualHotspotProvisioning
@@ -218,6 +220,11 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
     private var testToneTrack: AudioTrack? = null
     private var toneStop: Runnable? = null
     private var exportButton: Button? = null
+    private var wifiChannelScanButton: Button? = null
+    private var wifiChannelScanResultLabel: TextView? = null
+    private var wifiChannelScanInProgress = false
+    private var wifiChannelScanSummary: String? = null
+    private var wifiChannelScanRecommendedChannel: Int? = null
     private var rootScroll: ScrollView? = null
     private var settingsRailScroll: ScrollView? = null
     private var reconnectBar: View? = null
@@ -706,6 +713,8 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
         renderedWheelKeyService = null
         readinessCard = null
         exportButton = null
+        wifiChannelScanButton = null
+        wifiChannelScanResultLabel = null
         bydAdbControls = null
         adbSwitches.clear()
         adbStatus = null
@@ -3742,6 +3751,7 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
         } else {
             parent.addView(label(getString(R.string.turn_the_car_s_wi_fi_switch_on_allow_location_nearby_devic), 16, MUTED))
             wifiDirectChannelControl(parent)
+            wifiChannelScanControls(parent)
             // #755: the pause also stops the car joining a known network, such as the phone's hotspot, by itself.
             toggle(parent, getString(R.string.settings_wifi_direct_scan_pause),
                 getString(R.string.settings_wifi_direct_scan_pause_description),
@@ -3779,6 +3789,9 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
                     if (selection != current) {
                         AirPlayPersistence.saveWifiP2pPreferredChannel(this, selection)
                         control.text = summary(selection)
+                        // A scan result below still names the old choice, so
+                        // refresh it while the scanner is on screen.
+                        if (wifiChannelScanResultLabel?.isAttachedToWindow == true) render()
                         toast(getString(R.string.saved_for_your_next_connection))
                     }
                 }
@@ -3793,6 +3806,130 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
             setPadding(0, 0, 0, dp(12))
         })
     }
+
+    /**
+     * Null when the platform cannot answer: `is5GHzBandSupported` is API 21 and
+     * minSdk is 24, so the call itself always exists — null only means there is
+     * no WifiManager, the same runCatching pattern WifiP2pGroupManager uses.
+     * Callers treat null as "unknown" and keep the current behaviour; only an
+     * explicit false skips the band warning.
+     */
+    private fun wifi5GhzSupported(): Boolean? =
+        runCatching {
+            (getSystemService(Context.WIFI_SERVICE) as? WifiManager)?.is5GHzBandSupported
+        }.getOrNull()
+
+    /**
+     * Null when the platform cannot answer. `is5GHzBandSupported` also reads false
+     * while Wi-Fi is off, so the band warning is skipped only when Wi-Fi is on.
+     */
+    private fun wifiEnabled(): Boolean? =
+        runCatching {
+            (getSystemService(Context.WIFI_SERVICE) as? WifiManager)?.isWifiEnabled
+        }.getOrNull()
+
+    /** Wi-Fi channel scanner next to the Wi-Fi Direct channel control: one scan, a ranked summary, and an apply action. */
+    private fun wifiChannelScanControls(card: LinearLayout) {
+        card.addView(label(getString(R.string.settings_wifi_channel_scan), 22, TEXT, true).apply {
+            setPadding(0, dp(10), 0, 0)
+        })
+        card.addView(label(getString(R.string.settings_wifi_channel_scan_description), 14, MUTED).apply {
+            setPadding(0, dp(10), 0, 0)
+        })
+        wifiChannelScanResultLabel = label(
+            wifiChannelScanSummary ?: "",
+            15, MUTED,
+        ).apply { setPadding(0, dp(10), 0, 0) }
+        card.addView(wifiChannelScanResultLabel)
+        // A scan takes the single radio off the CarPlay channel, so it stays off while a session runs.
+        wifiChannelScanButton = button(
+            if (wifiChannelScanInProgress) getString(R.string.settings_wifi_channel_scan_scanning)
+            else getString(R.string.settings_wifi_channel_scan_button), false,
+        ) { startWifiChannelScan() }.apply {
+            isEnabled = !wifiChannelScanInProgress && !CarPlayBackgroundSession.hasSession()
+        }
+        card.addView(wifiChannelScanButton, matchButton(10, 60))
+        // The button is greyed out while a session runs; say why instead of leaving it silent.
+        if (CarPlayBackgroundSession.hasSession()) {
+            card.addView(label(getString(R.string.settings_wifi_channel_scan_session_running), 14, MUTED).apply {
+                setPadding(0, dp(10), 0, 0)
+            })
+        }
+        val recommended = wifiChannelScanRecommendedChannel
+        if (recommended != null) {
+            val current = AirPlayPersistence.loadWifiP2pPreferredChannel(this)
+            if ((current == WifiP2pChannels.AUTO || current == WifiP2pChannels.AUTO_5_GHZ ||
+                current >= 36) && wifi5GhzSupported() != false && wifiEnabled() == true) {
+                card.addView(label(getString(R.string.settings_wifi_channel_scan_band_change,
+                    wifiDirectChannelLabel(current), recommended), 15, WARNING).apply {
+                    setPadding(0, dp(10), 0, 0)
+                })
+            }
+            if (recommended != current) {
+                val wifiChannelScanApplyButton = button(getString(R.string.settings_wifi_channel_scan_apply, recommended), false) {
+                    AirPlayPersistence.saveWifiP2pPreferredChannel(this, recommended)
+                    markReconnectNeeded()
+                    render()
+                    toast(getString(R.string.saved_for_your_next_connection))
+                }
+                card.addView(wifiChannelScanApplyButton, matchButton(10, 60))
+            }
+        }
+    }
+
+    private fun startWifiChannelScan() {
+        if (wifiChannelScanInProgress) return
+        if (CarPlayBackgroundSession.hasSession()) return
+        wifiChannelScanInProgress = true
+        wifiChannelScanButton?.apply { isEnabled = false; text = getString(R.string.settings_wifi_channel_scan_scanning) }
+        wifiChannelScanResultLabel?.text = getString(R.string.settings_wifi_channel_scan_scanning)
+        WifiChannelScanner(this).scanOnce { outcome ->
+            if (isFinishing || isDestroyed) return@scanOnce
+            wifiChannelScanInProgress = false
+            when (outcome) {
+                WifiChannelScanner.Outcome.NeedsLocation -> {
+                    wifiChannelScanSummary = getString(R.string.settings_wifi_channel_scan_needs_location)
+                    wifiChannelScanRecommendedChannel = null
+                }
+                WifiChannelScanner.Outcome.WifiOff -> {
+                    wifiChannelScanSummary = getString(R.string.settings_wifi_channel_scan_wifi_off)
+                    wifiChannelScanRecommendedChannel = null
+                }
+                WifiChannelScanner.Outcome.ScanFailed -> {
+                    wifiChannelScanSummary = getString(R.string.settings_wifi_channel_scan_failed)
+                    wifiChannelScanRecommendedChannel = null
+                }
+                is WifiChannelScanner.Outcome.Scanned -> {
+                    wifiChannelScanSummary = wifiChannelScanSummaryText(outcome.ranking, outcome.recommendedChannel)
+                    wifiChannelScanRecommendedChannel = outcome.recommendedChannel
+                }
+            }
+            // The scan outlives the page: re-render only while the scanner is still
+            // shown. render() also cancels wheel-key learning, so a late re-render
+            // would steal the driver's place on another page. The summary and the
+            // recommendation are stored, so they render when the driver comes back.
+            if (wifiChannelScanResultLabel?.isAttachedToWindow == true) render()
+        }
+    }
+
+    private fun wifiChannelScanSummaryText(
+        ranking: List<WifiChannelRanker.ChannelScore>,
+        recommendedChannel: Int?,
+    ): String = buildString {
+        for (score in ranking) {
+            if (score.accessPointCount == 0) {
+                appendLine(getString(R.string.settings_wifi_channel_scan_channel_empty, score.channel))
+            } else {
+                appendLine(getString(R.string.settings_wifi_channel_scan_channel,
+                    score.channel, score.accessPointCount, score.strongestRssiDbm ?: 0))
+            }
+        }
+        if (recommendedChannel != null) {
+            append(getString(R.string.settings_wifi_channel_scan_recommend, recommendedChannel))
+        } else {
+            append(getString(R.string.settings_wifi_channel_scan_empty))
+        }
+    }.trimEnd().toString()
 
     private fun mediaChannelControl(parent: LinearLayout) {
         val summary: (Int) -> String = {
