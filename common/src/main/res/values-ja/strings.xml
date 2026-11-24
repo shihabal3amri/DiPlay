@@ -541,7 +541,7 @@
     <string name="adb_dashboard_does_not_send_map">メーター：%1$s。iPhoneから地図映像は送信されません。</string>
     <string name="adb_not_approved">DiPlayはまだ許可されていません。「ADBへのアクセスを確認」をタップし、車の画面で許可してください。</string>
     <string name="adb_off">ネットワークADBがオフです。車載端末の開発者向けオプションでオンにしてください。</string>
-    <string name="adb_network_not_answering">USBデバッグはオンですが、ネットワークADBが応答しません。車載端末の開発者向けオプションでネットワークADBをオンにしてください。すでにオンの場合は、一度オフにしてからもう一度オンにしてください。</string>
+    <string name="adb_network_not_answering">USBデバッグはオンですが、ネットワークADBが応答しません。車載端末の開発者向けオプションでネットワークADBをオンにしてください。すでにオンの場合は、一度オフにしてからもう一度オンにしてください。この項目がない場合は、USBで接続したパソコンから「adb tcpip 5555」を実行してください。車載端末を再起動するたびに必要です。</string>
     <string name="adb_pairing_only">この車載端末ではペアリングが必要なワイヤレスデバッグだけが利用でき、DiPlayはまだ対応していません。</string>
     <string name="navi_mode_off">オフ</string>
     <string name="navi_mode_turn_on_by_navi">ナビ使用時のみオン</string>

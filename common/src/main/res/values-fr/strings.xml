@@ -544,7 +544,7 @@
     <string name="adb_dashboard_does_not_send_map">Tableau de bord : %1$s, donc l’iPhone n’envoie pas la carte.</string>
     <string name="adb_not_approved">DiPlay n’est pas encore autorisé. Touchez Vérifier l’accès ADB, puis autorisez DiPlay sur l’écran de la voiture.</string>
     <string name="adb_off">ADB via le réseau est désactivé. Activez-le dans les options pour les développeurs de l’autoradio.</string>
-    <string name="adb_network_not_answering">Le débogage USB est activé, mais ADB via le réseau ne répond pas. Activez ADB via le réseau dans les options pour les développeurs de l’autoradio. S’il est déjà activé, désactivez-le puis réactivez-le.</string>
+    <string name="adb_network_not_answering">Le débogage USB est activé, mais ADB via le réseau ne répond pas. Activez ADB via le réseau dans les options pour les développeurs de l’autoradio. S’il est déjà activé, désactivez-le puis réactivez-le. Si cette option n’existe pas, exécutez « adb tcpip 5555 » depuis un ordinateur connecté en USB, puis de nouveau après chaque redémarrage de l’autoradio.</string>
     <string name="adb_pairing_only">Cet autoradio ne propose que le débogage sans fil avec association, que DiPlay ne prend pas encore en charge.</string>
     <string name="navi_mode_off">Désactivé</string>
     <string name="navi_mode_turn_on_by_navi">Activé par la navigation</string>

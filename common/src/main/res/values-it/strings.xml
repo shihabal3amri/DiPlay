@@ -535,7 +535,7 @@
     <string name="adb_dashboard_does_not_send_map">Cruscotto: %1$s, quindi l’iPhone non invia la mappa.</string>
     <string name="adb_not_approved">DiPlay non è ancora approvato. Tocca Verifica l’accesso ADB, poi consenti DiPlay sullo schermo dell’auto.</string>
     <string name="adb_off">ADB via rete è disattivato. Attivalo nelle opzioni sviluppatore della head unit.</string>
-    <string name="adb_network_not_answering">Il debug USB è attivo, ma ADB via rete non risponde. Attiva ADB via rete nelle opzioni sviluppatore della head unit. Se è già attivo, disattivalo e riattivalo.</string>
+    <string name="adb_network_not_answering">Il debug USB è attivo, ma ADB via rete non risponde. Attiva ADB via rete nelle opzioni sviluppatore della head unit. Se è già attivo, disattivalo e riattivalo. Se questa opzione non c’è, esegui “adb tcpip 5555” da un computer collegato via USB, e di nuovo dopo ogni riavvio della head unit.</string>
     <string name="adb_pairing_only">Questa head unit offre solo il debug wireless con associazione, che DiPlay non supporta ancora.</string>
     <string name="navi_mode_off">Disattivata</string>
     <string name="navi_mode_turn_on_by_navi">Attiva con navi</string>

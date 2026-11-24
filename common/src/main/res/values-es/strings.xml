@@ -468,7 +468,7 @@
     <string name="adb_dashboard_does_not_send_map">Panel: %1$s, así que el iPhone no envía el mapa.</string>
     <string name="adb_not_approved">DiPlay aún no está autorizado. Toca «Comprobar acceso ADB» y permite DiPlay en la pantalla del coche.</string>
     <string name="adb_off">ADB por red está desactivado. Actívalo en las opciones de desarrollador de la unidad principal.</string>
-    <string name="adb_network_not_answering">La depuración USB está activada, pero ADB por red no responde. Activa ADB por red en las opciones de desarrollador de la unidad principal. Si ya está activado, desactívalo y vuelve a activarlo.</string>
+    <string name="adb_network_not_answering">La depuración USB está activada, pero ADB por red no responde. Activa ADB por red en las opciones de desarrollador de la unidad principal. Si ya está activado, desactívalo y vuelve a activarlo. Si no existe esa opción, ejecuta “adb tcpip 5555” desde un ordenador conectado por USB, y de nuevo después de cada reinicio de la unidad principal.</string>
     <string name="adb_pairing_only">Esta unidad principal solo ofrece depuración inalámbrica con emparejamiento, que DiPlay aún no admite.</string>
     <string name="navi_mode_off">Apagado</string>
     <string name="navi_mode_turn_on_by_navi">Activar con la navegación</string>

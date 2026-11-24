@@ -1021,7 +1021,7 @@
     <string name="settings_hotspot_interface_description">Yalnızca erişim noktasını Android\'in Wi-Fi erişim noktası olarak bildirmediği bir ağ arayüzünde (örneğin bazı Geely, Lynk &amp; Co ve diğer Qualcomm ünitelerinde eth0.3) çalıştıran ana üniteler içindir. Otomatik bulmak için boş bırakın.</string>
     <string name="wifi_direct_refused_beside_hotspot">Araç erişim noktası açık ve Wi-Fi Direct onun yanında başlatılamıyor</string>
     <string name="connection_help_wifi_direct_beside_hotspot">Araç erişim noktasını kapatıp tekrar deneyin veya Bağlantı kurulumunda Aracın dahili erişim noktası\'nı seçip adını ve parolasını kaydedin.</string>
-    <string name="adb_network_not_answering">USB hata ayıklama açık, ancak ağ üzerinden ADB yanıt vermiyor. Ana ünitenin geliştirici seçeneklerinden ağ üzerinden ADB\'yi açın. Zaten açıksa, kapatıp tekrar açın.</string>
+    <string name="adb_network_not_answering">USB hata ayıklama açık, ancak ağ üzerinden ADB yanıt vermiyor. Ana ünitenin geliştirici seçeneklerinden ağ üzerinden ADB\'yi açın. Zaten açıksa, kapatıp tekrar açın. Böyle bir seçenek yoksa USB ile bağlı bir bilgisayardan “adb tcpip 5555” komutunu çalıştırın; ana ünite her yeniden başlatıldığında tekrarlayın.</string>
     <string name="car_hotspot_details_differ">Araç erişim noktası ayarları DiPlay\'de kayıtlı olanlardan farklı</string>
     <string name="car_sees_no_usb_device">Araç henüz herhangi bir USB cihazı görmüyor</string>
     <string name="car_sees_usb_device_not_iphone">Araç bir USB cihazı görüyor, ancak bu bir iPhone değil</string>

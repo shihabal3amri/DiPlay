@@ -538,7 +538,7 @@
     <string name="adb_dashboard_does_not_send_map">계기판: %1$s, iPhone이 지도를 보내지 않습니다.</string>
     <string name="adb_not_approved">DiPlay가 아직 승인되지 않았습니다. ‘ADB 접근 확인’을 누른 다음 차량 화면에서 DiPlay를 허용하세요.</string>
     <string name="adb_off">네트워크 ADB가 꺼져 있습니다. 헤드 유닛의 개발자 옵션에서 켜세요.</string>
-    <string name="adb_network_not_answering">USB 디버깅은 켜져 있지만 네트워크 ADB가 응답하지 않습니다. 헤드 유닛의 개발자 옵션에서 네트워크 ADB를 켜세요. 이미 켜져 있다면 껐다가 다시 켜세요.</string>
+    <string name="adb_network_not_answering">USB 디버깅은 켜져 있지만 네트워크 ADB가 응답하지 않습니다. 헤드 유닛의 개발자 옵션에서 네트워크 ADB를 켜세요. 이미 켜져 있다면 껐다가 다시 켜세요. 이 옵션이 없으면 USB로 연결한 컴퓨터에서 “adb tcpip 5555”를 실행하세요. 헤드 유닛을 다시 시작할 때마다 필요합니다.</string>
     <string name="adb_pairing_only">이 헤드 유닛은 페어링 방식의 무선 디버깅만 지원하며 DiPlay는 아직 이를 지원하지 않습니다.</string>
     <string name="navi_mode_off">끄기</string>
     <string name="navi_mode_turn_on_by_navi">내비로 켜기</string>
