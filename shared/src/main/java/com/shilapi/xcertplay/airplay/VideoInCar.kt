@@ -160,6 +160,9 @@ object VideoInCar {
         val positionSeconds: Double,
         val durationSeconds: Double,
         val bufferedSeconds: Double,
+        val playWhenReady: Boolean = playing,
+        val buffering: Boolean = false,
+        val seekableDurationSeconds: Double = durationSeconds,
     )
 
     /**
@@ -171,21 +174,21 @@ object VideoInCar {
         val duration = state?.durationSeconds ?: 0.0
         val info = linkedMapOf<String, Any?>(
             "item" to linkedMapOf("uuid" to itemUuid),
-            "rate" to if (state?.playing == true) 1.0 else 0.0,
+            "rate" to if (state?.playWhenReady == true) 1.0 else 0.0,
             "readyToPlay" to ready,
-            "playbackLikelyToKeepUp" to ready,
+            "playbackLikelyToKeepUp" to (ready && state?.buffering == false),
         )
         if (state != null && ready) {
             info["position"] = cmTime(state.positionSeconds)
             info["duration"] = cmTime(duration)
-            info["seekableTimeRanges"] = listOf(range(0.0, duration))
+            info["seekableTimeRanges"] = listOf(range(0.0, state.seekableDurationSeconds))
             info["loadedTimeRanges"] = listOf(range(0.0, state.bufferedSeconds))
         }
         info["droppedVideoFrames"] = 0L
         info["totalVideoFrames"] = 0L
         info["decodedFrameCount"] = 0L
         info["playbackState"] = when {
-            state == null || !ready -> "loading"
+            state == null || !ready || state.buffering || (state.playWhenReady && !state.playing) -> "loading"
             state.playing -> "playing"
             else -> "paused"
         }
@@ -196,6 +199,17 @@ object VideoInCar {
     fun seekResponse(messageId: Any?): Map<String, Any?> =
         linkedMapOf("type" to "seek", "kind" to "response", "messageID" to messageId).withoutNulls()
 
+    fun currentItemChangedNotification(current: Any?, before: Any?, reason: String): Map<String, Any?> =
+        linkedMapOf("type" to "notification", "name" to "currentItemChanged", "reason" to reason,
+            "itemCurrent" to current?.let { linkedMapOf("uuid" to it) },
+            "itemBefore" to before?.let { linkedMapOf("uuid" to it) }).withoutNulls()
+
+    fun itemRemovedNotification(uuid: Any): Map<String, Any?> =
+        linkedMapOf("type" to "notification", "name" to "itemRemoved", "item" to linkedMapOf("uuid" to uuid))
+
+    fun playbackInterruptedNotification(): Map<String, Any?> =
+        linkedMapOf("type" to "playbackState", "name" to "stopped", "reason" to "interrupted")
+
     /**
      * The answer to a property request: {key, value}. What this player does not report has no value,
      * as the web app answers null for properties it does not support (plists have no null).
@@ -205,7 +219,7 @@ object VideoInCar {
         val value: Any? = when (key) {
             "hasEnabledAudio" -> true
             "muted" -> false
-            "seekableTimeRanges" -> if (ready) listOf(range(0.0, state!!.durationSeconds)) else null
+            "seekableTimeRanges" -> if (ready) listOf(range(0.0, state!!.seekableDurationSeconds)) else null
             "loadedTimeRanges" -> if (ready) listOf(range(0.0, state!!.bufferedSeconds)) else null
             else -> null
         }
@@ -222,16 +236,37 @@ object VideoInCar {
             .withoutNulls()
 
     /** Tells the iPhone at once that the car's player started or paused, e.g. from the steering wheel. */
-    fun playbackStateNotification(playing: Boolean, itemUuid: Any?): Map<String, Any?> =
-        if (playing) {
+    fun playbackStateNotification(playing: Boolean, itemUuid: Any?, state: PlayerState? = null): Map<String, Any?> =
+        if (playing && state != null) {
+            playerPlaybackStateNotification(itemUuid, state)
+        } else if (playing) {
             linkedMapOf("type" to "playbackState", "name" to "playing", "item" to linkedMapOf("uuid" to itemUuid)).withoutNulls()
         } else {
             linkedMapOf("type" to "playbackState", "name" to "paused")
         }
 
-    /** CMTime as the web app sends it: milliseconds, flags 1 (valid). */
-    fun cmTime(seconds: Double): Map<String, Any?> =
-        linkedMapOf("value" to Math.round(seconds * 1000), "timescale" to 1000L, "flags" to 1L, "epoch" to 0L)
+    /** Actual player transitions use the same playback info as replies to the sender's queries. */
+    fun playerPlaybackStateNotification(itemUuid: Any?, state: PlayerState): Map<String, Any?> {
+        val info = playbackInfoResponse(null, itemUuid, state)["info"] as Map<*, *>
+        val message = linkedMapOf<String, Any?>("type" to "playbackState", "name" to info["playbackState"])
+        if (info["playbackState"] == "playing") {
+            message["item"] = linkedMapOf("uuid" to itemUuid)
+            message["params"] = info.filterKeys { it != "item" }
+        }
+        return message.withoutNulls()
+    }
+
+    /** CMTime flags preserve indefinite live duration instead of turning it into zero or a finite window. */
+    fun cmTime(seconds: Double): Map<String, Any?> {
+        val flags = when (seconds) {
+            Double.POSITIVE_INFINITY -> 5L
+            Double.NEGATIVE_INFINITY -> 9L
+            else -> if (seconds.isNaN()) 17L else 1L
+        }
+        return linkedMapOf("value" to if (seconds.isFinite()) Math.round(seconds * 1000) else 0L,
+            "timescale" to if (seconds.isNaN() || seconds == Double.NEGATIVE_INFINITY) 0L else 1000L,
+            "flags" to flags, "epoch" to 0L)
+    }
 
     private fun range(start: Double, duration: Double) = linkedMapOf("start" to cmTime(start), "duration" to cmTime(duration))
 

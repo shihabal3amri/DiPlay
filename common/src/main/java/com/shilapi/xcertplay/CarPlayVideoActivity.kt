@@ -6,7 +6,6 @@ import android.graphics.drawable.GradientDrawable
 import android.graphics.drawable.InsetDrawable
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
-import android.net.Uri
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -67,8 +66,10 @@ class CarPlayVideoActivity : ComponentActivity() {
     private lateinit var timeBar: SeekBar
     private var scrubbing = false
     private var loadedUrl: String? = null
+    private var loadedGeneration = -1L
     private var prepared = false
     private var encryptionLogged = false
+    private val completion = VideoPlaybackCompletion { onPlaybackCompleted() }
     private val hideControls = Runnable {
         controls.visibility = View.GONE
         main.removeCallbacks(tick)
@@ -102,14 +103,23 @@ class CarPlayVideoActivity : ComponentActivity() {
             override fun onPlaybackStateChanged(state: Int) {
                 if (state == Player.STATE_READY && !prepared) {
                     prepared = true
-                    Log.i(TAG, "prepared duration=${player.duration} ms size=${player.videoSize.width}x${player.videoSize.height}")
+                    CarPlayVideo.note("prepared duration=${player.duration} ms size=${player.videoSize.width}x${player.videoSize.height}")
                 }
             }
 
             override fun onTimelineChanged(timeline: Timeline, reason: Int) = logEncryption()
 
+            override fun onEvents(player: Player, events: Player.Events) {
+                if (events.containsAny(Player.EVENT_PLAYBACK_STATE_CHANGED, Player.EVENT_IS_PLAYING_CHANGED,
+                        Player.EVENT_PLAY_WHEN_READY_CHANGED, Player.EVENT_PLAYBACK_SUPPRESSION_REASON_CHANGED)) {
+                    CarPlayVideo.onPlayerPlaybackStateChanged(this@CarPlayVideoActivity, loadedGeneration)
+                }
+            }
+
             override fun onPlayerError(error: PlaybackException) {
+                // Logcat keeps the cause messages (URLs masked); the report keeps their types only.
                 Log.w(TAG, "player error ${error.errorCodeName}: ${causes(error)}")
+                CarPlayVideo.note(VideoDiagnostics.playerError(error), logcat = false)
                 CarPlayVideo.onPlayerFailed(
                     when (error.errorCode) {
                         in 2000..2999 -> VideoInCar.ERROR_NETWORK // IO
@@ -119,6 +129,7 @@ class CarPlayVideoActivity : ComponentActivity() {
                 )
             }
         })
+        player.addListener(completion)
         val view = PlayerView(this).apply {
             useController = false
             setShutterBackgroundColor(Color.BLACK)
@@ -305,9 +316,16 @@ class CarPlayVideoActivity : ComponentActivity() {
 
     private fun returnToCarPlay() {
         if (isFinishing) return
-        val isLive = ::player.isInitialized && player.isCurrentMediaItemLive
+        val isLive = isLiveItem()
         CarPlayVideo.dismissPlayer(if (prepared && !isLive) player.currentPosition.toInt() else null, isLive)
         // The player may have been opened from the app task; finish alone can expose the start page.
+        OwnScreenStart.start(this, CarPlayScreen.intent(this))
+        finish()
+    }
+
+    private fun onPlaybackCompleted() {
+        if (isFinishing || CarPlayVideo.activity !== this || loadedGeneration != CarPlayVideo.playbackGeneration) return
+        CarPlayVideo.onPlaybackCompleted()
         OwnScreenStart.start(this, CarPlayScreen.intent(this))
         finish()
     }
@@ -348,18 +366,24 @@ class CarPlayVideoActivity : ComponentActivity() {
             prepared = prepared,
             playing = player.isPlaying,
             positionSeconds = player.currentPosition / 1000.0,
-            durationSeconds = duration / 1000.0,
+            durationSeconds = if (isLiveItem()) Double.NaN else duration / 1000.0,
             bufferedSeconds = player.bufferedPosition / 1000.0,
+            playWhenReady = player.playWhenReady,
+            buffering = player.playbackState == Player.STATE_BUFFERING,
+            seekableDurationSeconds = duration / 1000.0,
         )
     }
 
     fun load() {
         val url = CarPlayVideo.url ?: return
-        if (url == loadedUrl) return
+        val generation = CarPlayVideo.playbackGeneration
+        if (url == loadedUrl && generation == loadedGeneration) return
         loadedUrl = url
+        loadedGeneration = generation
+        completion.reset()
         prepared = false
         encryptionLogged = false
-        Log.i(TAG, "loading video scheme=${Uri.parse(url).scheme.orEmpty()} ${playbackNetworkSummary()}")
+        CarPlayVideo.note(VideoDiagnostics.loadingVideo(url, playbackNetworkSummary()))
         val item = MediaItem.Builder().setUri(url)
             .apply { if (CarPlayVideo.streaming) setMimeType(MimeTypes.APPLICATION_M3U8) }
             .build()
@@ -373,6 +397,11 @@ class CarPlayVideoActivity : ComponentActivity() {
         player.playWhenReady = CarPlayVideo.playing
         if (controls.visibility == View.VISIBLE) updatePlayPause()
     }
+
+    internal fun isLiveItem(): Boolean = completion.keepsLiveSession ||
+        (::player.isInitialized && player.isCurrentMediaItemLive)
+
+    internal fun ownsCurrentItem(): Boolean = loadedGeneration == CarPlayVideo.playbackGeneration && loadedUrl == CarPlayVideo.url
 
     /** Moves the playback position by [deltaMillis], within the video. */
     fun skip(deltaMillis: Int) {
@@ -399,8 +428,8 @@ class CarPlayVideoActivity : ComponentActivity() {
             (0 until init.schemeDataCount).map { init.get(it).uuid }
         }
         val sessionKeys = manifest.multivariantPlaylist.sessionKeyDrmInitData.map { it.schemeType }
-        Log.i(TAG, "HLS encryption aes128KeyScheme=$keyScheme sampleAesSchemeType=${media.protectionSchemes?.schemeType} " +
-            "drmUuids=$drm sessionKeys=$sessionKeys segments=${media.segments.size}")
+        CarPlayVideo.note(VideoDiagnostics.hlsEncryption(keyScheme, media.protectionSchemes?.schemeType, drm,
+            sessionKeys, media.segments.size))
     }
 
     private fun causes(error: Throwable): String = generateSequence(error) { it.cause }.take(4)
@@ -427,7 +456,7 @@ class CarPlayVideoActivity : ComponentActivity() {
         main.removeCallbacks(tick)
         val positionMillis = if (::player.isInitialized && prepared) player.currentPosition.toInt() else null
         if (::player.isInitialized) player.release()
-        CarPlayVideo.detachPlayer(this, positionMillis, isChangingConfigurations)
+        CarPlayVideo.detachPlayer(this, positionMillis, isChangingConfigurations, loadedGeneration)
         super.onDestroy()
     }
 

@@ -211,4 +211,90 @@ class VideoInCarTest {
             VideoInCar.playbackStateNotification(true, "94FF"),
         )
     }
+
+    @Test fun queueSelectionNotificationsUseNativeNamesAndOmitAbsentItems() {
+        val first = VideoInCar.currentItemChangedNotification("first", null, "ReasonAddToPlayQueue")
+        assertEquals(mapOf("type" to "notification", "name" to "currentItemChanged",
+            "reason" to "ReasonAddToPlayQueue", "itemCurrent" to mapOf("uuid" to "first")), first)
+        val next = VideoInCar.currentItemChangedNotification("next", "first", "ReasonAddToPlayQueue")
+        assertEquals(mapOf("uuid" to "first"), next["itemBefore"])
+        assertEquals(mapOf("uuid" to "next"), next["itemCurrent"])
+        assertFalse(next.containsKey("kind"))
+    }
+
+    @Test fun queueRemovalAndInterruptionHaveDistinctNativeMessages() {
+        assertEquals(mapOf("type" to "notification", "name" to "itemRemoved",
+            "item" to mapOf("uuid" to "first")), VideoInCar.itemRemovedNotification("first"))
+        val empty = VideoInCar.currentItemChangedNotification(null, "first", "ReasonRemoveFromPlayqueue")
+        assertFalse(empty.containsKey("itemCurrent"))
+        assertEquals(mapOf("uuid" to "first"), empty["itemBefore"])
+        assertEquals("ReasonRemoveFromPlayqueue", empty["reason"])
+        assertEquals(mapOf("type" to "playbackState", "name" to "stopped", "reason" to "interrupted"),
+            VideoInCar.playbackInterruptedNotification())
+    }
+
+    @Test fun binaryQueueItemIdentitySurvivesTheWireFormat() {
+        val uuid = byteArrayOf(1, 2, 3, 4)
+        val encoded = BplistCodec.encode(VideoInCar.currentItemChangedNotification(uuid, null, "ReasonAddToPlayQueue"))
+        val decoded = BplistCodec.decode(encoded) as Map<*, *>
+        assertTrue(uuid.contentEquals((decoded["itemCurrent"] as Map<*, *>)["uuid"] as ByteArray))
+    }
+
+    @Test fun bufferingPreservesTheRequestedRateWithoutReportingPause() {
+        val state = VideoInCar.PlayerState(true, false, 12.0, 90.0, 12.0,
+            playWhenReady = true, buffering = true)
+        val info = VideoInCar.playbackInfoResponse(1L, "item", state)["info"] as Map<*, *>
+        assertEquals(1.0, info["rate"])
+        assertEquals("loading", info["playbackState"])
+        assertFalse(info["playbackLikelyToKeepUp"] as Boolean)
+        assertEquals(mapOf("type" to "playbackState", "name" to "loading"),
+            VideoInCar.playerPlaybackStateNotification("item", state))
+        val paused = state.copy(playWhenReady = false, buffering = false)
+        val pausedInfo = VideoInCar.playbackInfoResponse(2L, "item", paused)["info"] as Map<*, *>
+        assertEquals(0.0, pausedInfo["rate"])
+        assertEquals("paused", pausedInfo["playbackState"])
+    }
+
+    @Test fun playbackSuppressionDoesNotPretendTheUserPaused() {
+        val state = VideoInCar.PlayerState(true, false, 12.0, 90.0, 24.0, playWhenReady = true)
+        val info = VideoInCar.playbackInfoResponse(1L, "item", state)["info"] as Map<*, *>
+        assertEquals(1.0, info["rate"])
+        assertEquals("loading", info["playbackState"])
+    }
+
+    @Test fun liveDurationIsIndefiniteWhileItsSeekableWindowRemainsFinite() {
+        val state = VideoInCar.PlayerState(true, true, 28.0, Double.NaN, 35.0,
+            seekableDurationSeconds = 40.0)
+        val encoded = BplistCodec.encode(VideoInCar.playbackInfoResponse(1L, "live", state))
+        val response = BplistCodec.decode(encoded) as Map<*, *>
+        val info = response["info"] as Map<*, *>
+        assertEquals(mapOf("value" to 0L, "timescale" to 0L, "flags" to 17L, "epoch" to 0L), info["duration"])
+        val ranges = info["seekableTimeRanges"] as List<*>
+        assertEquals(VideoInCar.cmTime(40.0), (ranges.single() as Map<*, *>)["duration"])
+        assertEquals(ranges, VideoInCar.propertyResponse(2L, "seekableTimeRanges", state)["value"])
+    }
+
+    @Test fun actualPlayingNotificationIncludesTheNativePlaybackInfoPayload() {
+        val state = VideoInCar.PlayerState(true, true, 12.0, 90.0, 24.0)
+        val message = VideoInCar.playerPlaybackStateNotification("item", state)
+        assertEquals("playing", message["name"])
+        assertEquals(mapOf("uuid" to "item"), message["item"])
+        val params = message["params"] as Map<*, *>
+        assertEquals(1.0, params["rate"])
+        assertEquals(true, params["readyToPlay"])
+        assertEquals(VideoInCar.cmTime(12.0), params["position"])
+        assertFalse(params.containsKey("item"))
+        assertFalse(message.containsKey("messageID"))
+        val loading = state.copy(prepared = false, playing = false)
+        assertEquals("loading", VideoInCar.playbackStateNotification(true, "item", loading)["name"])
+    }
+
+    @Test fun specialCmTimesKeepTheirNativeFlags() {
+        assertEquals(mapOf("value" to 0L, "timescale" to 1000L, "flags" to 5L, "epoch" to 0L),
+            VideoInCar.cmTime(Double.POSITIVE_INFINITY))
+        assertEquals(mapOf("value" to 0L, "timescale" to 0L, "flags" to 9L, "epoch" to 0L),
+            VideoInCar.cmTime(Double.NEGATIVE_INFINITY))
+        assertEquals(mapOf("value" to 12_345L, "timescale" to 1000L, "flags" to 1L, "epoch" to 0L),
+            VideoInCar.cmTime(12.345))
+    }
 }
