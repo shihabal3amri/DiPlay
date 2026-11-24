@@ -98,19 +98,19 @@ class WirelessConnectionProofTest {
         val proof = WirelessConnectionProof<Any>()
         proof.begin(1) {}
         proof.activate(1, behindScreen)
-        assertFalse(proof.isUsable(1, behindScreen, audioReceived = true, screen = SHOWN))
+        assertFalse(proof.isUsable(1, behindScreen, audioReceived = true, videoReceived = false, screen = SHOWN))
         proof.activate(1, hidden)
-        assertTrue(proof.isUsable(1, hidden, audioReceived = true, screen = HIDDEN))
+        assertTrue(proof.isUsable(1, hidden, audioReceived = true, videoReceived = false, screen = HIDDEN))
     }
 
-    @Test fun aSessionWithoutFrameOrAudioIsNeverUsable() {
+    @Test fun aSessionWithoutFrameAudioOrVideoIsNeverUsable() {
         val session = Any()
         val proof = WirelessConnectionProof<Any>()
         proof.begin(1) {}
         proof.activate(1, session)
         proof.authenticated(1)
-        assertFalse(proof.isUsable(1, session, audioReceived = false, screen = HIDDEN))
-        assertFalse(proof.isUsable(1, session, audioReceived = false, screen = SHOWN))
+        assertFalse(proof.isUsable(1, session, audioReceived = false, videoReceived = false, screen = HIDDEN))
+        assertFalse(proof.isUsable(1, session, audioReceived = false, videoReceived = false, screen = SHOWN))
     }
 
     @Test fun aRenderedFrameIsEnoughWithOrWithoutAScreen() {
@@ -119,8 +119,8 @@ class WirelessConnectionProofTest {
         proof.begin(1) {}
         proof.activate(1, session)
         proof.rendered(1, session)
-        assertTrue(proof.isUsable(1, session, audioReceived = false, screen = SHOWN))
-        assertTrue(proof.isUsable(1, session, audioReceived = false, screen = HIDDEN))
+        assertTrue(proof.isUsable(1, session, audioReceived = false, videoReceived = false, screen = SHOWN))
+        assertTrue(proof.isUsable(1, session, audioReceived = false, videoReceived = false, screen = HIDDEN))
     }
 
     @Test fun anAcceptedSessionStaysAcceptedWhenItsScreenComesBack() {
@@ -128,8 +128,8 @@ class WirelessConnectionProofTest {
         val proof = WirelessConnectionProof<Any>()
         proof.begin(1) {}
         proof.activate(1, session)
-        assertTrue(proof.isUsable(1, session, audioReceived = true, screen = HIDDEN))
-        assertTrue(proof.isUsable(1, session, audioReceived = true, screen = SHOWN))
+        assertTrue(proof.isUsable(1, session, audioReceived = true, videoReceived = false, screen = HIDDEN))
+        assertTrue(proof.isUsable(1, session, audioReceived = true, videoReceived = false, screen = SHOWN))
     }
 
     @Test fun acceptanceBelongsToOneSessionAndGeneration() {
@@ -138,15 +138,15 @@ class WirelessConnectionProofTest {
         val proof = WirelessConnectionProof<Any>()
         proof.begin(1) {}
         proof.activate(1, first)
-        assertFalse(proof.isUsable(2, first, audioReceived = true, screen = HIDDEN))
-        assertFalse(proof.isUsable(1, second, audioReceived = true, screen = HIDDEN))
-        assertTrue(proof.isUsable(1, first, audioReceived = true, screen = HIDDEN))
+        assertFalse(proof.isUsable(2, first, audioReceived = true, videoReceived = false, screen = HIDDEN))
+        assertFalse(proof.isUsable(1, second, audioReceived = true, videoReceived = false, screen = HIDDEN))
+        assertTrue(proof.isUsable(1, first, audioReceived = true, videoReceived = false, screen = HIDDEN))
         proof.activate(1, second)
-        assertFalse(proof.isUsable(1, second, audioReceived = false, screen = SHOWN))
+        assertFalse(proof.isUsable(1, second, audioReceived = false, videoReceived = false, screen = SHOWN))
         proof.end(1, second)
-        assertFalse(proof.isUsable(1, second, audioReceived = true, screen = HIDDEN))
+        assertFalse(proof.isUsable(1, second, audioReceived = true, videoReceived = false, screen = HIDDEN))
         proof.begin(2) {}
-        assertFalse(proof.isUsable(1, first, audioReceived = true, screen = HIDDEN))
+        assertFalse(proof.isUsable(1, first, audioReceived = true, videoReceived = false, screen = HIDDEN))
     }
 
     @Test fun audioProvesASessionHiddenAllAlong() {
@@ -155,8 +155,8 @@ class WirelessConnectionProofTest {
         proof.begin(1) {}
         proof.activate(1, session)
         proof.observeScreen(1, session, HIDDEN)
-        assertFalse(proof.isUsable(1, session, audioReceived = false, screen = HIDDEN))
-        assertTrue(proof.isUsable(1, session, audioReceived = true, screen = HIDDEN))
+        assertFalse(proof.isUsable(1, session, audioReceived = false, videoReceived = false, screen = HIDDEN))
+        assertTrue(proof.isUsable(1, session, audioReceived = true, videoReceived = false, screen = HIDDEN))
         assertFalse(proof.screenShown(1))
     }
 
@@ -167,7 +167,7 @@ class WirelessConnectionProofTest {
         proof.begin(1) {}
         proof.activate(1, session)
         proof.observeScreen(1, session, SHOWN)
-        assertFalse(proof.isUsable(1, session, audioReceived = true, screen = HIDDEN))
+        assertFalse(proof.isUsable(1, session, audioReceived = true, videoReceived = false, screen = HIDDEN))
         assertTrue(proof.screenShown(1))
     }
 
@@ -178,7 +178,7 @@ class WirelessConnectionProofTest {
         proof.begin(1) {}
         proof.activate(1, session)
         proof.observeScreen(1, session, HIDDEN)
-        assertFalse(proof.isUsable(1, session, audioReceived = true, screen = MainScreenOutput(false, 1)))
+        assertFalse(proof.isUsable(1, session, audioReceived = true, videoReceived = false, screen = MainScreenOutput(false, 1)))
     }
 
     @Test fun aRenderedFrameStillProvesASessionWhoseScreenWasLeft() {
@@ -188,7 +188,7 @@ class WirelessConnectionProofTest {
         proof.activate(1, session)
         proof.observeScreen(1, session, SHOWN)
         proof.rendered(1, session)
-        assertTrue(proof.isUsable(1, session, audioReceived = false, screen = HIDDEN))
+        assertTrue(proof.isUsable(1, session, audioReceived = false, videoReceived = false, screen = HIDDEN))
     }
 
     @Test fun aNewSessionStartsWithoutTheOldOnesScreen() {
@@ -200,7 +200,85 @@ class WirelessConnectionProofTest {
         proof.observeScreen(1, first, SHOWN)
         proof.activate(1, second)
         proof.observeScreen(1, second, MainScreenOutput(false, 3))
-        assertTrue(proof.isUsable(1, second, audioReceived = true, screen = MainScreenOutput(false, 3)))
+        assertTrue(proof.isUsable(1, second, audioReceived = true, videoReceived = false, screen = MainScreenOutput(false, 3)))
+    }
+
+    @Test fun receivedVideoProvesASessionHiddenAllAlong() {
+        // Navigation only, music paused: the iPhone sends main-screen video that nothing can show (#1215).
+        val session = Any()
+        val proof = WirelessConnectionProof<Any>()
+        proof.begin(1) {}
+        proof.activate(1, session)
+        proof.observeScreen(1, session, HIDDEN)
+        assertFalse(proof.isUsable(1, session, audioReceived = false, videoReceived = false, screen = HIDDEN))
+        assertTrue(proof.isUsable(1, session, audioReceived = false, videoReceived = true, screen = HIDDEN))
+        assertFalse(proof.hasRenderedFrame(1))
+    }
+
+    @Test fun receivedVideoCannotProveASessionBehindAScreenWithoutAFrame() {
+        val session = Any()
+        val proof = WirelessConnectionProof<Any>()
+        proof.begin(1) {}
+        proof.activate(1, session)
+        assertFalse(proof.isUsable(1, session, audioReceived = false, videoReceived = true, screen = SHOWN))
+        // Audio on top of it changes nothing.
+        assertFalse(proof.isUsable(1, session, audioReceived = true, videoReceived = true, screen = SHOWN))
+    }
+
+    @Test fun receivedVideoCannotProveASessionThatShowedABlackScreenBeforeBeingHidden() {
+        val session = Any()
+        val proof = WirelessConnectionProof<Any>()
+        proof.begin(1) {}
+        proof.activate(1, session)
+        proof.observeScreen(1, session, SHOWN)
+        assertFalse(proof.isUsable(1, session, audioReceived = false, videoReceived = true, screen = HIDDEN))
+        assertTrue(proof.screenShown(1))
+    }
+
+    @Test fun aScreenAttachedAndLeftBetweenChecksStillCountsAgainstVideo() {
+        val session = Any()
+        val proof = WirelessConnectionProof<Any>()
+        proof.begin(1) {}
+        proof.activate(1, session)
+        proof.observeScreen(1, session, HIDDEN)
+        assertFalse(proof.isUsable(1, session, audioReceived = false, videoReceived = true, screen = MainScreenOutput(false, 1)))
+    }
+
+    @Test fun aSessionAcceptedOnVideoStaysAcceptedWhenItsScreenComesBack() {
+        val session = Any()
+        val proof = WirelessConnectionProof<Any>()
+        proof.begin(1) {}
+        proof.activate(1, session)
+        assertTrue(proof.isUsable(1, session, audioReceived = false, videoReceived = true, screen = HIDDEN))
+        assertTrue(proof.isUsable(1, session, audioReceived = false, videoReceived = true, screen = SHOWN))
+    }
+
+    @Test fun acceptanceOnVideoBelongsToOneSessionAndGeneration() {
+        val first = Any()
+        val second = Any()
+        val proof = WirelessConnectionProof<Any>()
+        proof.begin(1) {}
+        proof.activate(1, first)
+        assertFalse(proof.isUsable(2, first, audioReceived = false, videoReceived = true, screen = HIDDEN))
+        assertFalse(proof.isUsable(1, second, audioReceived = false, videoReceived = true, screen = HIDDEN))
+        assertTrue(proof.isUsable(1, first, audioReceived = false, videoReceived = true, screen = HIDDEN))
+        proof.activate(1, second)
+        assertFalse(proof.isUsable(1, second, audioReceived = false, videoReceived = false, screen = HIDDEN))
+        proof.end(1, second)
+        assertFalse(proof.isUsable(1, second, audioReceived = false, videoReceived = true, screen = HIDDEN))
+        proof.begin(2) {}
+        assertFalse(proof.isUsable(1, first, audioReceived = false, videoReceived = true, screen = HIDDEN))
+    }
+
+    @Test fun receivedVideoNeverConfirmsTheConnection() {
+        var saves = 0
+        val session = Any()
+        val proof = WirelessConnectionProof<Any>()
+        proof.begin(1) { saves++ }
+        proof.activate(1, session)
+        proof.authenticated(1)
+        assertTrue(proof.isUsable(1, session, audioReceived = false, videoReceived = true, screen = HIDDEN))
+        assertEquals(0, saves)
     }
 
     private companion object {

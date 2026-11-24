@@ -5,6 +5,8 @@ import com.shilapi.xcertplay.airplay.AirPlayPeerDiagnostics
 import com.shilapi.xcertplay.hud.GearUnreadable
 import com.shilapi.xcertplay.hud.NavigationOutputLines
 import com.shilapi.xcertplay.hud.NavigationOutputLog
+import com.shilapi.xcertplay.media.MediaAudioLines
+import com.shilapi.xcertplay.media.MusicVolume
 import com.shilapi.xcertplay.network.WifiStationLines
 import com.shilapi.xcertplay.orchestration.CarPlayController
 import com.shilapi.xcertplay.orchestration.VideoInCarDiagnostics
@@ -16,7 +18,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * The lines added for #1222, #1196, #1180 and #1233 reach a saved report unchanged: the redactor drops a
+ * The lines added for #1222, #1196, #1180, #1233 and #1229 reach a saved report unchanged: the redactor drops a
  * whole line that contains "ssid", "token", "payload=" or a field ending in "name", so each line is built
  * by the code that writes it and checked here.
  */
@@ -60,6 +62,18 @@ class ReportEvidenceRedactionTest {
             listOf(watching(), unavailable("SecurityException"), connected(1, 1), disconnected(1, 95, 0),
                 flags(1, true, true, true, true), flags(2, null, null, null, null))
                 .forEach { add("${CarPlayController.CONNECTION_DIAGNOSTIC_PREFIX} attempt=3 run=1 phase=CONTROL $it") }
+        }
+        // #1229
+        with(MediaAudioLines) {
+            for (rebuild in listOf(true, false)) {
+                add(notConsuming(0L, 3_000_000_000L, 151, 0, rebuild))
+                add(notConsuming(0xffff_ffffL, 3_000_000_000L, 5, 192, rebuild))
+                add(notConsuming(null, 3_000_000_000L, 0, 192, rebuild))
+                add(rebuilt(rebuild))
+            }
+            add(consumingAgain(960))
+            add(started(MusicVolume(3, 39, muted = false, fixed = true), 2, 14))
+            add(started(null, null, 0))
         }
     }
 

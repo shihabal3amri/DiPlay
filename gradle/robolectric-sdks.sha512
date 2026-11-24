@@ -1,0 +1,18 @@
+# The Android jars that the Robolectric 4.17 tests use: API 23 (the default without a manifest) and API 25 to 36.
+# CI downloads and caches them before the tests (scripts/fetch_robolectric_sdks.py).
+# The CI cache key is the hash of this file.
+# After the tests, CI warns when a test needs a jar that is not here, and prints the line to add.
+# Replace all lines when a Robolectric upgrade changes the jar versions.
+bb6de4f27740e6fd604b2c6672a759c6b52d440ebce5d3de2cbbf2797b8b5128608d3a695676af2a9c795cca66c99f5eae8ecbf22b41d15fde071106eade6b6e  org/robolectric/android-all-instrumented/6.0.1_r3-robolectric-r1-i7/android-all-instrumented-6.0.1_r3-robolectric-r1-i7.jar
+3abd7f424180c3881b6c909582a8db52999d320e55bda767f5b0f08b7617ed038084d61a77a012285357920e21a47859e93f7158485a8fc812165b670a24fa29  org/robolectric/android-all-instrumented/7.1.0_r7-robolectric-r1-i7/android-all-instrumented-7.1.0_r7-robolectric-r1-i7.jar
+c55e2053f3ae35d617ce02b0ecd311c1f72fcd671eaff873fb203e106b2dc444b870677b71be546a062045fc0a473926bb1668bd43f9051176826aab3f732aab  org/robolectric/android-all-instrumented/8.0.0_r4-robolectric-r1-i7/android-all-instrumented-8.0.0_r4-robolectric-r1-i7.jar
+f6b923d67e9165f35592f1baa007f9c25906c2b81b1474ec4e20e2886f5e8bfe2893abaf08b35b8c9d480599620998c65177ef5d0e3b1b5bae89b55dad18e79b  org/robolectric/android-all-instrumented/8.1.0-robolectric-4611349-i7/android-all-instrumented-8.1.0-robolectric-4611349-i7.jar
+24687b9ea919eb20f5e27e47274f2aa711e98eb332d4769d34044a3b4952a71393831d0a3f61ba726dc8fe220673a76138c11a0716f304999e5b029146fe88eb  org/robolectric/android-all-instrumented/9-robolectric-4913185-2-i7/android-all-instrumented-9-robolectric-4913185-2-i7.jar
+d8907eec0646ae1b71ec306cc61449c76c61a7a08eaca44eb4aa30937cfcf5dcaf7d0938cbea76b3bd85a83646b012ff499faa11cea45e32df7aff62e791951f  org/robolectric/android-all-instrumented/10-robolectric-5803371-i7/android-all-instrumented-10-robolectric-5803371-i7.jar
+686c3d5faf7772795fc28f356baf9a92dcd89dedc2f7a16720ce4eb8d7b5ee5932500c623c3028355cc13a14c855210bcba796180681a01b0a7f2a276eb5303d  org/robolectric/android-all-instrumented/11-robolectric-6757853-i7/android-all-instrumented-11-robolectric-6757853-i7.jar
+1fe2738ae44f06ec77ddfd61a04ab80d6d070a7692724d983855157065b13d31a2dc98363846d7f6178e287b0a445a71adf4f6661e8443b21b4682b433ca5399  org/robolectric/android-all-instrumented/12-robolectric-7732740-i7/android-all-instrumented-12-robolectric-7732740-i7.jar
+747d403cd1e80a898a9ffb917920ce094216312b3dabaa312410e100647102b4141d2fbd1efca32251308e713fd69dca72c0971f93f7d6f1247d19a13cbac4ef  org/robolectric/android-all-instrumented/12.1-robolectric-8229987-i7/android-all-instrumented-12.1-robolectric-8229987-i7.jar
+0ffcb15c867dcfd87e57b6eef601067de84d23db0e818f8ea8a6035745482a144e91eb65a7f532dd9614ce27eba67204b117b7185058c2aac074dcb26e62acc9  org/robolectric/android-all-instrumented/13-robolectric-9030017-i7/android-all-instrumented-13-robolectric-9030017-i7.jar
+7cdc0b1306e7865f1acd25a363073149654caee5b8e278c5ae37ff4724185724eff39f0b0111800b521e640bb28698d9d2e655134a801569a0f07470e7b5f455  org/robolectric/android-all-instrumented/14-robolectric-10818077-i7/android-all-instrumented-14-robolectric-10818077-i7.jar
+5fc64ffccf4788154162686b3966ddd63abea8326542c465e2a7f0129fc92770d0e1e8ddcfabd7f1500e491ec02e3b4104b9e51b61fccd9cf08006c9dc02987c  org/robolectric/android-all-instrumented/15-robolectric-13954326-i7/android-all-instrumented-15-robolectric-13954326-i7.jar
+0576318b89abb0a1c9a760a61bb68ccd2d509b33164b8265d6b1fb587a4b7629e1e805b6c7f8fbefab94fc03c8db8100b1d4856a32728803c242d2677aa7ec76  org/robolectric/android-all-instrumented/16-robolectric-13921718-i7/android-all-instrumented-16-robolectric-13921718-i7.jar

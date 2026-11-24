@@ -543,7 +543,7 @@
     <string name="adb_dashboard_does_not_send_map">Dashboard: %1$s, so the iPhone does not send the map.</string>
     <string name="adb_not_approved">DiPlay is not approved yet. Tap Check ADB access, then allow DiPlay on the car screen.</string>
     <string name="adb_off">ADB over network is off. Turn it on in the head unit’s developer options.</string>
-    <string name="adb_network_not_answering">USB debugging is on, but ADB over network does not answer. Turn ADB over network on in the head unit’s developer options. If it is already on, turn it off and on again.</string>
+    <string name="adb_network_not_answering">USB debugging is on, but ADB over network does not answer. Turn ADB over network on in the head unit’s developer options. If it is already on, turn it off and on again. If there is no such option, run “adb tcpip 5555” from a computer connected over USB, again after each head unit restart.</string>
     <string name="adb_pairing_only">This head unit offers only wireless debugging with pairing, which DiPlay does not support yet.</string>
     <string name="navi_mode_off">Off</string>
     <string name="navi_mode_turn_on_by_navi">Turn on by navi</string>
@@ -704,6 +704,11 @@
     <string name="wheel_keys_adb_failed">ADB is not available: %1$s</string>
     <string name="wheel_keys_open_settings">Open accessibility settings</string>
     <string name="wheel_keys_no_settings">This head unit has no accessibility settings screen. Use the ADB button.</string>
+    <string name="settings_wheel_keys_restart">Restart DiPlay to start the service · ADB</string>
+    <string name="settings_wheel_keys_restart_description">DiPlay allowed the service again, but Android did not start it. Restarting DiPlay through the car\'s ADB can fix this. It disconnects CarPlay.</string>
+    <string name="settings_wheel_keys_restart_title">Restart DiPlay?</string>
+    <string name="settings_wheel_keys_restart_message">DiPlay closes and opens again. If CarPlay is connected, it disconnects. Do this only while parked. If it works, the wheel keys come back about 10 seconds after DiPlay opens.\n\nOnce it has worked, DiPlay does the same by itself when the car starts DiPlay and the service is stuck again: once per start, and only before CarPlay connects.</string>
+    <string name="settings_wheel_keys_restart_confirm">Restart DiPlay</string>
     <string name="wheel_zoom_behaviour">Mode key</string>
     <string name="wheel_zoom_behaviour_toggle">switches until pressed again</string>
     <string name="wheel_zoom_behaviour_timed">zoom for 5 seconds</string>

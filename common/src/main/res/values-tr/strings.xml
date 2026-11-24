@@ -668,6 +668,11 @@
     <string name="wheel_keys_adb_failed">ADB kullanılamıyor: %1$s</string>
     <string name="wheel_keys_open_settings">Erişilebilirlik ayarlarını aç</string>
     <string name="wheel_keys_no_settings">Bu ana ünitede erişilebilirlik ayarları ekranı yok. ADB düğmesini kullanın.</string>
+    <string name="settings_wheel_keys_restart">Hizmeti başlatmak için DiPlay\'i yeniden başlat · ADB</string>
+    <string name="settings_wheel_keys_restart_description">DiPlay hizmete yeniden izin verdi, ancak Android onu başlatmadı. DiPlay\'i aracın ADB\'si üzerinden yeniden başlatmak bunu düzeltebilir. CarPlay bağlantısı kesilir.</string>
+    <string name="settings_wheel_keys_restart_title">DiPlay yeniden başlatılsın mı?</string>
+    <string name="settings_wheel_keys_restart_message">DiPlay kapanır ve yeniden açılır. CarPlay bağlıysa bağlantısı kesilir. Bunu yalnızca park halindeyken yapın. İşe yararsa direksiyon tuşları, DiPlay açıldıktan yaklaşık 10 saniye sonra geri gelir.\n\nBir kez işe yaradıktan sonra, araç DiPlay\'i başlattığında hizmet yine takılmışsa DiPlay aynısını kendisi yapar: her çalıştırmada bir kez ve yalnızca CarPlay bağlanmadan önce.</string>
+    <string name="settings_wheel_keys_restart_confirm">DiPlay\'i yeniden başlat</string>
     <string name="wheel_zoom_behaviour">Mod tuşu</string>
     <string name="wheel_zoom_behaviour_toggle">tekrar basılana kadar değiştirir</string>
     <string name="wheel_zoom_behaviour_timed">5 saniye boyunca yakınlaştır</string>
@@ -1035,7 +1040,7 @@
     <string name="settings_hotspot_interface_description">Yalnızca erişim noktasını Android\'in Wi-Fi erişim noktası olarak bildirmediği bir ağ arayüzünde (örneğin bazı Geely, Lynk &amp; Co ve diğer Qualcomm ünitelerinde eth0.3) çalıştıran ana üniteler içindir. Otomatik bulmak için boş bırakın.</string>
     <string name="wifi_direct_refused_beside_hotspot">Araç erişim noktası açık ve Wi-Fi Direct onun yanında başlatılamıyor</string>
     <string name="connection_help_wifi_direct_beside_hotspot">Araç erişim noktasını kapatıp tekrar deneyin veya Bağlantı kurulumunda Aracın dahili erişim noktası\'nı seçip adını ve parolasını kaydedin.</string>
-    <string name="adb_network_not_answering">USB hata ayıklama açık, ancak ağ üzerinden ADB yanıt vermiyor. Ana ünitenin geliştirici seçeneklerinden ağ üzerinden ADB\'yi açın. Zaten açıksa, kapatıp tekrar açın.</string>
+    <string name="adb_network_not_answering">USB hata ayıklama açık, ancak ağ üzerinden ADB yanıt vermiyor. Ana ünitenin geliştirici seçeneklerinden ağ üzerinden ADB\'yi açın. Zaten açıksa, kapatıp tekrar açın. Böyle bir seçenek yoksa USB ile bağlı bir bilgisayardan “adb tcpip 5555” komutunu çalıştırın; ana ünite her yeniden başlatıldığında tekrarlayın.</string>
     <string name="car_hotspot_details_differ">Araç erişim noktası ayarları DiPlay\'de kayıtlı olanlardan farklı</string>
     <string name="car_sees_no_usb_device">Araç henüz herhangi bir USB cihazı görmüyor</string>
     <string name="car_sees_usb_device_not_iphone">Araç bir USB cihazı görüyor, ancak bu bir iPhone değil</string>

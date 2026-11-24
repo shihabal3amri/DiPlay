@@ -502,7 +502,7 @@
     <string name="adb_dashboard_does_not_send_map">儀表板：%1$s，因此 iPhone 不會傳送地圖。</string>
     <string name="adb_not_approved">DiPlay 尚未獲得授權。點一下「檢查 ADB 存取權限」，然後在車機螢幕上允許 DiPlay。</string>
     <string name="adb_off">網路 ADB 已關閉。請在車機的開發人員選項中開啟。</string>
-    <string name="adb_network_not_answering">USB 偵錯已開啟，但網路 ADB 沒有回應。請在車機的開發人員選項中開啟網路 ADB；如果已經開啟，請關閉後再重新開啟。</string>
+    <string name="adb_network_not_answering">USB 偵錯已開啟，但網路 ADB 沒有回應。請在車機的開發人員選項中開啟網路 ADB；如果已經開啟，請關閉後再重新開啟。如果沒有這個選項，請用 USB 連接電腦，在電腦上執行「adb tcpip 5555」；車機每次重新啟動後都要重新執行。</string>
     <string name="adb_pairing_only">此車機僅提供需要配對的無線除錯，DiPlay 目前不支援。</string>
     <string name="navi_mode_off">關閉</string>
     <string name="navi_mode_turn_on_by_navi">導航時開啟</string>
@@ -648,6 +648,11 @@
     <string name="wheel_keys_adb_failed">ADB 無法使用：%1$s</string>
     <string name="wheel_keys_open_settings">開啟輔助使用設定</string>
     <string name="wheel_keys_no_settings">此車機沒有輔助使用設定頁面，請使用 ADB 按鈕。</string>
+    <string name="settings_wheel_keys_restart">重新啟動 DiPlay 以啟動服務 · ADB</string>
+    <string name="settings_wheel_keys_restart_description">DiPlay 已重新允許此服務，但 Android 沒有啟動它。透過車機的 ADB 重新啟動 DiPlay 可能解決此問題。CarPlay 會中斷連線。</string>
+    <string name="settings_wheel_keys_restart_title">重新啟動 DiPlay？</string>
+    <string name="settings_wheel_keys_restart_message">DiPlay 會關閉並重新開啟。如果 CarPlay 已連線，它會中斷連線。請只在停車時操作。如果有效，DiPlay 開啟約 10 秒後方向盤按鍵會恢復。\n\n成功一次後，如果車輛啟動時開啟了 DiPlay 而服務又卡住，DiPlay 會自動執行同樣的操作：每次啟動只執行一次，而且只在 CarPlay 連線之前。</string>
+    <string name="settings_wheel_keys_restart_confirm">重新啟動 DiPlay</string>
     <string name="wheel_zoom_behaviour">模式鍵</string>
     <string name="wheel_zoom_behaviour_toggle">切換，直到再次按下</string>
     <string name="wheel_zoom_behaviour_timed">縮放 5 秒</string>

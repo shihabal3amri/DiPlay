@@ -541,7 +541,7 @@
     <string name="adb_dashboard_does_not_send_map">メーター：%1$s。iPhoneから地図映像は送信されません。</string>
     <string name="adb_not_approved">DiPlayはまだ許可されていません。「ADBへのアクセスを確認」をタップし、車の画面で許可してください。</string>
     <string name="adb_off">ネットワークADBがオフです。車載端末の開発者向けオプションでオンにしてください。</string>
-    <string name="adb_network_not_answering">USBデバッグはオンですが、ネットワークADBが応答しません。車載端末の開発者向けオプションでネットワークADBをオンにしてください。すでにオンの場合は、一度オフにしてからもう一度オンにしてください。</string>
+    <string name="adb_network_not_answering">USBデバッグはオンですが、ネットワークADBが応答しません。車載端末の開発者向けオプションでネットワークADBをオンにしてください。すでにオンの場合は、一度オフにしてからもう一度オンにしてください。この項目がない場合は、USBで接続したパソコンから「adb tcpip 5555」を実行してください。車載端末を再起動するたびに必要です。</string>
     <string name="adb_pairing_only">この車載端末ではペアリングが必要なワイヤレスデバッグだけが利用でき、DiPlayはまだ対応していません。</string>
     <string name="navi_mode_off">オフ</string>
     <string name="navi_mode_turn_on_by_navi">ナビ使用時のみオン</string>
@@ -702,6 +702,11 @@
     <string name="wheel_keys_adb_failed">ADBが使用できません：%1$s</string>
     <string name="wheel_keys_open_settings">ユーザー補助設定を開く</string>
     <string name="wheel_keys_no_settings">この車載端末にはユーザー補助設定画面がありません。ADBボタンを使用してください。</string>
+    <string name="settings_wheel_keys_restart">DiPlayを再起動してサービスを開始 · ADB</string>
+    <string name="settings_wheel_keys_restart_description">DiPlayはサービスを再び許可しましたが、Androidが起動しませんでした。車のADBでDiPlayを再起動すると解決する場合があります。CarPlayは切断されます。</string>
+    <string name="settings_wheel_keys_restart_title">DiPlayを再起動しますか？</string>
+    <string name="settings_wheel_keys_restart_message">DiPlayはいったん終了し、再び開きます。CarPlayが接続中の場合は切断されます。必ず停車中に行ってください。成功すると、DiPlayが開いてから約10秒でステアリングスイッチが使えるようになります。\n\n一度成功すると、車の始動時にDiPlayが開き、サービスが再び止まっている場合、DiPlayが同じ操作を自動で行います。始動ごとに1回、CarPlayの接続前に限ります。</string>
+    <string name="settings_wheel_keys_restart_confirm">DiPlayを再起動</string>
     <string name="wheel_zoom_behaviour">モード切替キー</string>
     <string name="wheel_zoom_behaviour_toggle">次に押すまで切り替えたまま</string>
     <string name="wheel_zoom_behaviour_timed">5秒間だけ地図を拡大・縮小</string>

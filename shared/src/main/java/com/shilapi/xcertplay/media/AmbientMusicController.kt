@@ -130,6 +130,15 @@ object AmbientMusicController {
         return token
     }
 
+    /**
+     * The same stream goes on with a new track or envelope: passes the lamps on from its own [token]. Checked and
+     * passed on in one step with [closeRenderer] and [openRenderer], so a stream that was closed, or that a newer one
+     * has replaced, gets 0 and takes nothing from the newer one.
+     */
+    @Synchronized internal fun reopenRenderer(sink: Long, token: Long, envelope: AmbientMusicEnvelope,
+        playback: () -> Pair<Int, Boolean>): Long =
+        if (token == 0L || token != activeRenderer.get()) 0L else openRenderer(sink, envelope, playback)
+
     private fun feeding() = settings.carRhythm && settings.carRhythmFeed
 
     internal fun wantsPcm(token: Long): Boolean = token != 0L && token == activeRenderer.get() &&

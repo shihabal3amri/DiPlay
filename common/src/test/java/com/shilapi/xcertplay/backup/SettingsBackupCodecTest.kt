@@ -334,6 +334,36 @@ class SettingsBackupCodecTest {
     }
 
     @Test
+    fun aFreshInstallTakesTheNewerBooleanAndIntKeysOnlyAsTheirType() {
+        fun import(key: String, value: String) = SettingsBackupCodec.import(context,
+            """{"format": "diplay-settings", "version": 1, "settings": {"xcertplay_airplay": {"$key": $value}}}""".toByteArray())
+        // Read with getBoolean: a String or number kept here would throw ClassCastException in Settings or at connect.
+        for (key in listOf("car_music_link_drop", "fit_screen_shape")) {
+            for (wrong in listOf("\"yes\"", "1", "1.5")) {
+                prefs("xcertplay_airplay").edit().clear().commit()
+                val outcome = import(key, wrong)
+                assertEquals("$key $wrong", 0, outcome.applied)
+                assertEquals("$key $wrong", 1, outcome.skipped)
+                assertFalse("$key $wrong", prefs("xcertplay_airplay").contains(key))
+            }
+            prefs("xcertplay_airplay").edit().clear().commit()
+            assertEquals(key, 1, import(key, "true").applied)
+        }
+        assertTrue(AirPlayPersistence.loadFitScreenShape(context))
+        // Read with getInt.
+        for (wrong in listOf("\"-6\"", "-6.5", "true")) {
+            prefs("xcertplay_airplay").edit().clear().commit()
+            val outcome = import("call_audio_attenuation_db", wrong)
+            assertEquals(wrong, 0, outcome.applied)
+            assertEquals(wrong, 1, outcome.skipped)
+            assertEquals(wrong, 0, AirPlayPersistence.loadCallAudioAttenuationDb(context))
+        }
+        prefs("xcertplay_airplay").edit().clear().commit()
+        assertEquals(1, import("call_audio_attenuation_db", "-6").applied)
+        assertEquals(-6, AirPlayPersistence.loadCallAudioAttenuationDb(context))
+    }
+
+    @Test
     fun aStoredDeclaredKeyStillRejectsAWrongType() {
         AirPlayPersistence.saveHevcEnabled(context, false)
         AirPlayPersistence.saveFps(context, 30)
