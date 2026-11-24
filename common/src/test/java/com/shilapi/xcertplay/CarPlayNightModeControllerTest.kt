@@ -143,15 +143,32 @@ class CarPlayNightModeControllerTest {
         assertEquals(1, f.light.starts)
     }
 
-    @Test fun missingOrFailedSensorFallsBackToSystemAndCanRetryOnResume() {
+    @Test fun missingOrFailedSensorFallsBackToScheduleAndKeepsTicking() {
         for (light in listOf(Light(available = false), Light(succeeds = false))) {
-            val f = Fixture(light = light)
-            f.controller.systemChanged(true)
-            assertTrue(f.controller.night)
-            f.controller.pause()
-            f.controller.resume(false)
-            assertFalse(f.controller.night)
-            assertTrue(f.clock.tasks.isEmpty())
+            val clock = Clock()
+            var minute = 17 * 60 + 59
+            val time = object : NightTimeSource {
+                override fun snapshot() = NightTimeSnapshot(minute, 1)
+            }
+            val output = mutableListOf<Boolean>()
+            val controller = CarPlayNightModeController(light, clock, true, output::add, time)
+            controller.configure(CarPlayNightMode.AMBIENT, true, AmbientLightThreshold(50), 5,
+                CarPlayNightSchedule(18 * 60, 6 * 60))
+            // Without a usable sensor the schedule owns the state instead of the (stuck) system
+            // signal: 17:59 is still day under the schedule. The failed-start light only reaches
+            // the fallback after resume, when start() is first attempted.
+            if (light.available) assertFalse(controller.night) else assertTrue(controller.night)
+            controller.resume(false)
+            assertFalse(controller.night)
+            // A frozen system night signal must not flip the ambient fallback.
+            controller.systemChanged(true)
+            assertFalse(controller.night)
+            minute = 18 * 60
+            clock.advance(1)
+            assertTrue(controller.night)
+            assertEquals(listOf(false, true), output)
+            controller.pause()
+            assertTrue(clock.tasks.isEmpty())
         }
     }
 
