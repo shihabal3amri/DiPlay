@@ -729,7 +729,7 @@
     <string name="settings_wifi_channel_scan_failed">فشل فحص الواي فاي. حاول مجددًا بعد لحظات.</string>
     <string name="settings_wifi_channel_scan_wifi_off">شغّل واي فاي السيارة لفحص الشبكات.</string>
     <string name="settings_wifi_channel_scan_band_change">اختيارك الحالي هو %1$s. استخدام القناة %2$d سيبدّل Wi-Fi Direct إلى 2.4GHz.</string>
-    <string name="settings_wifi_channel_scan_session_running">المسح غير متاح أثناء اتصال CarPlay.</string>
+    <string name="settings_wifi_channel_scan_session_running">الفحص غير متاح أثناء اتصال CarPlay.</string>
     <string name="settings_fps_counter">عداد الإطارات في الثانية</string>
     <string name="settings_fps_counter_description">يعرض عدادًا في الزاوية العلوية اليمنى من CarPlay: الإطارات المعروضة في الثانية (أخضر من 50، أصفر من 30، أحمر أقل من ذلك)، والإطارات المستلمة من iPhone في الثانية، ووقت فك الترميز. تعرض الشاشة الثابتة إطارات قليلة لأن iPhone لا يرسل أي إطارات.</string>
     <string name="car_button_in_carplay">زر السيارة في CarPlay</string>

@@ -729,7 +729,7 @@
     <string name="settings_wifi_channel_scan_failed">La exploración Wi-Fi falló. Inténtalo de nuevo en un momento.</string>
     <string name="settings_wifi_channel_scan_wifi_off">Enciende el Wi-Fi del coche para explorar redes.</string>
     <string name="settings_wifi_channel_scan_band_change">Tu elección actual es %1$s. Usar el canal %2$d cambiará Wi-Fi Direct a 2,4 GHz.</string>
-    <string name="settings_wifi_channel_scan_session_running">El análisis no está disponible mientras CarPlay está conectado.</string>
+    <string name="settings_wifi_channel_scan_session_running">La exploración no está disponible mientras CarPlay está conectado.</string>
     <string name="settings_fps_counter">Contador de FPS</string>
     <string name="settings_fps_counter_description">Muestra un contador en la esquina superior derecha de CarPlay: fotogramas mostrados por segundo (verde desde 50, amarillo desde 30, rojo por debajo), fotogramas recibidos del iPhone por segundo y el tiempo de decodificación. Una pantalla quieta muestra pocos fotogramas porque el iPhone no envía ninguno.</string>
     <string name="car_button_in_carplay">Botón del coche en CarPlay</string>

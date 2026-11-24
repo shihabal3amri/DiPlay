@@ -221,7 +221,6 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
     private var toneStop: Runnable? = null
     private var exportButton: Button? = null
     private var wifiChannelScanButton: Button? = null
-    private var wifiChannelScanApplyButton: Button? = null
     private var wifiChannelScanResultLabel: TextView? = null
     private var wifiChannelScanInProgress = false
     private var wifiChannelScanSummary: String? = null
@@ -715,7 +714,6 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
         readinessCard = null
         exportButton = null
         wifiChannelScanButton = null
-        wifiChannelScanApplyButton = null
         wifiChannelScanResultLabel = null
         bydAdbControls = null
         adbSwitches.clear()
@@ -3791,6 +3789,9 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
                     if (selection != current) {
                         AirPlayPersistence.saveWifiP2pPreferredChannel(this, selection)
                         control.text = summary(selection)
+                        // A scan result below still names the old choice, so
+                        // refresh it while the scanner is on screen.
+                        if (wifiChannelScanResultLabel?.isAttachedToWindow == true) render()
                         toast(getString(R.string.saved_for_your_next_connection))
                     }
                 }
@@ -3807,15 +3808,24 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
     }
 
     /**
-     * Null when the platform cannot answer: `is5GHzBandSupported` is API 29+, so on
-     * API 27 the call throws NoSuchMethodError and runCatching (which catches
-     * Throwable) returns null — the same pattern WifiP2pGroupManager already uses.
+     * Null when the platform cannot answer: `is5GHzBandSupported` is API 21 and
+     * minSdk is 24, so the call itself always exists — null only means there is
+     * no WifiManager, the same runCatching pattern WifiP2pGroupManager uses.
      * Callers treat null as "unknown" and keep the current behaviour; only an
      * explicit false skips the band warning.
      */
     private fun wifi5GhzSupported(): Boolean? =
         runCatching {
             (getSystemService(Context.WIFI_SERVICE) as? WifiManager)?.is5GHzBandSupported
+        }.getOrNull()
+
+    /**
+     * Null when the platform cannot answer. `is5GHzBandSupported` also reads false
+     * while Wi-Fi is off, so the band warning is skipped only when Wi-Fi is on.
+     */
+    private fun wifiEnabled(): Boolean? =
+        runCatching {
+            (getSystemService(Context.WIFI_SERVICE) as? WifiManager)?.isWifiEnabled
         }.getOrNull()
 
     /** Wi-Fi channel scanner next to the Wi-Fi Direct channel control: one scan, a ranked summary, and an apply action. */
@@ -3849,14 +3859,14 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
         if (recommended != null) {
             val current = AirPlayPersistence.loadWifiP2pPreferredChannel(this)
             if ((current == WifiP2pChannels.AUTO || current == WifiP2pChannels.AUTO_5_GHZ ||
-                current >= 36) && wifi5GhzSupported() != false) {
+                current >= 36) && wifi5GhzSupported() != false && wifiEnabled() == true) {
                 card.addView(label(getString(R.string.settings_wifi_channel_scan_band_change,
                     wifiDirectChannelLabel(current), recommended), 15, WARNING).apply {
                     setPadding(0, dp(10), 0, 0)
                 })
             }
             if (recommended != current) {
-                wifiChannelScanApplyButton = button(getString(R.string.settings_wifi_channel_scan_apply, recommended), false) {
+                val wifiChannelScanApplyButton = button(getString(R.string.settings_wifi_channel_scan_apply, recommended), false) {
                     AirPlayPersistence.saveWifiP2pPreferredChannel(this, recommended)
                     markReconnectNeeded()
                     render()

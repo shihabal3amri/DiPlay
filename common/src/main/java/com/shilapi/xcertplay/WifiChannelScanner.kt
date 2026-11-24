@@ -98,8 +98,9 @@ class WifiChannelScanner(context: Context) {
         receiver = object : BroadcastReceiver() {
             override fun onReceive(context: Context, intent: Intent) {
                 // Android also sends this broadcast when the scan fails, with
-                // EXTRA_RESULTS_UPDATED=false. The extra is absent below API 29,
-                // where a broadcast still means results arrived.
+                // EXTRA_RESULTS_UPDATED=false. The extra is API 23 and minSdk is
+                // 24, so it is always present; the default only covers a sender
+                // that omits it.
                 if (!intent.getBooleanExtra(WifiManager.EXTRA_RESULTS_UPDATED, true)) {
                     finish(Outcome.ScanFailed)
                 } else {
@@ -121,7 +122,8 @@ class WifiChannelScanner(context: Context) {
         }
         handler.postDelayed(timeoutRunnable!!, SCAN_TIMEOUT_MILLIS)
         @Suppress("DEPRECATION")
-        if (!manager.startScan()) {
+        val started = runCatching { manager.startScan() }.getOrDefault(false)
+        if (!started) {
             finish(Outcome.ScanFailed)
         }
     }
