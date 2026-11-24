@@ -91,6 +91,10 @@ object AirPlayPersistence {
     private const val KEY_CALL_MEDIA_OUTPUT = "call_media_output"
     private const val KEY_SMOOTH_VIDEO = "smooth_video"
     private const val KEY_MTK_DECODER_TUNING = "mtk_decoder_tuning"
+    private const val KEY_WEAK_DEVICE_MODE = "weak_device_mode"
+    private const val KEY_WEAK_DEVICE_PREV_DISPLAY_SCALE_PERCENT = "weak_device_prev_display_scale_percent"
+    private const val KEY_WEAK_DEVICE_PREV_DIRECT_VIDEO_OUTPUT = "weak_device_prev_direct_video_output"
+    private const val KEY_WEAK_DEVICE_PREV_WIRELESS_MUSIC_BUFFER_MILLIS = "weak_device_prev_wireless_music_buffer_millis"
     private const val KEY_DIRECT_VIDEO_OUTPUT = "direct_video_output"
     private const val KEY_LOW_LATENCY_DECODER = "low_latency_decoder"
     private const val KEY_FPS_COUNTER = "fps_counter"
@@ -827,6 +831,73 @@ object AirPlayPersistence {
     fun saveMtkDecoderTuning(context: Context, enabled: Boolean) {
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
             .putBoolean(KEY_MTK_DECODER_TUNING, enabled).apply()
+    }
+
+    /** One switch for slow head units; see WeakDeviceProfile. The previous values live under their own keys. */
+    fun loadWeakDeviceMode(context: Context): Boolean =
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getBoolean(KEY_WEAK_DEVICE_MODE, false)
+
+    fun saveWeakDeviceMode(context: Context, enabled: Boolean) {
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
+            .putBoolean(KEY_WEAK_DEVICE_MODE, enabled).apply()
+    }
+
+    /** The values in force before the mode was last turned on, or null when none were saved. */
+    fun loadWeakDevicePrevious(context: Context): WeakDeviceProfile.Snapshot? {
+        val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        val keys = listOf(
+            KEY_WEAK_DEVICE_PREV_DISPLAY_SCALE_PERCENT,
+            KEY_WEAK_DEVICE_PREV_DIRECT_VIDEO_OUTPUT,
+            KEY_WEAK_DEVICE_PREV_WIRELESS_MUSIC_BUFFER_MILLIS,
+        )
+        if (keys.any { !prefs.contains(it) }) return null
+        return WeakDeviceProfile.Snapshot(
+            displayScalePercent = prefs.getInt(KEY_WEAK_DEVICE_PREV_DISPLAY_SCALE_PERCENT, 100),
+            directVideoOutput = prefs.getBoolean(KEY_WEAK_DEVICE_PREV_DIRECT_VIDEO_OUTPUT, false),
+            wirelessMusicBufferMillis = prefs.getInt(KEY_WEAK_DEVICE_PREV_WIRELESS_MUSIC_BUFFER_MILLIS, 300),
+        )
+    }
+
+    fun saveWeakDevicePrevious(context: Context, snapshot: WeakDeviceProfile.Snapshot) {
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
+            .putInt(KEY_WEAK_DEVICE_PREV_DISPLAY_SCALE_PERCENT, snapshot.displayScalePercent)
+            .putBoolean(KEY_WEAK_DEVICE_PREV_DIRECT_VIDEO_OUTPUT, snapshot.directVideoOutput)
+            .putInt(KEY_WEAK_DEVICE_PREV_WIRELESS_MUSIC_BUFFER_MILLIS, snapshot.wirelessMusicBufferMillis)
+            .apply()
+    }
+
+    fun clearWeakDevicePrevious(context: Context) {
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
+            .remove(KEY_WEAK_DEVICE_PREV_DISPLAY_SCALE_PERCENT)
+            .remove(KEY_WEAK_DEVICE_PREV_DIRECT_VIDEO_OUTPUT)
+            .remove(KEY_WEAK_DEVICE_PREV_WIRELESS_MUSIC_BUFFER_MILLIS)
+            .apply()
+    }
+
+    /** Applies the weak head-unit profile, saving the current values first so they can be restored. */
+    fun applyWeakDeviceProfile(context: Context) {
+        saveWeakDevicePrevious(context, WeakDeviceProfile.Snapshot(
+            displayScalePercent = loadDisplayScalePercent(context),
+            directVideoOutput = loadDirectVideoOutput(context),
+            wirelessMusicBufferMillis = loadMediaBufferMillis(context, wireless = true),
+        ))
+        val targets = WeakDeviceProfile.targets()
+        // A slower unit may already run below 75%: the mode must never raise
+        // the resolution it claims to lower.
+        saveDisplayScalePercent(context, minOf(loadDisplayScalePercent(context), targets.displayScalePercent))
+        saveDirectVideoOutput(context, targets.directVideoOutput)
+        saveMediaBufferMillis(context, wireless = true, targets.wirelessMusicBufferMillis)
+        saveWeakDeviceMode(context, true)
+    }
+
+    /** Restores the values saved when the profile was applied, or the factory defaults. */
+    fun restoreWeakDeviceProfile(context: Context) {
+        val previous = loadWeakDevicePrevious(context) ?: WeakDeviceProfile.defaults()
+        saveDisplayScalePercent(context, previous.displayScalePercent)
+        saveDirectVideoOutput(context, previous.directVideoOutput)
+        saveMediaBufferMillis(context, wireless = true, previous.wirelessMusicBufferMillis)
+        clearWeakDevicePrevious(context)
+        saveWeakDeviceMode(context, false)
     }
 
     fun loadDirectVideoOutput(context: Context): Boolean =

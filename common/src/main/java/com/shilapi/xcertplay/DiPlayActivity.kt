@@ -2061,6 +2061,16 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
                 AirPlayPersistence.saveLowLatencyDecoder(this, it)
                 markReconnectNeeded()
             }
+            // One switch for slow head units: it also moves the Direct video output toggle above,
+            // so re-render to show its new state instead of leaving it stale.
+            toggle(card, getString(R.string.settings_weak_device_mode),
+                getString(R.string.settings_weak_device_mode_description),
+                AirPlayPersistence.loadWeakDeviceMode(this)) { enabled ->
+                if (enabled) AirPlayPersistence.applyWeakDeviceProfile(this)
+                else AirPlayPersistence.restoreWeakDeviceProfile(this)
+                markReconnectNeeded()
+                render()
+            }
             toggle(card, getString(R.string.call_echo_cancellation), getString(R.string.call_echo_cancellation_description),
                 AirPlayPersistence.loadCallEchoCancellation(this)) {
                 AirPlayPersistence.saveCallEchoCancellation(this, it)
@@ -6285,6 +6295,7 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
         appendLine("Wheel long-press seek: ${if (AirPlayPersistence.loadWheelLongPressSeek(appContext)) "on" else "off"}; " +
             "long-press keys ${CarPlayMediaButton.longPressSeekKeys.describe()}")
         appendLine("MTK decoder tuning preference: ${if (AirPlayPersistence.loadMtkDecoderTuning(appContext)) "enabled" else "disabled"}")
+        appendLine("Weak head-unit mode: ${if (AirPlayPersistence.loadWeakDeviceMode(appContext)) "enabled" else "disabled"}")
         appendLine("CarPlay size: ${AirPlayPersistence.loadWidthPhysicalMm(appContext).let { mm -> "${com.shilapi.xcertplay.airplay.CarPlaySize.exact(mm)?.label ?: "Custom"}, $mm mm" }}")
         appendLine("Saved resolution preference (may differ from active session): ${AirPlayPersistence.loadDisplayScalePercent(appContext)}%")
         DiagnosticSettingsReport.lines(appContext).forEach { line -> DiagnosticRedactor.redact(line)?.let { appendLine(it) } }
