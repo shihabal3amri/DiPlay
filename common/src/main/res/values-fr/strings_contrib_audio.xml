@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="contrib_audio_home_channel_preview_unavailable">Impossible de prévisualiser le flux audio Android %1$d sur cet appareil.</string>
+    <string name="contrib_audio_home_choice_summary">%1$s · %2$s</string>
+    <string name="contrib_audio_home_media_channel_label">Flux audio multimédia</string>
+    <string name="contrib_audio_home_nav_channel_label">Flux audio de navigation</string>
+    <string name="contrib_audio_home_nav_channel_note">0 = routage automatique. Les valeurs 1 à 20 choisissent d’anciens identifiants de flux audio, y compris des sorties propres au fabricant si l’autoradio les prend en charge. Touchez une valeur pour l’écouter. Les changements s’appliquent à la reconnexion.</string>
+    <string name="contrib_audio_home_toggle_audio_focus">Focus audio</string>
+    <string name="contrib_audio_home_toggle_audio_focus_desc">Le multimédia CarPlay demande le focus audio. Si le son disparaît quand l’option est activée (certains autoradios gèrent mal le focus), désactivez-la. Les changements s’appliquent à la reconnexion.</string>
+    <string name="audio_focus_auto_yield">Couper le multimédia lors d’une perte temporaire du focus</string>
+    <string name="audio_focus_auto_yield_desc">Quand le focus audio est activé, coupe le multimédia pendant les interruptions audio d’Android, y compris les appels, et rétablit le son quand le focus revient. Désactivez cette option si votre autoradio ne rend pas le focus. Les changements s’appliquent à la reconnexion.</string>
+</resources>

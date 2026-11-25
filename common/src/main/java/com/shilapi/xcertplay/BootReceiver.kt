@@ -27,6 +27,7 @@ class BootReceiver : BroadcastReceiver() {
                     Intent.FLAG_ACTIVITY_SINGLE_TOP,
             )
         }
+        WheelKeyServiceReset.bootLaunch()
         try {
             context.startActivity(launch)
             StartupDiagnosticSnapshot.launchResult(context)

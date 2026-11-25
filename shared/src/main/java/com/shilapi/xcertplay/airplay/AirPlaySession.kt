@@ -65,6 +65,16 @@ interface AirPlayMediaHandler {
     fun onSetupResponseSent(session: AirPlaySession) {}
     /** duckAudio (true) and unduckAudio (false): the iPhone marks the start and end of a navigation prompt. */
     fun onAudioDuck(session: AirPlaySession, ducked: Boolean) {}
+    /**
+     * False while no screen is attached that could show the main screen's frames, e.g. while CarPlay
+     * is hidden behind another app. No frame can then render to prove that a session works.
+     */
+    fun hasMainScreenOutput(): Boolean = true
+    /**
+     * How many times a screen for the main screen has been attached; it only grows. A change shows that
+     * one was attached in between, even if CarPlay was hidden again before [hasMainScreenOutput] was asked.
+     */
+    fun mainScreenOutputAttachments(): Long = 0L
 }
 
 /**
@@ -97,6 +107,15 @@ class AirPlaySession(
     @Volatile private var mainFrameRendered = false
     // Activity 重建后仍可判断当前会话的中控主视频是否已经出帧。
     val hasRenderedMainFrame: Boolean get() = mainFrameRendered && !closed.get()
+    @Volatile private var audioReceived = false
+    /** The iPhone sent decrypted main audio (music, calls, prompts, Siri; types 100, 102, 103) on this session. */
+    val hasReceivedAudio: Boolean get() = audioReceived && !closed.get()
+    @Volatile private var mainVideoReceived = false
+    /**
+     * The iPhone sent a decrypted main-screen frame (type 110) on this session. The stream's codec configuration
+     * and its keepalives, all that the stuck iPhones in #975 and #249 send on it, do not count.
+     */
+    val hasReceivedMainVideo: Boolean get() = mainVideoReceived && !closed.get()
 
     private val closed = AtomicBoolean(false)
     internal val isClosed: Boolean get() = closed.get()
@@ -142,6 +161,16 @@ class AirPlaySession(
         if (closed.get()) return
         mainFrameRendered = true
         listener.onVideoFrameRendered(this)
+    }
+
+    /** Called for every decrypted audio packet, so it only writes the first time. */
+    internal fun noteAudioReceived() {
+        if (!audioReceived) audioReceived = true
+    }
+
+    /** Called for every decrypted main-screen frame, so it only writes the first time. */
+    internal fun noteMainVideoReceived() {
+        if (!mainVideoReceived) mainVideoReceived = true
     }
 
     internal fun logTrace(message: String) = trace { message }

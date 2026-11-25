@@ -120,13 +120,7 @@ class CarPlayVideoActivity : ComponentActivity() {
                 // Logcat keeps the cause messages (URLs masked); the report keeps their types only.
                 Log.w(TAG, "player error ${error.errorCodeName}: ${causes(error)}")
                 CarPlayVideo.note(VideoDiagnostics.playerError(error), logcat = false)
-                CarPlayVideo.onPlayerFailed(
-                    when (error.errorCode) {
-                        in 2000..2999 -> VideoInCar.ERROR_NETWORK // IO
-                        in 4000..4999 -> VideoInCar.ERROR_DECODER // decoding
-                        else -> VideoInCar.ERROR_INCOMPATIBLE_ASSET // parsing, DRM, unsupported
-                    },
-                )
+                CarPlayVideo.onPlayerFailed(error.errorCode)
             }
         })
         player.addListener(completion)
@@ -449,6 +443,12 @@ class CarPlayVideoActivity : ComponentActivity() {
         return "network=${transports.ifEmpty { listOf("other") }.joinToString("+")} " +
             "internet=${capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)} " +
             "validated=${capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)}"
+    }
+
+    // Finishing pauses this player before the CarPlay screen resumes, which then checks its window again.
+    override fun onPause() {
+        if (isFinishing && CarPlayVideo.activity === this) CarPlayVideo.onPlayerGone()
+        super.onPause()
     }
 
     override fun onDestroy() {

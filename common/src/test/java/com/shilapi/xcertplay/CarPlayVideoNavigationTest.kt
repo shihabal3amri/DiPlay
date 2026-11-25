@@ -156,7 +156,7 @@ class CarPlayVideoNavigationTest {
         assertTrue(report.any { it.contains("fallback=false") })
     }
 
-    @Test fun reopeningAClosedLiveSourceNeedsBothAUiRequestAndAnItem() {
+    @Test fun aLiveUiRequestDoesNotReopenTheClosedSourceButCanOpenAnotherChannel() {
         play()
         shadowOf(host).nextStartedActivity
         CarPlayVideo.dismissPlayer(12_345, isLive = true)
@@ -170,6 +170,8 @@ class CarPlayVideoNavigationTest {
         CarPlayVideo.onVideoUiRequested()
         idle()
         queue()
+        assertNull(shadowOf(host).nextStartedActivity)
+        queue("next-channel")
         assertNotNull(shadowOf(host).nextStartedActivity)
         assertTrue(CarPlayVideo.playing)
         assertEquals(0, CarPlayVideo.startMillis)
@@ -364,12 +366,15 @@ class CarPlayVideoNavigationTest {
     @Test fun aSilentStartTimeoutRetriesOnceAndRejectsLateActivities() {
         play()
         val original = shadowOf(host).nextStartedActivity
+        assertTrue(CarPlayVideo.playerOnScreen)
         shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(5))
         val retry = shadowOf(host).nextStartedActivity
         assertNotNull(retry)
+        assertTrue(CarPlayVideo.playerOnScreen)
         assertFalse(CarPlayVideo.attachPlayer(Robolectric.buildActivity(CarPlayVideoActivity::class.java, original).get()))
         shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(5))
         assertNull(shadowOf(host).nextStartedActivity)
+        assertFalse(CarPlayVideo.playerOnScreen)
         CarPlayVideo.onVideoUiRequested()
         idle()
         val current = shadowOf(host).nextStartedActivity
@@ -908,7 +913,8 @@ class CarPlayVideoNavigationTest {
                 "uuid" to "other", "clientBundleID" to "example.live", "Content-Location" to "https://example.com/other-live.m3u8")))
             send(9, mapOf("type" to "setRate", "rate" to 1.0))
         } finally { release.countDown() }
-        assertTrue(stateNotifications(target, 8).isEmpty())
+        assertEquals(listOf(VideoInCar.playbackInterruptedNotification()), stateNotifications(target, 8))
+        assertTrue(report.any { it.contains("notification skipped reason=stale_state stream=8") })
         assertEquals("https://example.com/other-live.m3u8", CarPlayVideo.url)
         assertTrue(CarPlayVideo.playing)
     }

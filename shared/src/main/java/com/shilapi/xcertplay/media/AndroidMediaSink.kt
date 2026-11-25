@@ -102,6 +102,17 @@ internal class AudioFocusCoordinator(
         if (active.remove(track) != null) refreshRequest()
     }
 
+    /**
+     * Puts a rebuilt track in its predecessor's place. The focus request stays as it is: asking again can make
+     * the car's Bluetooth music, which holds focus too, pause the iPhone (#1229).
+     */
+    @Synchronized
+    fun replace(old: AudioTrack, rebuilt: AudioTrack) {
+        val entry = active.remove(old)?.copy(appliedVolume = FULL_VOLUME) ?: return
+        active[rebuilt] = entry
+        applyMediaVolume(rebuilt, entry)
+    }
+
     fun onExternalFocusChange(change: Int) {
         val current = synchronized(this) { currentListener }
         current.onAudioFocusChange(change)
@@ -207,6 +218,8 @@ class AndroidMediaSink(
     private val callVoiceFilter: Boolean = false,
     /** Read at each call: a phone or tablet used as the head unit plays calls on its loudspeaker (#701). */
     private val callSpeakerphone: () -> Boolean = { false },
+    /** Read at each call: play calls like music on a head unit whose call path is silent ([callPlaysAsMedia]). */
+    private val callMediaOutput: () -> Boolean = { false },
     /**
      * Smooth video: show main-screen frames at the iPhone's frame time plus a delay that starts here and
      * then follows how late the decoder releases frames ([PacingDelay]); 0 shows each as soon as it is
@@ -264,6 +277,8 @@ class AndroidMediaSink(
     // Native codec work and waits never run under this lock.
     private val videoOwnershipLock = Any()
     private var videoClosed = false
+    // Per stream type, how many times a surface or mirror was attached; see videoOutputAttachments.
+    private val videoOutputAttachments = HashMap<Int, Long>()
     private val videoReleasedListeners = ArrayList<() -> Unit>()
     // Closed decoders whose workers may still hold a codec on a surface until they exit; a surface
     // detach also waits for them.
@@ -326,9 +341,25 @@ class AndroidMediaSink(
         } catch (_: java.util.concurrent.RejectedExecutionException) { recoveryPending.set(false) }
     }
 
+    override fun hasVideoOutput(type: Int): Boolean = synchronized(videoOwnershipLock) {
+        // The surface a new decoder of this stream would take (see videoDecoder), or a mirror of it.
+        !videoClosed && ((surfaces[type] ?: defaultSurface) != null ||
+            synchronized(mirrorLock) { mirrorSurfaces.keys.any { it.first == type } })
+    }
+
+    override fun videoOutputAttachments(type: Int): Long = synchronized(videoOwnershipLock) {
+        videoOutputAttachments[type] ?: 0L
+    }
+
+    /** Call with [videoOwnershipLock] held. */
+    private fun countVideoOutputAttached(type: Int) {
+        videoOutputAttachments[type] = (videoOutputAttachments[type] ?: 0L) + 1
+    }
+
     fun setSurface(type: Int, surface: Surface) {
         synchronized(videoOwnershipLock) {
             if (videoClosed) return
+            countVideoOutputAttached(type)
             surfaces[type] = surface
             videoDecoders[type]?.setSurface(surface)
         }
@@ -465,6 +496,7 @@ class AndroidMediaSink(
                 }
                 mirrorSurfaces[id] = surface
             }
+            countVideoOutputAttached(type)
             lastVideoConfig[type]?.let { (codec, data) -> mirrorDecoders(type).forEach { it.configure(codec, data) } }
         }
     }
@@ -569,8 +601,7 @@ class AndroidMediaSink(
     override fun onMicrophoneStarted(id: AudioStreamId, config: MicrophoneConfig) {
         // This callback runs on the downlink thread; microphone failures must not stop playback.
         try {
-            val speakerphoneCall = config.audioType == "telephony" &&
-                appContext != null && BydBluetoothSuspend.isSuspendedByUs(appContext)
+            val speakerphoneCall = config.audioType == "telephony" && callPlaysAsMedia()
             if (config.audioType == "telephony" && !speakerphoneCall) enterCommunicationMode(id)
             val uplink = microphoneUplinks.computeIfAbsent(id) {
                 MicrophoneUplink(config, onAudioDiagnostic,
@@ -596,6 +627,15 @@ class AndroidMediaSink(
             restoreAudioMode(id)
         }
     }
+
+    /**
+     * A call plays on the media output, without Android's call mode, while DiPlay has paused the car Bluetooth (no
+     * SCO), or when the driver chose it for a head unit whose call path stays silent although music plays (#1198,
+     * #1214). The car's phone audio state needs the call mode, so it overrides the driver's choice.
+     */
+    private fun callPlaysAsMedia(): Boolean =
+        (appContext != null && BydBluetoothSuspend.isSuspendedByUs(appContext)) ||
+            (runCatching(callMediaOutput).getOrDefault(false) && !PhoneAudioRoute.carPlayCallsUseCarAudio())
 
     private fun enterCommunicationMode(id: AudioStreamId) {
         val manager = audioManager ?: return
@@ -757,12 +797,12 @@ class AndroidMediaSink(
             mediaBufferMillis,
             onAudioDiagnostic,
             ambientSinkToken,
-            speakerphoneCall = format.audioType == "telephony" &&
-                appContext != null && BydBluetoothSuspend.isSuspendedByUs(appContext),
+            speakerphoneCall = format.audioType == "telephony" && callPlaysAsMedia(),
             echoReference = echoReference,
             voiceFilter = callVoiceFilter && format.audioType == TELEPHONY_AUDIO_TYPE,
         ).also {
             if (format.audioType == TELEPHONY_AUDIO_TYPE) it.callBufferMillis = callBufferMillis
+            it.readMusicVolume = ::readMusicVolume
             it.setNavigationAttenuationDb(navigationAttenuationDb)
             it.setCallAttenuationDb(callAttenuationDb)
             if (format.audioType == TELEPHONY_AUDIO_TYPE) it.onRoutedToEarpiece = { moveCallToLoudspeaker(id) }
@@ -771,6 +811,17 @@ class AndroidMediaSink(
             it.setNavigationAttenuationDb(navigationAttenuationDb)
             it.setCallAttenuationDb(callAttenuationDb)
         }
+    }
+
+    private fun readMusicVolume(): MusicVolume? = audioManager?.let { manager ->
+        runCatching {
+            MusicVolume(
+                value = manager.getStreamVolume(AudioManager.STREAM_MUSIC),
+                max = manager.getStreamMaxVolume(AudioManager.STREAM_MUSIC),
+                muted = manager.isStreamMute(AudioManager.STREAM_MUSIC),
+                fixed = manager.isVolumeFixed,
+            )
+        }.getOrNull()
     }
 
     private companion object {
@@ -1851,10 +1902,10 @@ private class AudioRenderer(
     private val frameBytes = if (format.channels >= 2) 4 else 2
     private var totalWrittenFrames = 0L
     private val ambientMedia = AmbientMusicActivityPolicy.acceptsAudio(format.audioType, format.payloadType)
-    private val ambientEnvelope = AmbientMusicEnvelope()
+    private var ambientEnvelope = AmbientMusicEnvelope()
     private val ambientBass = AmbientMusicBassAnalyzer(format.sampleRate, pcmChannels)
     private val ambientBands = AmbientMusicBandAnalyzer(format.sampleRate, pcmChannels)
-    private var ambientRendererToken = 0L
+    @Volatile private var ambientRendererToken = 0L
     private var writtenFramesThisWindow = 0L
     private var writeErrorsThisWindow = 0
     private var lastWriteErrorCode: Int? = null
@@ -1865,7 +1916,7 @@ private class AudioRenderer(
     private var statsWindowStartNs = 0L
     private var statsLastUnderruns = 0
     private var bytesPerSecond = 0
-    private val bufferProgress = AudioBufferProgress(if (format.channels >= 2) 4 else 2)
+    private var bufferProgress = AudioBufferProgress(frameBytes)
     private var underrunsAtPlaybackStart = 0
     private var headAtPlaybackStart = 0
     private var droppedAtLastTrim = 0
@@ -1879,6 +1930,18 @@ private class AudioRenderer(
     private var rebufferPauseReportCount = 0
     private var rebufferRecoverReportCount = 0
     private var queueFullReportCount = 0
+    /** Music only, set with the track; see [MediaTrackStall]. */
+    @Volatile private var trackStall: MediaTrackStall? = null
+    /** Set once, when [trackStall] asks for a new track; writes stop until the worker has built it. */
+    @Volatile private var rebuildPending = false
+    private var awaitingRebuiltTrack = false
+    /** Reads Android's music volume for the report; a property like [callBufferMillis]. */
+    var readMusicVolume: () -> MusicVolume? = { null }
+    private var musicVolume: MusicVolume? = null
+    private var mediaStartReported = false
+    private var playbackStartedNs = 0L
+    /** The clock of the stall and media-start checks; tests replace it. */
+    private var nanoTime: () -> Long = System::nanoTime
     private var diagnosticStage = "starting"
     private var lastDecoderOutputMetadata: String? = null
     private var decoderOutputReports = 0
@@ -1897,6 +1960,7 @@ private class AudioRenderer(
             val previous = lastArrivalNs.getAndSet(now)
             if (previous != 0L) maxArrivalGapMs.accumulateAndGet((now - previous) / 1_000_000L, ::maxOf)
             newestRtpSample = sample
+            trackStall?.packetArrived(nanoTime(), ::interruptBlockedWrite)
             // Hold short Wi-Fi bursts intact. If compressed audio remains >1.5s behind for
             // another 1.5s, skip only stale undecoded packets to catch up to the live song.
             val removed = mediaLagGuard?.recover(queue, sample, AudioPacket::sample, now) ?: 0
@@ -1973,6 +2037,8 @@ private class AudioRenderer(
             createTrack()
             diagnosticStage = "focus"
             requestAudioFocus()
+            // Read before playback: these are binder calls, and nothing can run dry yet.
+            if (trackStall != null) musicVolume = runCatching { readMusicVolume() }.getOrNull()
             while (running) {
                 // Report Settings changes from this worker, never from the UI thread, also between prompts.
                 applyNavigationAttenuation()
@@ -1983,6 +2049,8 @@ private class AudioRenderer(
                 // Waiting for the next UDP packet can strand decoded sound for hundreds of ms.
                 diagnosticStage = "decoder-output"
                 codec?.let(::drainCodec)
+                recoverStalledTrack()
+                reportMediaStart()
                 diagnosticStage = "buffer-maintenance"
                 maintainPlaybackBuffer()
                 diagnosticStage = "stats"
@@ -2000,6 +2068,7 @@ private class AudioRenderer(
             if (running) reportFailure(error)
             throw error
         } finally {
+            runCatching { reportMediaStart(force = true) }
             runCatching { logStatsIfDue(force = true) }
             release()
         }
@@ -2068,7 +2137,7 @@ private class AudioRenderer(
         actualLegacyStreamType = streamOverride.takeIf { it != 0 }
         var attributes = audioAttributesFor(selection, streamOverride)
         trackAttributes = attributes
-        val plan = MediaAudioBuffer.plan(selection.channel == AudioChannel.MEDIA,
+        val plan = MediaAudioBuffer.plan(streamChannel() == AudioChannel.MEDIA,
             format.sampleRate, format.channels, minBuffer, mediaBufferMillis, callBufferMillis)
         bytesPerSecond = format.sampleRate * frameBytes
         val built: AudioTrack
@@ -2116,18 +2185,18 @@ private class AudioRenderer(
             }
         }
         applyNavigationAttenuation()
-        if (ambientMedia) {
-            ambientRendererToken = AmbientMusicController.openRenderer(ambientSinkToken, ambientEnvelope) {
-                built.playbackHeadPosition to (running && built.playState == AudioTrack.PLAYSTATE_PLAYING)
-            }
+        // A rebuild passes the lamps on itself, once it knows which track stays; see reopenAmbient().
+        if (ambientMedia && !rebuildPending) {
+            ambientRendererToken = AmbientMusicController.openRenderer(ambientSinkToken, ambientEnvelope) { ambientPlayback(built) }
         }
         diagnosticStage = "track-attributes"
         trackAttributes = audioTrackAttributesForFocus(built, attributes)
         diagnosticStage = "track-capacity"
         val capacityBytes = built.bufferSizeInFrames * frameBytes
         startThresholdBytes = MediaAudioBuffer.startBytesFor(plan.startBytes, capacityBytes, PREBUFFER_WRITE_CHUNK_BYTES)
+        if (streamChannel() == AudioChannel.MEDIA && trackStall == null) trackStall = MediaTrackStall()
         // Only music plays long enough for the clocks to drift apart; calls keep their echo reference exact.
-        clockTrim = if (mappedChannel == AudioChannel.MEDIA) MediaClockTrim(format.sampleRate, (startThresholdBytes / frameBytes).toLong(),
+        clockTrim = if (streamChannel() == AudioChannel.MEDIA) MediaClockTrim(format.sampleRate, (startThresholdBytes / frameBytes).toLong(),
             measuresTarget = true) else null
         val trackMetadata = runCatching {
             "api=${Build.VERSION.SDK_INT} trackState=${built.state} trackRate=${built.sampleRate} " +
@@ -2157,6 +2226,9 @@ private class AudioRenderer(
                 "focus=${if (audioFocusEnabled) "on" else "off"}",
         )
     }
+
+    private fun ambientPlayback(track: AudioTrack): Pair<Int, Boolean> =
+        track.playbackHeadPosition to (running && track.playState == AudioTrack.PLAYSTATE_PLAYING)
 
     /** 0 uses usage-based routing; 1–20 attempt legacy stream types supported by the head unit. */
     private fun channelOverride(channel: AudioChannel): Int = when (channel) {
@@ -2231,6 +2303,12 @@ private class AudioRenderer(
         return if (speakerphoneCall) AudioChannelMapper.playCallOnSpeaker(selection) else selection
     }
 
+    /**
+     * What the stream is, where [mappedChannel] is where it plays: a call on the media output still takes focus,
+     * buffers and keeps its clock like a call, so the coordinator never mutes it and the echo reference stays exact.
+     */
+    private fun streamChannel(): AudioChannel? = if (speakerphoneCall) AudioChannel.PHONE else mappedChannel
+
     private fun audioAttributesFor(selection: AudioChannelSelection): AudioAttributes =
         AudioAttributes.Builder()
             .setUsage(usageFor(selection.channel))
@@ -2243,7 +2321,7 @@ private class AudioRenderer(
      * [NavigationPromptFocus] requests focus for each prompt, between duckAudio and unduckAudio.
      */
     private fun requestAudioFocus() {
-        val channel = mappedChannel ?: return
+        val channel = streamChannel() ?: return
         val attributes = trackAttributes ?: return
         if (channel == AudioChannel.NAVIGATION) {
             Log.i(TAG, "audio focus skipped channel=NAVIGATION; overlays without ducking")
@@ -2510,6 +2588,8 @@ private class AudioRenderer(
 
     private fun writePcm(data: ByteArray, offset: Int = 0, length: Int = data.size) {
         val track = track ?: return
+        // What is left of the stalled track's music; the rebuilt track starts with what comes next.
+        if (rebuildPending) return
         diagnosticStage = "track-write"
         if (!firstPcmLogged && length > 0) {
             firstPcmLogged = true
@@ -2528,15 +2608,22 @@ private class AudioRenderer(
             fadeApplied = true
         }
         var written = 0
-        while (written < length && running) {
+        while (written < length && running && !rebuildPending) {
             val writeLength = if (playbackStarted) {
                 length - written
             } else {
                 minOf(length - written, PREBUFFER_WRITE_CHUNK_BYTES)
             }
             val writeStarted = System.nanoTime()
+            val stallWatch = trackStall?.takeIf { playbackStarted }
+            val stallStartNs = if (stallWatch != null) nanoTime() else 0L
+            stallWatch?.writeStarted()
             diagnosticStage = "track-write"
-            val count = track.write(data, offset + written, writeLength, AudioTrack.WRITE_BLOCKING)
+            val count = try {
+                track.write(data, offset + written, writeLength, AudioTrack.WRITE_BLOCKING)
+            } finally {
+                stallWatch?.writeEnded()
+            }
             maxWriteMs = maxOf(maxWriteMs, (System.nanoTime() - writeStarted) / 1_000_000L)
             if (count < 0) {
                 writeErrorsThisWindow++
@@ -2545,8 +2632,10 @@ private class AudioRenderer(
             }
             if (count == 0) {
                 zeroWritesThisWindow++
+                stallWatch?.let { noteRefusedWrite(it, track, stallStartNs) }
                 break
             }
+            trackStall?.clear()
             if (count < writeLength) partialWritesThisWindow++
             val framesWritten = count / frameBytes
             if (ambientMedia && AmbientMusicController.wantsPcm(ambientRendererToken)) {
@@ -2587,11 +2676,109 @@ private class AudioRenderer(
         clockTrim?.measureAgain()
         track.play()
         playbackStarted = true
+        trackStall?.clear()
+        if (playbackStartedNs == 0L) playbackStartedNs = nanoTime()
         reportNavigationPlayback(track)
         if (rebufferCount > 0 && rebufferRecoverReportCount < MAX_REBUFFER_REPORTS) {
             rebufferRecoverReportCount++
             report("Audio: rebuffer recovered audioType=${format.audioType} rebufferCount=$rebufferCount")
         }
+    }
+
+    /** Worker: the playing track took nothing. Says so once the car has taken nothing for long enough. */
+    private fun noteRefusedWrite(watch: MediaTrackStall, track: AudioTrack, startedNs: Long) {
+        // A track that close() or the rebuffer paused refuses writes on purpose.
+        if (!running || rebuildPending || track.playState != AudioTrack.PLAYSTATE_PLAYING) {
+            watch.clear()
+            return
+        }
+        reportStall(watch.refused(startedNs, nanoTime(), track.playbackHeadPosition) ?: return)
+    }
+
+    /** Network thread, while the worker's write is blocked: only a pause makes that write return. */
+    private fun interruptBlockedWrite(stall: MediaTrackStall.Stall) {
+        if (!running) return
+        reportStall(stall)
+        // As in close(): quick calls that never wait for the worker.
+        if (stall.rebuild) runCatching { track?.pause() }
+    }
+
+    private fun reportStall(stall: MediaTrackStall.Stall) {
+        if (stall.rebuild) rebuildPending = true
+        val line = MediaAudioLines.notConsuming(stall.headFrames, stall.stalledNs, stall.zeroWrites, queue.size, stall.rebuild)
+        Log.w(TAG, line)
+        runCatching { report(line) }
+    }
+
+    /** Worker: replaces a track the car takes nothing from, once per stream, and reports whether that helped. */
+    private fun recoverStalledTrack() {
+        if (rebuildPending) {
+            if (running) rebuildTrack()
+            rebuildPending = false
+        } else if (awaitingRebuiltTrack && playbackStarted) {
+            val head = (track?.playbackHeadPosition ?: 0).toLong() and 0xffff_ffffL
+            if (head == 0L) return
+            awaitingRebuiltTrack = false
+            runCatching { report(MediaAudioLines.consumingAgain(head)) }
+        }
+    }
+
+    private fun rebuildTrack() {
+        val old = track ?: return
+        diagnosticStage = "track-rebuild"
+        runCatching { old.pause() }
+        runCatching { old.flush() }
+        // A new or flushed track counts its frames from zero.
+        playbackStarted = false
+        prebufferBytes = 0
+        totalWrittenFrames = 0L
+        bufferProgress = AudioBufferProgress(frameBytes)
+        lastPlaybackHeadFrames = null
+        statsLastUnderruns = 0
+        underrunsAfterLastWrite = 0
+        fadeApplied = false
+        trackStall?.clear()
+        // Build the new track first: if the head unit refuses it, the old one is filled and started again.
+        try {
+            createTrack()
+        } catch (error: Exception) {
+            reportFailure(error)
+        }
+        val rebuilt = track
+        val recreated = rebuilt != null && rebuilt !== old
+        reopenAmbient(rebuilt ?: old)
+        if (recreated) {
+            audioFocusCoordinator.replace(old, rebuilt!!)
+            runCatching { old.release() }
+        } else {
+            statsLastUnderruns = runCatching { old.underrunCount }.getOrDefault(0)
+        }
+        awaitingRebuiltTrack = true
+        runCatching { report(MediaAudioLines.rebuilt(recreated)) }
+    }
+
+    /**
+     * Worker, while rebuilding: [track], the new one or the kept one, counts its frames from zero, so the lamps follow
+     * it with an empty envelope. Skipped once close() or a newer stream has taken the lamps from this one.
+     */
+    private fun reopenAmbient(track: AudioTrack) {
+        if (!ambientMedia || !running) return
+        val envelope = AmbientMusicEnvelope()
+        val token = AmbientMusicController.reopenRenderer(ambientSinkToken, ambientRendererToken, envelope) { ambientPlayback(track) }
+        if (token == 0L) return
+        ambientRendererToken = token
+        ambientEnvelope = envelope
+    }
+
+    /** Worker: once per music stream, the volume it started with and, once it has settled, where it plays. */
+    private fun reportMediaStart(force: Boolean = false) {
+        if (mediaStartReported || playbackStartedNs == 0L || trackStall == null) return
+        if (!force && nanoTime() - playbackStartedNs < MEDIA_START_REPORT_NS) return
+        mediaStartReported = true
+        val line = MediaAudioLines.started(musicVolume, runCatching { track?.routedDevice?.type }.getOrNull(),
+            actualLegacyStreamType ?: 0)
+        Log.i(TAG, line)
+        runCatching { report(line) }
     }
 
     private fun reportNavigationPlayback(track: AudioTrack) {
@@ -2665,7 +2852,7 @@ private class AudioRenderer(
 
     private fun maintainPlaybackBuffer() {
         val track = track ?: return
-        if (bufferProgress.shouldRebuffer(mappedChannel == AudioChannel.MEDIA, playbackStarted,
+        if (bufferProgress.shouldRebuffer(streamChannel() == AudioChannel.MEDIA, playbackStarted,
                 track.underrunCount > underrunsAtPlaybackStart, queue.isEmpty(), track.playbackHeadPosition,
                 startThresholdBytes / 2L)) {
             // The hardware buffer has starved below the recovery floor. Pause without flushing
@@ -2830,6 +3017,8 @@ private class AudioRenderer(
         const val AUDIO_INPUT_WAIT_NS = 100_000_000L
         const val AUDIO_POLL_MILLIS = 10L
         const val BUFFER_TAIL_WAIT_NS = 500_000_000L
+        /** The route is only known once the track plays. */
+        const val MEDIA_START_REPORT_NS = 1_000_000_000L
         // Holds a burst after a Wi-Fi gap (~4 s of AAC) instead of dropping it. Wired LPCM packets hold about 7 ms,
         // so the same count is only ~1.4 s of wired music (#1177).
         const val MAX_QUEUED_PACKETS = 192

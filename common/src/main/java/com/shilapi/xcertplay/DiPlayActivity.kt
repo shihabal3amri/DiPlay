@@ -221,6 +221,8 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
     private var rootScroll: ScrollView? = null
     private var settingsRailScroll: ScrollView? = null
     private var reconnectBar: View? = null
+    /** What the wheel key service card shows: whether the service runs, and whether a restart is offered or under way. */
+    private var renderedWheelKeyService: Triple<Boolean, Boolean, Boolean>? = null
     private var readinessCard: LinearLayout? = null
     private var searchIndexSink: MutableList<String>? = null
     private var settingsSearchBox: EditText? = null
@@ -306,7 +308,7 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
         connect(notificationTransport)
     }
     private val tick = object : Runnable {
-        override fun run() { refreshStatus(); handler.postDelayed(this, 1000) }
+        override fun run() { refreshStatus(); refreshWheelKeyService(); handler.postDelayed(this, 1000) }
     }
     private val appearancePoll = object : Runnable {
         override fun run() {
@@ -551,10 +553,21 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
         if (initialLaunch) {
             initialLaunch = false
             startCarHotspotOnLaunch()
-            if (setupError == null && !CarPlayBackgroundSession.hasSession() &&
-                DiPlayPreferences.autoConnect(this) && requestedPage(intent) == null && page != "setup") {
-                handler.post { connect(DiPlayPreferences.autoConnectWireless(this)) }
-            }
+            // Held for a few seconds at most, and only on a car that proved to need the restart.
+            val held = page == "home" && WheelKeyServiceReset.restartAfterBoot(this, ::homeInFront, ::connectAfterHold)
+            if (!held) connectOnLaunch()
+        }
+    }
+    // In the seconds since the launch the driver may have opened another page or app, which CarPlay must not cover.
+    private fun homeInFront() = !isFinishing && page == "home" &&
+        lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.RESUMED)
+    private fun connectAfterHold() {
+        if (homeInFront()) connectOnLaunch()
+    }
+    private fun connectOnLaunch() {
+        if (!isFinishing && !isDestroyed && setupError == null && !CarPlayBackgroundSession.hasSession() &&
+            DiPlayPreferences.autoConnect(this) && requestedPage(intent) == null && page != "setup") {
+            handler.post { connect(DiPlayPreferences.autoConnectWireless(this)) }
         }
     }
     override fun onPause() {
@@ -691,6 +704,7 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
         if (page != "settings") clearSettingsSearchState()
         status = null; homeLastProblem = null; connectButton = null; disconnectButton = null; lastRunning = null; carButtonCard = null
         reconnectBar = null
+        renderedWheelKeyService = null
         readinessCard = null
         exportButton = null
         bydAdbControls = null
@@ -1972,6 +1986,12 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
                 AirPlayPersistence.saveCarPlaySameTask(this, enabled)
                 CarPlayScreen.closeIfElsewhere(this)
             }
+            toggle(card, getString(R.string.settings_declare_automatic_appearance),
+                getString(R.string.settings_declare_automatic_appearance_description),
+                AirPlayPersistence.loadDeclareAutomaticAppearance(this)) {
+                AirPlayPersistence.saveDeclareAutomaticAppearance(this, it)
+                markReconnectNeeded()
+            }
             toggle(card, getString(R.string.split_screen_areas), getString(R.string.split_screen_areas_description),
                 SplitScreenSettings.enabled(this)) {
                 SplitScreenSettings.setEnabled(this, it)
@@ -2028,13 +2048,13 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
             toggle(card, getString(R.string.smooth_video), getString(R.string.smooth_video_description),
                 AirPlayPersistence.loadSmoothVideo(this)) {
                 AirPlayPersistence.saveSmoothVideo(this, it)
-                reconnectIfRunning()
+                markReconnectNeeded()
             }
             toggle(card, getString(R.string.settings_direct_video_output),
                 getString(R.string.settings_direct_video_output_description),
                 AirPlayPersistence.loadDirectVideoOutput(this)) {
                 AirPlayPersistence.saveDirectVideoOutput(this, it)
-                reconnectIfRunning()
+                markReconnectNeeded()
             }
             toggle(card, getString(R.string.settings_low_latency_decoder),
                 getString(R.string.settings_low_latency_decoder_description),
@@ -2047,6 +2067,8 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
                 AirPlayPersistence.saveCallEchoCancellation(this, it)
                 markReconnectNeeded()
             }
+            toggle(card, getString(R.string.settings_call_media_output), getString(R.string.settings_call_media_output_description),
+                AirPlayPersistence.loadCallMediaOutput(this)) { AirPlayPersistence.saveCallMediaOutput(this, it) }
             toggle(card, getString(R.string.call_voice_filter), getString(R.string.call_voice_filter_description),
                 AirPlayPersistence.loadCallVoiceFilter(this)) {
                 AirPlayPersistence.saveCallVoiceFilter(this, it)
@@ -2079,12 +2101,12 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
             toggle(card, getString(R.string.main_buffered_audio), getString(R.string.main_buffered_audio_description),
                 AirPlayPersistence.loadMainBufferedAudio(this)) {
                 AirPlayPersistence.saveMainBufferedAudio(this, it)
-                reconnectIfRunning()
+                markReconnectNeeded()
             }
             toggle(card, getString(R.string.settings_speech_without_low_rates), getString(R.string.settings_speech_without_low_rates_description),
                 AirPlayPersistence.loadSpeechWithout8And16Khz(this)) {
                 AirPlayPersistence.saveSpeechWithout8And16Khz(this, it)
-                reconnectIfRunning()
+                markReconnectNeeded()
             }
             toggle(card, getString(R.string.settings_call_at_call_rate), getString(R.string.settings_call_at_call_rate_description),
                 AirPlayPersistence.loadCallAtCallRate(this)) {
@@ -2101,10 +2123,16 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
                     markReconnectNeeded()
                 }
             }
-            toggle(card, getString(R.string.settings_car_bluetooth_audio), getString(R.string.settings_car_bluetooth_audio_description),
+            // Geely's input service may reconnect during CarPlay and reads this preference live.
+            // Wait for explicit consent before changing it or its key routing can diverge from the session.
+            reconnectingToggle(card, getString(R.string.settings_car_bluetooth_audio), getString(R.string.settings_car_bluetooth_audio_description),
                 AirPlayPersistence.loadCarBluetoothAudio(this)) {
                 AirPlayPersistence.saveCarBluetoothAudio(this, it)
-                reconnectIfRunning()
+            }
+            toggle(card, getString(R.string.settings_car_music_link_drop), getString(R.string.settings_car_music_link_drop_description),
+                AirPlayPersistence.loadCarMusicLinkDrop(this)) {
+                AirPlayPersistence.saveCarMusicLinkDrop(this, it)
+                markReconnectNeeded()
             }
         }
         filteredSection(content, SettingsSection.CAR_BUTTON,
@@ -4323,8 +4351,11 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
             NavigationWheelSettings.setEnabled(this, it)
             render()
         }
-        if (!NavigationWheelSettings.enabled(this) || WheelKeyService.connected()) return
+        if (!NavigationWheelSettings.enabled(this)) return
+        renderedWheelKeyService = wheelKeyServiceShown()
+        if (WheelKeyService.connected()) return
         card.addView(label(getString(R.string.settings_navigation_wheel_service_required), 14, WARNING))
+        wheelKeyRestartControls(card)
         card.addView(button(getString(R.string.wheel_keys_open_settings), false) {
             if (!UsbAutoConfirmService.openSettings(this)) toast(getString(R.string.wheel_keys_no_settings))
         }, settingsButtonLayout())
@@ -4471,12 +4502,14 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
 
     private fun wheelKeyServiceControls(card: LinearLayout) {
         val connected = WheelKeyService.connected()
+        renderedWheelKeyService = wheelKeyServiceShown()
         card.addView(label(getString(when {
             connected -> R.string.wheel_keys_service_on
             WheelKeyService.enabledInSettings(this) -> R.string.wheel_keys_service_starting
             else -> R.string.wheel_keys_service_off
         }), 14, if (connected) MUTED else WARNING))
         if (!connected) {
+            wheelKeyRestartControls(card)
             card.addView(actionButton(getString(R.string.wheel_keys_enable_adb), false) {
                 Thread({
                     val access = WheelKeyService.enableOverAdb(this)
@@ -4492,6 +4525,62 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
                 if (!UsbAutoConfirmService.openSettings(this)) toast(getString(R.string.wheel_keys_no_settings))
             }, settingsButtonLayout())
         }
+    }
+
+    /** Restarting DiPlay, once the allowed list alone did not start the service. */
+    private fun wheelKeyRestartControls(card: LinearLayout) {
+        if (!WheelKeyService.restartOffered(this)) return
+        card.addView(label(getString(R.string.settings_wheel_keys_restart_description), 14, MUTED)
+            .apply { setPadding(0, dp(SETTINGS_BLOCK_GAP_DP), 0, 0) })
+        card.addView(actionButton(getString(R.string.settings_wheel_keys_restart), false) {
+            confirmWheelKeyRestart()
+        }.apply {
+            if (WheelKeyServiceReset.restarting()) {
+                isEnabled = false
+                setTextColor(MUTED)
+                text = getString(R.string.adb_checking)
+            }
+        }, settingsButtonLayout())
+    }
+
+    // Always asks: a CarPlay session may start while the dialog is open, and the restart ends it.
+    private fun confirmWheelKeyRestart() {
+        val app = applicationContext
+        appDialogBuilder()
+            .setTitle(getString(R.string.settings_wheel_keys_restart_title))
+            .setMessage(getString(R.string.settings_wheel_keys_restart_message))
+            .setPositiveButton(getString(R.string.settings_wheel_keys_restart_confirm)) { _, _ ->
+                Thread({
+                    val access = WheelKeyServiceReset.restart(app, ::endSessionForRestart)
+                    runOnUiThread {
+                        if (!isFinishing && !isDestroyed && access != null &&
+                            access != com.shilapi.xcertplay.adb.LocalAdb.Access.READY) {
+                            toast(getString(R.string.wheel_keys_adb_failed, access.name))
+                        }
+                    }
+                }, "diplay-wheel-keys-restart").start()
+            }
+            .setNegativeButton(getString(R.string.common_cancel), null)
+            .show()
+    }
+
+    // As when the car closes DiPlay: guidance ends first, while DiPlay can still tell the dashboard.
+    private fun endSessionForRestart() {
+        val ended = java.util.concurrent.CountDownLatch(1)
+        handler.post {
+            BydNavigationOutputs.endNow()
+            CarPlayBackgroundSession.stop { ended.countDown() }
+        }
+        ended.await(SESSION_END_MILLIS, java.util.concurrent.TimeUnit.MILLISECONDS)
+    }
+
+    private fun wheelKeyServiceShown() = Triple(
+        WheelKeyService.connected(), WheelKeyService.restartOffered(this), WheelKeyServiceReset.restarting())
+
+    /** The service starts, or fails to, seconds after its card was drawn. */
+    private fun refreshWheelKeyService() {
+        val shown = renderedWheelKeyService ?: return
+        if (shown != wheelKeyServiceShown()) requestAppearanceRender()
     }
 
     private fun wheelKeyAssignButton(card: LinearLayout, role: WheelZoomSettings.Role, name: String) {
@@ -5937,6 +6026,7 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
 
     private fun connect(wireless: Boolean) {
         startupHotspotCancelled = true
+        WheelKeyServiceReset.cancelPendingRestart()
         if (wireless && pendingCarHotspotSetup) { toast(getString(R.string.save_your_hotspot_details_in_connection_setup_first)); page = "connection"; render(); return }
         if (setupError != null) { toast(setupError!!); return }
         if (wireless && AirPlayPersistence.loadWirelessHotspotMode(this) == WirelessHotspotMode.MANUAL &&
@@ -6492,6 +6582,7 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
                 appDialogBuilder().setTitle(title).setMessage(description)
                     .setPositiveButton(R.string.apply_and_reconnect) { _, _ ->
                         save(selected)
+                        markReconnectNeeded()
                         reconnectIfRunning()
                     }
                     .setNegativeButton(R.string.cancel) { _, _ -> render() }
@@ -7182,6 +7273,7 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
 
         private const val BYD_VEHICLE_TAG = "DiPlay-BYD13"
         private const val VEHICLE_VALIDATION_RETRY_MILLIS = 500L
+        private const val SESSION_END_MILLIS = 5_000L
 
         // BYD's settings app answers sixty standard android.settings actions with an activity in its
         // "unsupport" package instead of a real screen. It does nothing but report string/unsupport_tips
