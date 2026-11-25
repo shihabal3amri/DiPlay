@@ -38,6 +38,7 @@ interface AirPlaySessionListener {
     fun onCommand(session: AirPlaySession, type: String, params: Map<String, Any?>) {}
     /** Video in car: a playback message on a remote control session (X-Apple-StreamID). */
     fun onRemoteControlMessage(session: AirPlaySession, streamId: Long, message: Map<String, Any?>) {}
+    fun onRemoteControlStreamEnded(session: AirPlaySession, streamId: Long) {}
     /** Video in car: requestUI "videoplayback:", the iPhone asks the car to show its video player. */
     fun onVideoPlaybackUiRequested(session: AirPlaySession) {}
     /** False when this listener drops "TRACE " lines: the session then skips building their hex dumps. */
@@ -123,6 +124,7 @@ class AirPlaySession(
     private var eventSocket: Socket? = null
     private var eventCipher: ControlCipher? = null
     private var eventCseq = 0
+    private val videoEventExchanges = VideoEventExchanges(::debugLog)
     private var pendingNightMode: Boolean? = null
     private val firstTouchSendLogged = AtomicBoolean(false)
     private val touchSendFailureLogged = AtomicBoolean(false)
@@ -182,6 +184,7 @@ class AirPlaySession(
 
     override fun close() {
         if (!closed.compareAndSet(false, true)) return
+        videoEventExchanges.clear()
         mainScreenToken = null
         clearClusterContent()
         safeClose(socket)
@@ -340,6 +343,7 @@ class AirPlaySession(
         sendCommandLocked(
             linkedMapOf("params" to linkedMapOf("data" to BplistCodec.encode(message))),
             "X-Apple-StreamID: $streamId\r\n",
+            streamId to message,
         )
     }
 
@@ -350,10 +354,13 @@ class AirPlaySession(
     internal fun setVideoPlaybackAllowed(allowed: Boolean): VideoPlaybackDelivery =
         videoPlaybackAvailability.setDesired(allowed)
 
-    private fun sendCommandLocked(command: Map<String, Any?>, extraHeaders: String = ""): Boolean {
+    private fun sendCommandLocked(command: Map<String, Any?>, extraHeaders: String = "",
+        videoMessage: Pair<Long, Map<String, Any?>>? = null): Boolean {
         val socket = eventSocket ?: return false
         val cipher = eventCipher ?: return false
         eventCseq++
+        val cseq = eventCseq
+        videoMessage?.let { videoEventExchanges.started(cseq, it.first, it.second) }
         val body = BplistCodec.encode(command)
         val head = "POST /command RTSP/1.0\r\n" + extraHeaders +
             "Content-Type: $PLIST_CONTENT_TYPE\r\n" +
@@ -365,8 +372,10 @@ class AirPlaySession(
             val output = socket.getOutputStream()
             output.write(bytes)
             output.flush()
+            if (videoMessage != null) videoEventExchanges.written(cseq)
             true
         } catch (error: Exception) {
+            if (videoMessage != null) videoEventExchanges.failed(cseq)
             Log.w(TAG, "airplay event command failed type=${command["type"]}", error)
             close()
             false
@@ -774,6 +783,9 @@ class AirPlaySession(
                 }
                 STREAM_TYPE_DATA -> {
                     val streamResponse = media.onDataStream(this, stream)
+                    if (streamResponse != null && (stream["clientTypeUUID"] as? String)?.uppercase() in VideoInCar.REMOTE_CONTROL_UUIDS) {
+                        debugLog(VideoControlEvidence.setup(stream, streamResponse))
+                    }
                     debugLog(
                         "airplay data stream type=$type accepted=${streamResponse != null} " +
                             "dataPort=${streamResponse?.get("dataPort") ?: "none"}",
@@ -802,7 +814,10 @@ class AirPlaySession(
         val data = params["data"] as? ByteArray
         if (streamId != null && data != null) {
             runCatching { asMap(BplistCodec.decode(data)) }.getOrNull()
-                ?.let { listener.onRemoteControlMessage(this, streamId, it) }
+                ?.let {
+                    debugLog(VideoControlEvidence.received(streamId, it))
+                    listener.onRemoteControlMessage(this, streamId, it)
+                }
             return RtspMessage.Response(status = 200)
         }
         when (type) {
@@ -825,6 +840,14 @@ class AirPlaySession(
             null
         }
         val types = teardownStreamTypes(decodedBody)
+        ((decodedBody as? Map<*, *>)?.get("streams") as? List<*>)?.forEach { entry ->
+            val stream = entry as? Map<*, *> ?: return@forEach
+            val id = (stream["streamID"] as? Number)?.toLong()
+            if ((stream["type"] as? Number)?.toInt() == STREAM_TYPE_DATA && id != null && id != 1L) {
+                debugLog("video control teardown stream=$id")
+                listener.onRemoteControlStreamEnded(this, id)
+            }
+        }
 
         debugLog(
             "airplay TEARDOWN types=${types ?: "all"} activeBefore=$activeStreams " +
@@ -969,7 +992,12 @@ class AirPlaySession(
                 encrypted = decrypted.rest
                 frames.append(decrypted.data)
                 for (message in frames.drain()) {
-                    if (message.method.startsWith("RTSP/") || message.method.startsWith("HTTP/")) continue
+                    if (message.method.startsWith("RTSP/") || message.method.startsWith("HTTP/")) {
+                        val cseq = message.headers["cseq"]?.toIntOrNull()
+                        val status = message.path.toIntOrNull()
+                        if (cseq != null && status != null) videoEventExchanges.response(cseq, status)
+                        continue
+                    }
                     debugLog(
                         "airplay event rx ${message.method} ${message.path} cseq=${message.headers["cseq"] ?: "-"} body=${message.body.size}",
                     )

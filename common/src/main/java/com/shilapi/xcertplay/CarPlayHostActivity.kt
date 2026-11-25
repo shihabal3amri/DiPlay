@@ -6750,6 +6750,7 @@ open class CarPlayHostActivity : ComponentActivity() {
 
     private fun onHostTouch(view: View, event: MotionEvent): Boolean {
         if (menuOpen) return true
+        if (event.actionMasked != MotionEvent.ACTION_UP) CarPlayVideo.onCarPlayTouch(event)
 
         when (event.actionMasked) {
             MotionEvent.ACTION_DOWN -> {
@@ -6821,6 +6822,7 @@ open class CarPlayHostActivity : ComponentActivity() {
         flushHeldTouch()
         val contacts = CarPlayTouchMapper.contacts(event, content)
         val queued = controller?.sendTouch(contacts) ?: false
+        if (event.actionMasked == MotionEvent.ACTION_UP) CarPlayVideo.onCarPlayTouch(event, queued)
         when (event.actionMasked) {
             MotionEvent.ACTION_DOWN,
             MotionEvent.ACTION_POINTER_DOWN,

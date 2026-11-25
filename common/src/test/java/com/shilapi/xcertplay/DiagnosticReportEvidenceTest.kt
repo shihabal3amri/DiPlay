@@ -136,7 +136,8 @@ class DiagnosticReportEvidenceTest {
             "Video: queue item app=com.example.Video scheme=myapp mediaType=streaming",
             "Video: iPhone unhandledURL answer request=3 keys=[type,kind,response] " +
                 "responseKeys=[FCUP_Response_RequestID,FCUP_Response_StatusCode]",
-        ), lines)
+        ), lines.filter { it.startsWith("Video: queue item app=") ||
+            it.startsWith("Video: queue item this player cannot play") || it.startsWith("Video: iPhone unhandledURL answer") })
         for (line in lines) {
             assertKept(line)
             assertFalse(line, listOf("videoplayback", "SECRET", "signature", "203.0.113.9", "sdcard", "rr3", "sn-abc",
@@ -182,7 +183,8 @@ class DiagnosticReportEvidenceTest {
         CarPlayVideo.onVideoMessage(7L, mapOf("type" to "stop"))
         shadowOf(Looper.getMainLooper()).idle()
 
-        val perLoad = lines.drop(1)
+        val perLoad = lines.filter { it.startsWith("Video: asked the iPhone") ||
+            it.startsWith("Video: iPhone ") }
         assertEquals(perLoad.toString(), 3, perLoad.count { it.startsWith("Video: asked the iPhone to load a myapp URL") })
         assertEquals(perLoad.toString(), 3, perLoad.count { it.startsWith("Video: iPhone unhandledURL answer") })
         assertEquals(perLoad.toString(), 3, perLoad.count { it.startsWith("Video: iPhone loaded myapp URL status=200") })
@@ -190,7 +192,7 @@ class DiagnosticReportEvidenceTest {
         assertTrue(perLoad.toString(), perLoad.contains("Video: iPhone loaded myapp URL status=404 bytes=0 redirect=false"))
         assertEquals("Video: iPhone loads for the item asked=5 answers=5 loaded=5 failed=1 noAnswer=0 " +
             "(first 3 of each kind written in full)", lines.last())
-        assertEquals(lines.toString(), 12, lines.size)
+        assertEquals(lines.toString(), 11, perLoad.size)
 
         // The next item starts its own count; one that never passed the limit needs no summary.
         lines.clear()
@@ -201,7 +203,8 @@ class DiagnosticReportEvidenceTest {
         CarPlayVideo.onVideoMessage(7L, mapOf("type" to "stop"))
         shadowOf(Looper.getMainLooper()).idle()
         assertEquals(listOf("Video: queue item app=none scheme=myapp mediaType=streaming",
-            "Video: iPhone loaded myapp URL status=200 bytes=4 redirect=false"), lines)
+            "Video: iPhone loaded myapp URL status=200 bytes=4 redirect=false"),
+            lines.filter { it.startsWith("Video: queue item app=") || it.startsWith("Video: iPhone ") })
     }
 
     // The host that started a session closes its log in onDestroy; a host that adopts it must take video lines over.

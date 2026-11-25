@@ -507,6 +507,10 @@ class CarPlayController(
             if (activeSession === session) videoListener?.onVideoMessage(streamId, message)
         }
 
+        override fun onRemoteControlStreamEnded(session: AirPlaySession, streamId: Long) {
+            if (activeSession === session) videoListener?.onVideoStreamEnded(streamId)
+        }
+
         override fun onVideoPlaybackUiRequested(session: AirPlaySession) {
             debugLog("CarPlay requested the car's video player")
             if (activeSession === session) videoListener?.onVideoUiRequested()
@@ -516,6 +520,18 @@ class CarPlayController(
             debugLog(
                 "AirPlay command type=$type params=${params.keys.sorted().joinToString(",")}",
             )
+            if (activeSession === session && type == "modesChanged") {
+                fun fields(name: String, allowed: Set<String>): String =
+                    (params[name] as? List<*>)?.take(8)?.joinToString(prefix = "[", postfix = "]") { entry ->
+                        (entry as? Map<*, *>)?.entries?.filter {
+                            it.key in allowed && (it.value is Number || it.value is Boolean)
+                        }?.joinToString(prefix = "{", postfix = "}") { "${it.key}=${it.value}" } ?: "{}"
+                    } ?: "[]"
+                debugLog("video modes resources=" + fields("resources", setOf(
+                    "resourceID", "entity", "owner", "transferType", "transferPriority",
+                    "takeConstraint", "borrowConstraint", "unborrowConstraint")) +
+                    " appStates=" + fields("appStates", setOf("appStateID", "state", "speechMode", "entity")))
+            }
             if (
                 config.transport == CarPlayTransport.WIRELESS &&
                 !closed &&
@@ -2016,6 +2032,9 @@ class CarPlayController(
             // Passed on explicitly: without these the car's video player never opened over Wi-Fi.
             override fun onRemoteControlMessage(session: AirPlaySession, streamId: Long, message: Map<String, Any?>) =
                 sessionListener.onRemoteControlMessage(session, streamId, message)
+
+            override fun onRemoteControlStreamEnded(session: AirPlaySession, streamId: Long) =
+                sessionListener.onRemoteControlStreamEnded(session, streamId)
 
             override fun onVideoPlaybackUiRequested(session: AirPlaySession) =
                 sessionListener.onVideoPlaybackUiRequested(session)

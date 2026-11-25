@@ -1,7 +1,13 @@
 package com.shilapi.xcertplay
 
-/** Chooses the settings information architecture from usable window dimensions, not pixels. */
+/** Shared window-size rules for compact controls and the Settings information architecture. */
 internal object SettingsLayoutPolicy {
+    const val COMPACT_MIN_WIDTH_DP = 550
+    const val COMPACT_MIN_HEIGHT_DP = 450
+
+    fun isCompact(widthDp: Int, heightDp: Int): Boolean =
+        widthDp < COMPACT_MIN_WIDTH_DP || heightDp < COMPACT_MIN_HEIGHT_DP
+
     // 840 keeps 1280-pixel units at 240 dpi (853 dp) on the rail.
     const val EXPANDED_MIN_WIDTH_DP = 840
     // The rail scrolls on its own, so short ultrawide units (1920x720 at 240 dpi, 480 dp) still get it.

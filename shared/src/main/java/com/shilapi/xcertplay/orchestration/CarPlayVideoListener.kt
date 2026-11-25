@@ -23,6 +23,9 @@ interface CarPlayVideoListener {
     /** The iPhone asks the car to show its video player (requestUI "videoplayback:"). Any thread. */
     fun onVideoUiRequested()
 
+    /** A playback control stream ended; its queue no longer owns the retained local player. */
+    fun onVideoStreamEnded(streamId: Long) {}
+
     /** The CarPlay session ended; the player must close. Any thread. */
     fun onVideoSessionEnded()
 }

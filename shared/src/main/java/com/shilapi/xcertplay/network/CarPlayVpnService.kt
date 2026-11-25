@@ -321,6 +321,10 @@ class CarPlayVpnService : VpnService() {
                                 current.listener.onVideoPlaybackUiRequested(session)
                             }
 
+                            override fun onRemoteControlStreamEnded(session: AirPlaySession, streamId: Long) {
+                                current.listener.onRemoteControlStreamEnded(session, streamId)
+                            }
+
                             override fun onSessionEnded(session: AirPlaySession) {
                                 removeSession(session)
                                 if (current.listenerIdentity == null || !internalPeer) current.listener.onSessionEnded(session)
