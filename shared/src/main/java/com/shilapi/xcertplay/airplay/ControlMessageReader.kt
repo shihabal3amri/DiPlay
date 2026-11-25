@@ -13,6 +13,7 @@ internal class ControlMessageReader(
     private val headerBytes = ByteArray(HEADER_LIMIT + 4)
     private var headerSize = 0
     private var header: RtspMessage.Header? = null
+    private var bodyLength = 0
     private var received = 0
     private var body: ByteArray? = null
     private var permit: Closeable? = null
@@ -35,13 +36,13 @@ internal class ControlMessageReader(
                     begin(RtspMessage.parseHeader(String(headerBytes, 0, headerSize - 4, Charsets.US_ASCII)))
                 }
                 val current = header ?: continue
-                val count = minOf(bytes.size - offset, current.length - received)
+                val count = minOf(bytes.size - offset, bodyLength - received)
                 body?.let { bytes.copyInto(it, received, offset, offset + count) }
                 received += count
                 offset += count
-                if (received == current.length) {
+                if (received == bodyLength) {
                     result += RtspMessage.Request(current.method, current.path, current.protocol, current.headers,
-                        body ?: ByteArray(0), video, if (rejection != null) current.length else 0, rejection)
+                        body ?: ByteArray(0), video, if (rejection != null) bodyLength else 0, rejection)
                         .also { it.bodyLease = permit }
                     permit = null
                     reset()
@@ -56,26 +57,31 @@ internal class ControlMessageReader(
     }
 
     private fun begin(next: RtspMessage.Header) {
+        val length = next.headers["content-length"]?.let {
+            val value = it.toIntOrNull()
+            if (value == null || value < 0) throw ProtocolException("Invalid Content-Length")
+            value
+        } ?: 0
         val stream = next.headers["x-apple-streamid"]?.toLongOrNull()
         val allowedStreams = videoStreams()
         val negotiatedVideo = next.method == "POST" && RtspMessage.isCommandPath(next.path) && stream in allowedStreams
         val allowsLargeBody = negotiatedVideo && allowsLargeVideoResources()
         video = allowsLargeBody
-        if (next.length > ORDINARY_BODY_LIMIT) {
+        if (length > ORDINARY_BODY_LIMIT) {
             if (!negotiatedVideo) throw ProtocolException(
-                "RTSP body of ${next.length} bytes over $ORDINARY_BODY_LIMIT stream=${stream ?: -1} allowed=$allowedStreams")
+                "RTSP body of ${length} bytes over $ORDINARY_BODY_LIMIT stream=${stream ?: -1} allowed=$allowedStreams")
             video = true
             rejection = when {
                 !allowsLargeBody -> "relay_disabled"
-                next.length > VideoInCar.MAX_RESOURCE_COMMAND_BYTES -> "resource_size_limit"
+                length > VideoInCar.MAX_RESOURCE_COMMAND_BYTES -> "resource_size_limit"
                 else -> {
-                    permit = budget.acquire(next.length)
+                    permit = budget.acquire(length)
                     if (permit == null) "memory_budget" else null
                 }
             }
         }
         if (rejection == null) {
-            try { body = ByteArray(next.length) } catch (error: OutOfMemoryError) {
+            try { body = ByteArray(length) } catch (error: OutOfMemoryError) {
                 if (!video) throw error
                 permit?.close()
                 permit = null
@@ -83,13 +89,15 @@ internal class ControlMessageReader(
             }
         }
         header = next
-        if (video && next.length > ORDINARY_BODY_LIMIT) log(
-            "video resource framing stream=$stream bytes=${next.length} action=${if (rejection == null) "receive" else "drain"} reason=${rejection ?: "negotiated_video_stream"} reservedBytes=${budget.reservedBytes()} maxHeapBytes=${Runtime.getRuntime().maxMemory()}")
+        bodyLength = length
+        if (video && length > ORDINARY_BODY_LIMIT) log(
+            "video resource framing stream=$stream bytes=${length} action=${if (rejection == null) "receive" else "drain"} reason=${rejection ?: "negotiated_video_stream"} reservedBytes=${budget.reservedBytes()} maxHeapBytes=${Runtime.getRuntime().maxMemory()}")
     }
 
     private fun reset() {
         headerSize = 0
         header = null
+        bodyLength = 0
         received = 0
         body = null
         video = false

@@ -21,6 +21,18 @@ class ControlMessageMemoryTest {
         }
     }
 
+    @Test fun malformedVideoBodyLengthsAreRejectedBeforeReservingMemory() {
+        val budget = ControlBodyBudget({ 64L * 1024 * 1024 }, { 64L * 1024 * 1024 })
+        for (length in listOf("-5", "abc", "2147483648")) {
+            ControlMessageReader({ setOf(3L) }, budget).use { reader ->
+                val request = "POST /command RTSP/1.0\r\nX-Apple-StreamID: 3\r\nContent-Length: $length\r\n\r\n"
+                val error = assertThrows(ProtocolException::class.java) { reader.feed(request.toByteArray()) }
+                assertEquals("Invalid Content-Length", error.message)
+                assertEquals(0L, budget.reservedBytes())
+            }
+        }
+    }
+
     @Test fun aDeniedVideoBodyIsDrainedWithoutAllocationAndTheNextCommandStillParses() {
         val budget = ControlBodyBudget({ 64L * 1024 * 1024 }, { 64L * 1024 * 1024 })
         if (java.lang.Boolean.getBoolean("diplay.lowHeapProbe")) {

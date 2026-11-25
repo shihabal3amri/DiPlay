@@ -90,7 +90,7 @@ object RtspMessage {
             val header = parseHeader(headerText)
             val headers = header.headers
             val bodyStart = headerEndIndex + headerEnd.size
-            val contentLength = header.length
+            val contentLength = headers["content-length"]?.toIntOrNull()?.coerceAtLeast(0) ?: 0
             if (contentLength > MAX_BODY_BYTES) throw ProtocolException("RTSP body of $contentLength bytes over $MAX_BODY_BYTES")
             val bodyEnd = bodyStart + contentLength
             if (bodyEnd > limit) return Scan(messages, offset, bodyEnd)
@@ -109,7 +109,7 @@ object RtspMessage {
     }
 
     internal data class Header(val method: String, val path: String, val protocol: String,
-        val headers: Map<String, String>, val length: Int)
+        val headers: Map<String, String>)
 
     internal fun parseHeader(text: String): Header {
         val lines = text.split("\r\n")
@@ -119,12 +119,7 @@ object RtspMessage {
             val separator = line.indexOf(':')
             if (separator >= 0) headers[line.substring(0, separator).trim().lowercase()] = line.substring(separator + 1).trim()
         }
-        val length = headers["content-length"]?.let {
-            val value = it.toLongOrNull() ?: throw ProtocolException("Invalid Content-Length")
-            if (value !in 0..Int.MAX_VALUE.toLong()) throw ProtocolException("Invalid Content-Length")
-            value.toInt()
-        } ?: 0
-        return Header(first[0], first.getOrElse(1) { "" }, first.getOrElse(2) { "RTSP/1.0" }, headers, length)
+        return Header(first[0], first.getOrElse(1) { "" }, first.getOrElse(2) { "RTSP/1.0" }, headers)
     }
 
     internal fun isCommandPath(path: String): Boolean =
