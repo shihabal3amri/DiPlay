@@ -16,8 +16,8 @@ internal object VideoDiagnostics {
     private const val MAX_KEYS = 12
     private val unsafeWordCharacters = Regex("[^A-Za-z0-9_.:-]")
 
-    fun queueItem(app: Any?, url: String, mediaType: Any?): String =
-        "queue item app=${word(app)} scheme=${scheme(url)}" + (host(url)?.let { " host=$it" } ?: "") +
+    fun queueItem(url: String, mediaType: Any?): String =
+        "queue item scheme=${scheme(url)}" + (host(url)?.let { " host=$it" } ?: "") +
             " mediaType=${word(mediaType)}"
 
     fun scheme(url: String): String = word(runCatching { Uri.parse(url).scheme?.lowercase() }.getOrNull())

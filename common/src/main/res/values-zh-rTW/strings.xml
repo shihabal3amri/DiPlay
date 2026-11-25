@@ -558,6 +558,8 @@
     <string name="wheel_speed_for_tunnels_description">開啟「向 iPhone 回報位置」後，DiPlay 還會傳送車輪速度和檔位，讓 Apple 地圖在隧道和停車場中也能繼續推算你的位置。會重新連線 CarPlay。需要在車機上開啟網路 ADB。</string>
     <string name="video_while_parked">停車時播放影片 · 需要 ADB</string>
     <string name="video_while_parked_description">iOS 27：在 iPhone 上投放至 CarPlay 的影片會在車輛處於 P 檔時於車機螢幕上播放。移出 P 檔時播放器會關閉；沒有 ADB 時影片會保持關閉，iPhone 只播放聲音。一般 HTTPS 影片（例如來自 Safari）可以播放；受 FairPlay 保護的影片（例如 Apple TV+）需要獲授權的接收器，因此無法在此播放。會重新連線 CarPlay。需要車機開啟網路 ADB。</string>
+    <string name="settings_video_use_iphone_network">影片流量使用 iPhone 網路（實驗性）</string>
+    <string name="settings_video_use_iphone_network_description">透過 iPhone 的網路載入串流影片，可能會使用 iPhone 的行動數據。單一檔案的影片仍使用車機網路。部分串流無法以這種方式播放，遇到這種情況請關閉此選項。從下一部開啟的影片開始生效。</string>
     <string name="video_off_gear_unreadable">車機螢幕無法播放影片：DiPlay 讀不到檔位。</string>
     <string name="video_gear_no_reply">車機的 ADB 沒有回應檔位讀取。</string>
     <string name="cluster_song">儀表板顯示歌曲</string>

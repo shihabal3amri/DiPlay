@@ -600,6 +600,8 @@
     <string name="wheel_speed_for_tunnels_description">Avec Envoyer la position à l’iPhone activé, DiPlay envoie aussi la vitesse des roues et le rapport engagé, pour que Plans puisse continuer à faire avancer votre position dans les tunnels et les parkings. Reconnecte CarPlay. Nécessite ADB via le réseau sur l’autoradio.</string>
     <string name="video_while_parked">Vidéo à l’arrêt</string>
     <string name="video_while_parked_description">iOS 27 : une vidéo envoyée vers CarPlay depuis l’iPhone est lue sur l’écran de la voiture quand celle-ci est en P. Le lecteur se ferme quand vous quittez P ; sans ADB, la vidéo reste désactivée et l’iPhone ne lit que le son. Les vidéos HTTPS simples (par exemple depuis Safari) sont lues ; les vidéos protégées par FairPlay, comme Apple TV+, nécessitent un récepteur sous licence et ne sont pas lues ici. Reconnecte CarPlay. Nécessite ADB via le réseau sur l’autoradio.</string>
+    <string name="settings_video_use_iphone_network">Utiliser le réseau de l’iPhone pour les vidéos (expérimental)</string>
+    <string name="settings_video_use_iphone_network_description">Charge les vidéos en streaming via la connexion Internet de l’iPhone et peut utiliser ses données mobiles. Les vidéos composées d’un seul fichier utilisent toujours la connexion de l’unité embarquée. Si un flux ne se lit pas ainsi, désactivez cette option. S’applique à la prochaine vidéo ouverte.</string>
     <string name="video_off_gear_unreadable">Les vidéos ne peuvent pas être lues sur l’écran de la voiture : DiPlay ne peut pas lire le rapport engagé.</string>
     <string name="video_gear_no_reply">L’ADB de l’autoradio n’a pas répondu à la lecture du rapport engagé.</string>
     <string name="cluster_song">Morceau sur le tableau de bord</string>

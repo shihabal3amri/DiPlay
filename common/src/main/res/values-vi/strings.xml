@@ -600,6 +600,8 @@
     <string name="wheel_speed_for_tunnels_description">Khi bật Gửi vị trí cho iPhone, DiPlay còn gửi tốc độ bánh xe và số của xe, để Apple Maps có thể tiếp tục cập nhật vị trí của bạn trong hầm và bãi đỗ xe. Kết nối lại CarPlay. Cần ADB qua mạng trên hệ thống giải trí.</string>
     <string name="video_while_parked">Video khi đỗ xe</string>
     <string name="video_while_parked_description">iOS 27: video bạn gửi tới CarPlay trên iPhone sẽ phát trên màn hình xe khi xe ở số P. Trình phát đóng lại khi bạn chuyển khỏi số P; không có ADB thì video vẫn tắt và iPhone chỉ phát âm thanh. Video HTTPS thông thường (ví dụ từ Safari) phát được; video được bảo vệ bằng FairPlay, như Apple TV+, cần bộ thu được cấp phép và không phát được ở đây. Kết nối lại CarPlay. Cần ADB qua mạng trên hệ thống giải trí.</string>
+    <string name="settings_video_use_iphone_network">Dùng mạng iPhone cho video (thử nghiệm)</string>
+    <string name="settings_video_use_iphone_network_description">Tải video phát trực tuyến qua kết nối Internet của iPhone và có thể dùng dữ liệu di động của iPhone. Video dạng một tệp vẫn dùng kết nối của thiết bị trên xe. Nếu luồng nào không phát được theo cách này, hãy tắt tùy chọn. Áp dụng từ video tiếp theo bạn mở.</string>
     <string name="cluster_song">Bài hát trên cụm đồng hồ</string>
     <string name="cluster_song_description">Tên bài hát và nghệ sĩ của CarPlay hiện trong thẻ nhạc trên cụm đồng hồ, kèm nút phát và tạm dừng. Thẻ hiện dưới dạng nguồn nhạc “Khác” của BYD, vì cụm đồng hồ không vẽ nguồn riêng của CarPlay. Áp dụng ngay. Cần ADB qua mạng trên hệ thống giải trí.</string>
     <string name="cluster_song_gate">Tự động kích hoạt thẻ nhạc</string>
