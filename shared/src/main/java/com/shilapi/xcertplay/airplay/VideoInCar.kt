@@ -73,6 +73,9 @@ internal class VideoPlaybackAvailability(
  * licensed FairPlay receiver. Plain http(s) media such as Safari's plays.
  */
 object VideoInCar {
+    /** Bounded, opt-in FCUP responses: one HLS resource plus its nested plist envelopes. */
+    const val MAX_RESOURCE_BYTES = 32 * 1024 * 1024
+    internal const val MAX_RESOURCE_COMMAND_BYTES = MAX_RESOURCE_BYTES + 64 * 1024
     const val FEATURE = "videoPlayback"
     const val UI_URL = "videoplayback:"
     const val SETTINGS_CHANNEL_UUID = "BB493F61-A6B8-4769-8D74-80C23A9F71C4"

@@ -579,6 +579,8 @@
     <string name="wheel_speed_for_tunnels_description">Konumu iPhone\'a bildir açıkken, DiPlay aracın tekerlek hızını ve vitesini de gönderir, böylece Apple Haritalar tünellerde ve otoparklarda konumunuzu ilerletmeye devam edebilir. CarPlay\'i yeniden bağlar. Ana ünitede ağ üzerinden ADB gerektirir.</string>
     <string name="video_while_parked">Park halindeyken video</string>
     <string name="video_while_parked_description">iOS 27: iPhone\'da CarPlay\'e gönderdiğiniz bir video, araç P konumundayken araç ekranında oynatılır. P konumundan çıktığınızda oynatıcı kapanır; ADB olmadan video kapalı kalır ve iPhone yalnızca ses çalar. Düz HTTPS video (örneğin Safari\'den) oynatılır; Apple TV+ gibi FairPlay korumalı videolar lisanslı bir alıcı gerektirir ve burada oynatılamaz. CarPlay\'i yeniden bağlar. Ana ünitede ağ üzerinden ADB gerektirir.</string>
+    <string name="settings_video_use_iphone_network">Video trafiği için iPhone ağını kullan (deneysel)</string>
+    <string name="settings_video_use_iphone_network_description">Akış videolarını iPhone’un internet bağlantısıyla yükler ve iPhone’un mobil verisini kullanabilir. Tek dosyadan oluşan videolar araç ünitesinin bağlantısını kullanmaya devam eder. Bu şekilde oynatılamayan akışlar için seçeneği kapatın. Açacağınız bir sonraki videoda geçerli olur.</string>
     <string name="video_off_gear_unreadable">Videolar araç ekranında oynatılamıyor: DiPlay vitesi okuyamıyor.</string>
     <string name="video_gear_no_reply">Ana ünitenin ADB\'si vites okumasına yanıt vermedi.</string>
     <string name="cluster_song">Gösterge panelinde parça</string>

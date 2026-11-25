@@ -32,6 +32,7 @@ import androidx.media3.common.Timeline
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.DefaultDataSource
 import androidx.media3.datasource.DefaultHttpDataSource
+import androidx.media3.exoplayer.upstream.DefaultAllocator
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.hls.HlsManifest
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
@@ -63,6 +64,10 @@ class CarPlayVideoActivity : Activity() {
     private lateinit var timeBar: SeekBar
     private var scrubbing = false
     private var loadedUrl: String? = null
+    private var loadedRelayGeneration = -1L
+    private var iphoneNetworkVideo = false
+    private var iphoneAllocator: DefaultAllocator? = null
+    private var playbackReleased = false
     private var prepared = false
     private var encryptionLogged = false
     private val hideControls = Runnable {
@@ -84,9 +89,13 @@ class CarPlayVideoActivity : Activity() {
             hide(WindowInsetsCompat.Type.systemBars())
             systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
         }
-        val http = DefaultHttpDataSource.Factory().setAllowCrossProtocolRedirects(true)
-        val sources = IphoneResolvingDataSource.Factory(DefaultDataSource.Factory(this, http))
-        player = ExoPlayer.Builder(this).setMediaSourceFactory(DefaultMediaSourceFactory(sources)).build()
+        val playerBuilder = ExoPlayer.Builder(this)
+        if (CarPlayVideo.streaming && AirPlayPersistence.loadVideoUseIphoneNetwork(this)) {
+            val allocator = DefaultAllocator(true, C.DEFAULT_BUFFER_SEGMENT_SIZE)
+            iphoneAllocator = allocator
+            playerBuilder.setLoadControl(IphoneVideoPlaybackPolicy.loadControl(Runtime.getRuntime().maxMemory(), allocator))
+        }
+        player = playerBuilder.build()
         player.addListener(object : Player.Listener {
             override fun onPlaybackStateChanged(state: Int) {
                 if (state == Player.STATE_READY && !prepared) {
@@ -98,6 +107,7 @@ class CarPlayVideoActivity : Activity() {
             override fun onTimelineChanged(timeline: Timeline, reason: Int) = logEncryption()
 
             override fun onPlayerError(error: PlaybackException) {
+                if (playbackReleased) return
                 // Logcat keeps the cause messages (URLs masked); the report keeps their types only.
                 Log.w(TAG, "player error ${error.errorCodeName}: ${causes(error)}")
                 CarPlayVideo.note(VideoDiagnostics.playerError(error), logcat = false)
@@ -259,22 +269,43 @@ class CarPlayVideoActivity : Activity() {
     }
 
     fun load() {
+        if (playbackReleased || isFinishing) return
         val url = CarPlayVideo.url ?: return
-        if (url == loadedUrl) return
+        val generation = CarPlayVideo.relayItemGeneration
+        val useIphoneNetwork = CarPlayVideo.streaming && AirPlayPersistence.loadVideoUseIphoneNetwork(this)
+        val scheme = android.net.Uri.parse(url).scheme?.lowercase()
+        val needsIphone = useIphoneNetwork || scheme !in setOf("http", "https", "data")
+        if (url == loadedUrl && (!needsIphone && !iphoneNetworkVideo || generation == loadedRelayGeneration)) return
         loadedUrl = url
+        loadedRelayGeneration = generation
+        iphoneNetworkVideo = useIphoneNetwork
         prepared = false
         encryptionLogged = false
         CarPlayVideo.note(VideoDiagnostics.loadingVideo(url, playbackNetworkSummary()))
         val item = MediaItem.Builder().setUri(url)
             .apply { if (CarPlayVideo.streaming) setMimeType(MimeTypes.APPLICATION_M3U8) }
             .build()
-        player.setMediaItem(item, (CarPlayVideo.pendingSeekMillis ?: CarPlayVideo.startMillis).toLong())
+        val http = DefaultHttpDataSource.Factory().setAllowCrossProtocolRedirects(true)
+        val factory = IphoneResolvingDataSource.Factory(
+            DefaultDataSource.Factory(this, http), useIphoneNetwork, CarPlayVideo::noteRelay,
+        ) { CarPlayVideo.resolveOnIphone(it, generation, useIphoneNetwork) }
+        val media = DefaultMediaSourceFactory(factory)
+        if (useIphoneNetwork) media.setLoadErrorHandlingPolicy(IphoneVideoPlaybackPolicy(CarPlayVideo::noteRelay))
+        player.setMediaSource(media.createMediaSource(item),
+            (CarPlayVideo.pendingSeekMillis ?: CarPlayVideo.startMillis).toLong())
         CarPlayVideo.pendingSeekMillis = null
         player.prepare()
         applyRate()
     }
 
+    fun onResourcePressure(reason: String) {
+        if (playbackReleased || !iphoneNetworkVideo) return
+        iphoneAllocator?.trim()
+        CarPlayVideo.noteRelay("event=resource_pressure reason=$reason")
+    }
+
     fun applyRate() {
+        if (playbackReleased) return
         player.playWhenReady = CarPlayVideo.playing
         if (controls.visibility == View.VISIBLE) updatePlayPause()
     }
@@ -333,15 +364,24 @@ class CarPlayVideoActivity : Activity() {
         super.onPause()
     }
 
-    override fun onDestroy() {
+    internal fun releasePlaybackResources() {
+        if (playbackReleased) return
+        playbackReleased = true
         main.removeCallbacks(hideControls)
         main.removeCallbacks(tick)
+        if (::player.isInitialized) player.release()
+        iphoneAllocator?.reset()
+        iphoneAllocator = null
+    }
+
+    override fun onDestroy() {
+        val position = if (!playbackReleased && prepared) player.currentPosition.toInt() else null
+        releasePlaybackResources()
         if (CarPlayVideo.activity === this) {
             CarPlayVideo.activity = null
             CarPlayVideo.onPlayerGone()
-            CarPlayVideo.onPlayerClosed(if (prepared) player.currentPosition.toInt() else null)
+            CarPlayVideo.onPlayerClosed(position)
         }
-        player.release()
         super.onDestroy()
     }
 

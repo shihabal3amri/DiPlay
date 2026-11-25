@@ -113,7 +113,7 @@ class DiagnosticReportEvidenceTest {
         } finally { folder.deleteRecursively() }
     }
 
-    @Test fun aQueuedVideoReachesTheReportWithItsDomainButNotItsUrl() {
+    @Test fun queuedVideoReportOmitsTheUrlAndAppIdentifier() {
         val lines = CopyOnWriteArrayList<String>()
         ReflectionHelpers.setField(CarPlayVideo, "diagnostic", { line: String -> lines += line })
         val url = "https://rr3---sn-abc.googlevideo.com/videoplayback?expire=1&signature=SECRET&ip=203.0.113.9"
@@ -131,16 +131,16 @@ class DiagnosticReportEvidenceTest {
         shadowOf(Looper.getMainLooper()).idle()
 
         assertEquals(listOf(
-            "Video: queue item app=com.example.Video scheme=https host=googlevideo.com mediaType=streaming",
+            "Video: queue item scheme=https host=googlevideo.com mediaType=streaming",
             "Video: queue item this player cannot play mediaType=file",
-            "Video: queue item app=com.example.Video scheme=myapp mediaType=streaming",
+            "Video: queue item scheme=myapp mediaType=streaming",
             "Video: iPhone unhandledURL answer request=3 keys=[type,kind,response] " +
                 "responseKeys=[FCUP_Response_RequestID,FCUP_Response_StatusCode]",
         ), lines)
         for (line in lines) {
             assertKept(line)
             assertFalse(line, listOf("videoplayback", "SECRET", "signature", "203.0.113.9", "sdcard", "rr3", "sn-abc",
-                "u83Kq2ZpLx0aTnQw7Rv", "master").any(line::contains))
+                "u83Kq2ZpLx0aTnQw7Rv", "master", "com.example.Video").any(line::contains))
         }
     }
 
@@ -200,7 +200,7 @@ class DiagnosticReportEvidenceTest {
         CarPlayVideo.noteIphoneLoaded("myapp", 200, 4, redirect = false)
         CarPlayVideo.onVideoMessage(7L, mapOf("type" to "stop"))
         shadowOf(Looper.getMainLooper()).idle()
-        assertEquals(listOf("Video: queue item app=none scheme=myapp mediaType=streaming",
+        assertEquals(listOf("Video: queue item scheme=myapp mediaType=streaming",
             "Video: iPhone loaded myapp URL status=200 bytes=4 redirect=false"), lines)
     }
 
