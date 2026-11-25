@@ -69,7 +69,7 @@ internal object CarPlayVideo : CarPlayVideoListener {
     private var deferredPlayUntil = 0L
     private var deferredUiUntil = 0L
     private val retiredItems = LinkedHashSet<String>()
-    private val closedLiveSources = LinkedHashSet<String>()
+    private var closedLiveSource: String? = null
     private val supersededStreams = LinkedHashSet<Long>()
     private val inactiveItems = LinkedHashMap<Long, Any?>()
     private val remoteQueueItems = LinkedHashMap<Long, Any>()
@@ -277,7 +277,7 @@ internal object CarPlayVideo : CarPlayVideoListener {
         clearTapRequest()
         tapTracking = false
         retiredItems.clear()
-        closedLiveSources.clear()
+        closedLiveSource = null
         supersededStreams.clear()
         inactiveItems.clear()
         remoteQueueItems.clear()
@@ -376,6 +376,7 @@ internal object CarPlayVideo : CarPlayVideoListener {
             !player.ownsCurrentItem() || url == null || dismissedByUser || inactiveItems.containsKey(stream) ||
             !ownsRemoteItem(stream)) return
         val state = player.state()
+        if (state.prepared && state.playing && player.isLiveItem()) closedLiveSource = null
         val message = VideoInCar.playerPlaybackStateNotification(itemUuid, state)
         val report = playerPlaybackReport(stream, message)
         if (report == lastPlayerPlaybackReport) return
@@ -448,7 +449,6 @@ internal object CarPlayVideo : CarPlayVideoListener {
         waitingForLiveItem = isLive && url != null
         if (isLive) {
             dismissedLiveApp = itemApp
-            rememberClosedLiveSource()
             streamId?.let { rememberInactiveItem(it, itemUuid) }
             playbackGeneration++
             url = null
@@ -536,7 +536,7 @@ internal object CarPlayVideo : CarPlayVideoListener {
                 val sourceKey = itemKey(0, item.url)
                 val nextApp = (queued?.get("clientBundleID") as? String)?.takeIf { it.isNotBlank() }
                 val tappedReopen = hasTapRequest(receivedAt)
-                if (sourceKey != null && sourceKey in closedLiveSources) {
+                if (sourceKey != null && sourceKey == closedLiveSource && !tappedReopen) {
                     val currentStream = this.streamId
                     if (currentStream != null && currentStream != streamId && url != null && playing &&
                         activity?.takeUnless { it.isFinishing }?.let { it.ownsCurrentItem() && !it.isLiveItem() } == true) {
@@ -592,7 +592,6 @@ internal object CarPlayVideo : CarPlayVideoListener {
                     "liveUi=$openLiveItem livePlay=$playLiveItem tap=$tappedReopen deferredUi=$openDeferredItem " +
                     "deferredPlay=$playDeferredItem handoff=$liveHandoff retainsSource=$retainsSource " +
                     "source=${sourceKey?.takeLast(12) ?: "unknown"}")
-                closedLiveSources.remove(sourceKey)
                 inactiveItems.remove(streamId)
                 inactivePlayRequests.remove(streamId)
                 dismissedLiveApp = null
@@ -978,8 +977,7 @@ internal object CarPlayVideo : CarPlayVideoListener {
     }
 
     private fun rememberClosedLiveSource() {
-        url?.let { itemKey(0, it) }?.let { closedLiveSources.add(it) }
-        while (closedLiveSources.size > 32) closedLiveSources.remove(closedLiveSources.first())
+        closedLiveSource = itemKey(0, url)
     }
 
     private fun rememberInactiveItem(stream: Long, uuid: Any?) {

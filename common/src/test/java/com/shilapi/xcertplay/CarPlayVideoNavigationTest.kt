@@ -2,6 +2,8 @@ package com.shilapi.xcertplay
 
 import android.content.Intent
 import android.os.Looper
+import android.os.SystemClock
+import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
@@ -154,6 +156,110 @@ class CarPlayVideoNavigationTest {
         assertFalse(CarPlayVideo.playing)
         assertNull(CarPlayVideo.url)
         assertTrue(report.any { it.contains("fallback=false") })
+    }
+
+    @Test fun closedLiveChannelsCanBeRevisitedRepeatedlyWithATapAndFreshItems() {
+        for ((index, channel) in listOf("one", "two", "one", "two", "one").withIndex()) {
+            tapCarPlay()
+            message(mapOf("type" to "insertPlayQueueItem", "item" to mapOf(
+                "uuid" to "selection-$index", "clientBundleID" to "example.live", "mediaType" to "streaming",
+                "Content-Location" to "https://example.com/$channel.m3u8")))
+            rate()
+            assertEquals("https://example.com/$channel.m3u8", CarPlayVideo.url)
+            assertTrue(CarPlayVideo.playing)
+            assertNotNull(shadowOf(host).nextStartedActivity)
+            CarPlayVideo.dismissPlayer(null, isLive = true)
+            assertNull(CarPlayVideo.url)
+            shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(3))
+            rate()
+            assertNull(shadowOf(host).nextStartedActivity)
+        }
+    }
+
+    @Test fun anotherLiveChannelMustActuallyPlayBeforeThePhoneCanSelectTheClosedChannel() {
+        play()
+        shadowOf(host).nextStartedActivity
+        CarPlayVideo.dismissPlayer(null, isLive = true)
+
+        queue("next-channel")
+        rate()
+        shadowOf(host).nextStartedActivity
+        val player = mock(CarPlayVideoActivity::class.java)
+        CarPlayVideo.activity = player
+        `when`(player.ownsCurrentItem()).thenReturn(true)
+        `when`(player.isLiveItem()).thenReturn(true)
+        `when`(player.state()).thenReturn(VideoInCar.PlayerState(false, false, 0.0, Double.NaN, 0.0))
+        CarPlayVideo.onPlayerPlaybackStateChanged(player, CarPlayVideo.playbackGeneration)
+        queue()
+        assertEquals("https://example.com/next-channel.mp4", CarPlayVideo.url)
+
+        `when`(player.state()).thenReturn(VideoInCar.PlayerState(true, true, 0.0, Double.NaN, 10.0))
+        `when`(player.isLiveItem()).thenReturn(false)
+        CarPlayVideo.onPlayerPlaybackStateChanged(player, CarPlayVideo.playbackGeneration)
+        queue()
+        assertEquals("https://example.com/next-channel.mp4", CarPlayVideo.url)
+
+        `when`(player.isLiveItem()).thenReturn(true)
+        CarPlayVideo.onPlayerPlaybackStateChanged(player, CarPlayVideo.playbackGeneration)
+        queue()
+        assertEquals("https://example.com/first.mp4", CarPlayVideo.url)
+        rate()
+        assertTrue(CarPlayVideo.playing)
+        verify(player, never()).finish()
+    }
+
+    @Test fun anExpiredTapCannotReopenAClosedLiveSource() {
+        play()
+        shadowOf(host).nextStartedActivity
+        CarPlayVideo.dismissPlayer(null, isLive = true)
+        tapCarPlay()
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(11))
+        queue()
+        rate()
+        assertNull(CarPlayVideo.url)
+        assertFalse(CarPlayVideo.playing)
+        assertNull(shadowOf(host).nextStartedActivity)
+    }
+
+    @Test fun backBeforeHlsPreparationRetiresTheSourceAndRejectsLaterReplay() {
+        message(mapOf("type" to "insertPlayQueueItem", "item" to mapOf(
+            "uuid" to "pending-live", "clientBundleID" to "example.live", "mediaType" to "streaming",
+            "Content-Location" to "https://example.com/live.m3u8")))
+        rate()
+        val screen = Robolectric.buildActivity(CarPlayVideoActivity::class.java, shadowOf(host).nextStartedActivity).get()
+        assertFalse(screen.isLiveItem()) // No manifest or timeline has loaded.
+        ReflectionHelpers.callInstanceMethod<Void>(screen, "returnToCarPlay")
+        shadowOf(screen).nextStartedActivity
+        assertNull(CarPlayVideo.url)
+        repeat(3) {
+            shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(3))
+            rate()
+            message(mapOf("type" to "insertPlayQueueItem", "item" to mapOf(
+                "uuid" to "retry-$it", "mediaType" to "streaming",
+                "Content-Location" to "https://example.com/live.m3u8")))
+            assertNull(CarPlayVideo.url)
+            assertFalse(CarPlayVideo.playing)
+            assertNull(shadowOf(host).nextStartedActivity)
+        }
+    }
+
+    @Test fun backFromPreparedOnDemandHlsPreservesItsPositionAndResume() {
+        message(mapOf("type" to "insertPlayQueueItem", "item" to mapOf(
+            "uuid" to "vod", "mediaType" to "streaming", "Content-Location" to "https://example.com/vod.m3u8")))
+        rate()
+        val screen = Robolectric.buildActivity(CarPlayVideoActivity::class.java, shadowOf(host).nextStartedActivity).get()
+        val player = mock(androidx.media3.exoplayer.ExoPlayer::class.java)
+        `when`(player.currentPosition).thenReturn(12_345L)
+        ReflectionHelpers.setField(screen, "player", player)
+        ReflectionHelpers.setField(screen, "prepared", true)
+        ReflectionHelpers.callInstanceMethod<Void>(screen, "returnToCarPlay")
+        shadowOf(screen).nextStartedActivity
+        assertEquals("https://example.com/vod.m3u8", CarPlayVideo.url)
+        assertEquals(12_345, CarPlayVideo.startMillis)
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(3))
+        rate()
+        assertTrue(CarPlayVideo.playing)
+        assertNotNull(shadowOf(host).nextStartedActivity)
     }
 
     @Test fun aLiveUiRequestDoesNotReopenTheClosedSourceButCanOpenAnotherChannel() {
@@ -1224,6 +1330,13 @@ class CarPlayVideoNavigationTest {
     }
 
     private fun play() { queue(); rate() }
+    private fun tapCarPlay() {
+        val down = SystemClock.uptimeMillis()
+        for (action in listOf(MotionEvent.ACTION_DOWN, MotionEvent.ACTION_UP)) {
+            val event = MotionEvent.obtain(down, down, action, 10f, 10f, 0)
+            try { CarPlayVideo.onCarPlayTouch(event, queued = true) } finally { event.recycle() }
+        }
+    }
     private fun queue(id: String = "first") = message(mapOf(
         "type" to "insertPlayQueueItem",
         "item" to mapOf("uuid" to id, "Content-Location" to "https://example.com/$id.mp4"),

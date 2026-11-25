@@ -310,7 +310,8 @@ class CarPlayVideoActivity : ComponentActivity() {
 
     private fun returnToCarPlay() {
         if (isFinishing) return
-        val isLive = isLiveItem()
+        // A failed or pending HLS load has no timeline yet; Back must still retire its source.
+        val isLive = isLiveItem() || (!prepared && CarPlayVideo.streaming)
         CarPlayVideo.dismissPlayer(if (prepared && !isLive) player.currentPosition.toInt() else null, isLive)
         // The player may have been opened from the app task; finish alone can expose the start page.
         OwnScreenStart.start(this, CarPlayScreen.intent(this))
