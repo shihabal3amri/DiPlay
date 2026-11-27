@@ -17,20 +17,29 @@ import kotlin.math.roundToLong
  * hardware constant, so the next music stream starts from the trim this one learned.
  * The level music holds once it plays is not the start threshold. Buffered music (#1031) is fed a second ahead of
  * real time, and realtime music over Wi-Fi comes in bursts, so playback starts partway through one and the rest
- * lands on top (#1068).
+ * lands on top (#1068). What the writes leave queued does not fall below the start threshold, though, unless music
+ * arrives late: on the T507 in #1177 it was late for the first seconds after play(), and a target measured then took
+ * the level down to 0.4 s of the 1000 ms buffer.
  */
 internal class MediaClockTrim(
     private val sampleRate: Int,
-    private var targetFrames: Long,
+    targetFrames: Long,
     integral: Double = learnedTrim,
     private val measuresTarget: Boolean = false,
 ) {
+    /** The level, in frames, the trim steers to. */
+    var targetFrames = targetFrames
+        private set
     // Clean once for both phases: a NaN or out-of-range learned trim must never reach
     // roundToInt / setPlaybackRate, whether or not this instance measures the target.
     private var integral = if (integral.isFinite()) integral.coerceIn(-MAX_TRIM, MAX_TRIM) else 0.0
 
-    private class Measuring(val halfStartNs: Long? = null, val earlierHalfMean: Double? = null) {
+    /** A [mean] level over half a measurement, and the mean of the levels the writes in it left, [afterWrites]. */
+    private class Half(val mean: Double, val afterWrites: Double)
+
+    private class Measuring(val halfStartNs: Long? = null, val earlier: Half? = null) {
         var levelFrameNs = 0.0
+        var afterWriteFrameNs = 0.0
     }
 
     private var level: Double? = null
@@ -49,9 +58,16 @@ internal class MediaClockTrim(
      * the target, the waiting packets are the overflow itself, not decoder backpressure, so the integral still learns.
      */
     private var overflowRecovery = false
+    /** The measurement began at play(), with the start threshold queued, not after the lag guard cut the queue. */
+    private var measuringFromStart = true
 
-    fun measureAgain() {
+    /**
+     * Measure the target again: after play() by default, or [afterCut] when the lag guard cut queued music, which
+     * lowers the level for good, so it may then sit below the start threshold.
+     */
+    fun measureAgain(afterCut: Boolean = false) {
         overflowRecovery = false
+        measuringFromStart = !afterCut
         if (measuresTarget) measuring = Measuring()
     }
 
@@ -103,7 +119,7 @@ internal class MediaClockTrim(
         val measure = measuring
         if (measure != null) {
             if (!headMoving) return
-            addToMeasurement(measure, nowNs, elapsedNs, meanSinceLastWrite)
+            addToMeasurement(measure, nowNs, elapsedNs, meanSinceLastWrite, lastBuffered.toDouble())
         } else {
             val previous = level
             level = if (previous == null || elapsedNs > STALE_NS) error(buffered.toDouble())
@@ -113,24 +129,32 @@ internal class MediaClockTrim(
         lastSampleNs = nowNs
     }
 
-    private fun addToMeasurement(measure: Measuring, nowNs: Long, elapsedNs: Long, meanSinceLastWrite: Double) {
+    private fun addToMeasurement(measure: Measuring, nowNs: Long, elapsedNs: Long, meanSinceLastWrite: Double,
+        afterLastWrite: Double) {
         val halfStartNs = measure.halfStartNs
         if (halfStartNs == null) {
             measuring = Measuring(nowNs)
             return
         }
         measure.levelFrameNs += meanSinceLastWrite * elapsedNs
+        measure.afterWriteFrameNs += afterLastWrite * elapsedNs
         if (nowNs - halfStartNs < MEASURE_HALF_NS) return
-        val halfMean = measure.levelFrameNs / (nowNs - halfStartNs)
-        val earlierHalfMean = measure.earlierHalfMean
-        if (earlierHalfMean == null || abs(halfMean - earlierHalfMean) > sampleRate * HALVES_AGREE_SECONDS) {
-            measuring = Measuring(nowNs, halfMean)
+        val half = Half(measure.levelFrameNs / (nowNs - halfStartNs), measure.afterWriteFrameNs / (nowNs - halfStartNs))
+        val earlier = measure.earlier
+        if (earlier == null || abs(half.mean - earlier.mean) > sampleRate * HALVES_AGREE_SECONDS) {
+            measuring = Measuring(nowNs, half)
             return
         }
-        val measured = earlierHalfMean.roundToLong()
+        // Each write leaves at least the start threshold queued while music arrives on time: playback starts once it
+        // is, and over Wi-Fi the rest of the burst lands on top. Only the drain between writes takes the mean below
+        // it, by up to half a burst at 300 ms (#807). Writes that leave less mean the music is late, not that the link
+        // holds less: on the T507 in #1177 a target measured there was about 0.6 s of the 1000 ms buffer. Steer to the
+        // level on-time music would hold instead; the error against it plays slower until the level is back.
+        val late = if (measuringFromStart) (startTargetFrames - earlier.afterWrites).coerceAtLeast(0.0) else 0.0
+        val measured = (earlier.mean + late).roundToLong()
         targetFrames = minOf(measured, maxTargetFrames())
         if (measured > targetFrames) overflowRecovery = true
-        level = error(earlierHalfMean)
+        level = error(earlier.mean)
         measuring = null
     }
 
@@ -160,7 +184,12 @@ internal class MediaClockTrim(
         val seconds = if (previousUpdate == null) 0.0 else ((nowNs - previousUpdate) / 1e9).coerceAtMost(MAX_STEP_SECONDS)
         lastUpdateNs = nowNs
         if (error <= 0.0) overflowRecovery = false
-        if (!compressedBacklog) {
+        // At its bound the output cannot move any further towards the error: integrating there only winds the
+        // integral up. After about 50 s at +1.5 % on the T507 in #1177, the level ran a third below its target before
+        // the integral came back, and a stream that ended then taught the next one to start 1.5 % fast.
+        val output = KP * error + integral
+        val atBound = abs(output) >= MAX_TRIM && output * error > 0.0
+        if (!compressedBacklog && !atBound) {
             integral = (integral + KI * error * seconds).coerceIn(-MAX_TRIM, MAX_TRIM)
             learnedTrim = integral
         }
