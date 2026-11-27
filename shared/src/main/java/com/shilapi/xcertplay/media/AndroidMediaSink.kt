@@ -45,6 +45,8 @@ internal class AudioFocusCoordinator(
     private val enabled: Boolean,
     private val muteMediaOnTransientLoss: Boolean = true,
     private val report: (String) -> Unit = {},
+    /** A change Android sent to this coordinator's own music request, outside its monitor; not external changes. */
+    private val onMediaFocusChange: (Int) -> Unit = {},
 ) {
     private data class Entry(val channel: AudioChannel, val attributes: AudioAttributes, var appliedVolume: Float = FULL_VOLUME)
 
@@ -55,10 +57,16 @@ internal class AudioFocusCoordinator(
     private var mediaVolume = FULL_VOLUME
     private var closed = false
     private var focusGeneration = 0L
+    private var listenerGeneration = focusGeneration
     private var currentListener = listenerFor(focusGeneration)
     internal val listener: AudioManager.OnAudioFocusChangeListener get() = currentListener
 
     private fun listenerFor(generation: Long) = AudioManager.OnAudioFocusChangeListener { change ->
+        if (applyFocusChange(generation, change) == AudioChannel.MEDIA) runCatching { onMediaFocusChange(change) }
+    }
+
+    /** The channel of the request [change] was applied to, or null when it was dropped. */
+    private fun applyFocusChange(generation: Long, change: Int): AudioChannel? =
         synchronized(this) {
             // Android may have queued callbacks before a request was abandoned or replaced.
             if (generation != focusGeneration || request == null || active.isEmpty()) {
@@ -70,7 +78,7 @@ internal class AudioFocusCoordinator(
                         " stale=${generation != focusGeneration} noRequest=${request == null}" +
                         " activeTracks=${active.size}")
                 }
-                return@synchronized
+                return@synchronized null
             }
             runCatching { report("Audio: focus change=$change activeTracks=${active.size}") }
             when (change) {
@@ -86,8 +94,8 @@ internal class AudioFocusCoordinator(
                 // Keep CarPlay audio running on permanent loss. Some head units
                 // do not send a later gain callback after taking focus back.
             }
+            requestedChannel
         }
-    }
 
     @Synchronized
     fun acquire(track: AudioTrack, channel: AudioChannel, attributes: AudioAttributes) {
@@ -113,9 +121,9 @@ internal class AudioFocusCoordinator(
         applyMediaVolume(rebuilt, entry)
     }
 
+    /** A change to the media-key session's request; the sink passes it to its renderers itself. */
     fun onExternalFocusChange(change: Int) {
-        val current = synchronized(this) { currentListener }
-        current.onAudioFocusChange(change)
+        applyFocusChange(synchronized(this) { listenerGeneration }, change)
     }
 
     @Synchronized
@@ -146,6 +154,7 @@ internal class AudioFocusCoordinator(
             AudioChannel.ASSISTANT -> AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK
             AudioChannel.NAVIGATION -> return
         }
+        listenerGeneration = focusGeneration
         currentListener = listenerFor(focusGeneration)
         val next = AudioFocusRequestCompat(gain, primary.attributes, currentListener, Handler(Looper.getMainLooper()))
         request = next
@@ -248,6 +257,7 @@ class AndroidMediaSink(
         audioFocusEnabled,
         audioFocusAutoYield,
         onAudioDiagnostic,
+        onMediaFocusChange = ::onMediaFocusChange,
     )
 
     private val navigationPromptFocus = NavigationPromptFocus(
@@ -265,6 +275,12 @@ class AndroidMediaSink(
     /** The media-key session may own Android's current focus request for this same sink. */
     fun onMediaAudioFocusChanged(change: Int) {
         audioFocusCoordinator.onExternalFocusChange(change)
+        onMediaFocusChange(change)
+    }
+
+    /** DiPlay's music focus changed, through the media-key session or the sink's own request; any thread. */
+    private fun onMediaFocusChange(change: Int) {
+        audioRenderers.values.forEach { it.onMediaFocusChanged(change) }
     }
 
     private val screenStateLock = Any()
@@ -1935,6 +1951,8 @@ private class AudioRenderer(
     /** Set once, when [trackStall] asks for a new track; writes stop until the worker has built it. */
     @Volatile private var rebuildPending = false
     private var awaitingRebuiltTrack = false
+    /** Music only, set with the track; see [MediaFocusRestart]. */
+    @Volatile private var focusRestart: MediaFocusRestart? = null
     /** Reads Android's music volume for the report; a property like [callBufferMillis]. */
     var readMusicVolume: () -> MusicVolume? = { null }
     private var musicVolume: MusicVolume? = null
@@ -2050,6 +2068,7 @@ private class AudioRenderer(
                 diagnosticStage = "decoder-output"
                 codec?.let(::drainCodec)
                 recoverStalledTrack()
+                restartRefusedStart()
                 reportMediaStart()
                 diagnosticStage = "buffer-maintenance"
                 maintainPlaybackBuffer()
@@ -2195,6 +2214,7 @@ private class AudioRenderer(
         val capacityBytes = built.bufferSizeInFrames * frameBytes
         startThresholdBytes = MediaAudioBuffer.startBytesFor(plan.startBytes, capacityBytes, PREBUFFER_WRITE_CHUNK_BYTES)
         if (streamChannel() == AudioChannel.MEDIA && trackStall == null) trackStall = MediaTrackStall()
+        if (streamChannel() == AudioChannel.MEDIA && focusRestart == null) focusRestart = MediaFocusRestart()
         // Only music plays long enough for the clocks to drift apart; calls keep their echo reference exact.
         clockTrim = if (streamChannel() == AudioChannel.MEDIA) MediaClockTrim(format.sampleRate, (startThresholdBytes / frameBytes).toLong(),
             measuresTarget = true) else null
@@ -2632,6 +2652,7 @@ private class AudioRenderer(
             }
             if (count == 0) {
                 zeroWritesThisWindow++
+                if (playbackStarted) focusRestart?.refused()
                 stallWatch?.let { noteRefusedWrite(it, track, stallStartNs) }
                 break
             }
@@ -2675,6 +2696,7 @@ private class AudioRenderer(
         headAtPlaybackStart = track.playbackHeadPosition
         clockTrim?.measureAgain()
         track.play()
+        focusRestart?.played()
         playbackStarted = true
         trackStall?.clear()
         if (playbackStartedNs == 0L) playbackStartedNs = nanoTime()
@@ -2721,6 +2743,32 @@ private class AudioRenderer(
             awaitingRebuiltTrack = false
             runCatching { report(MediaAudioLines.consumingAgain(head)) }
         }
+    }
+
+    /** Any thread: DiPlay's music focus changed. */
+    fun onMediaFocusChanged(change: Int) {
+        focusRestart?.focusChanged(change)
+    }
+
+    /**
+     * Worker: once DiPlay has music focus back, starts a track again whose start the car refused while another app
+     * held focus. Only play() again: the track keeps what it holds, and [trackStall] keeps its evidence and rebuild.
+     */
+    private fun restartRefusedStart() {
+        val restart = focusRestart ?: return
+        val track = track ?: return
+        if (!running || rebuildPending) return
+        val due = restart.due {
+            (playbackStarted && track.playState == AudioTrack.PLAYSTATE_PLAYING) to track.playbackHeadPosition
+        } ?: return
+        diagnosticStage = "track-restart"
+        underrunsAtPlaybackStart = track.underrunCount
+        clockTrim?.measureAgain()
+        runCatching { track.play() }
+        restart.played()
+        val line = MediaAudioLines.startNotAccepted(due.zeroWrites, due.number)
+        Log.w(TAG, line)
+        runCatching { report(line) }
     }
 
     private fun rebuildTrack() {

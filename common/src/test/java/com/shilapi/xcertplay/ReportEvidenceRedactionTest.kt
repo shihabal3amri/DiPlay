@@ -72,6 +72,8 @@ class ReportEvidenceRedactionTest {
                 add(rebuilt(rebuild))
             }
             add(consumingAgain(960))
+            add(startNotAccepted(151, 1))
+            add(startNotAccepted(1, 3))
             add(started(MusicVolume(3, 39, muted = false, fixed = true), 2, 14))
             add(started(null, null, 0))
         }

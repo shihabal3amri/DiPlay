@@ -463,7 +463,10 @@ class MediaTrackRebuildTest {
         assertTrue(stallLines().all { it.endsWith("rebuilding the track once") })
     }
 
-    /** A track that holds half a second and, when the car takes audio, plays 20 ms for each packet written. */
+    /**
+     * A track that holds half a second and, when the car takes audio, plays 20 ms for each packet written. A start the
+     * car refuses ([startAccepted]) leaves it PLAYING for Java but inactive, until a later play() is accepted.
+     */
     @Implements(AudioTrack::class)
     class CarTrack {
         @RealObject private lateinit var track: AudioTrack
@@ -471,6 +474,8 @@ class MediaTrackRebuildTest {
         @Volatile var written = 0L
         @Volatile var released = false
         @Volatile var playing = false
+        @Volatile var active = false
+        @Volatile var plays = 0
         val volumes = mutableListOf<Float>()
         private val index: Int by lazy { synchronized(tracks) { if (this !in tracks) tracks.add(this); tracks.indexOf(this) } }
 
@@ -486,16 +491,20 @@ class MediaTrackRebuildTest {
         @Implementation fun getPlayState() = if (playing) AudioTrack.PLAYSTATE_PLAYING else AudioTrack.PLAYSTATE_PAUSED
         @Implementation fun setPlaybackRate(rate: Int) = AudioTrack.SUCCESS
         @Implementation fun setStereoVolume(left: Float, right: Float): Int { volumes.add(left); return AudioTrack.SUCCESS }
-        @Implementation fun play() { playing = true }
+        @Implementation fun play() {
+            plays++
+            playing = true
+            if (!active) active = startAccepted(index)
+        }
         @Implementation fun pause() {
             check(!pauseFails)
-            synchronized(this) { playing = false; (this as Object).notifyAll() }
+            synchronized(this) { playing = false; active = false; (this as Object).notifyAll() }
         }
         @Implementation fun flush() { head = 0; written = 0L }
-        @Implementation fun release() { released = true; playing = false }
+        @Implementation fun release() { released = true; playing = false; active = false }
         @Implementation fun write(bytes: ByteArray, offset: Int, size: Int, mode: Int): Int = synchronized(this) {
             val position = index
-            if (playing && consumes(position)) head = minOf(written, head + PACKET_FRAMES.toLong()).toInt()
+            if (playing && active && consumes(position)) head = minOf(written, head + PACKET_FRAMES.toLong()).toInt()
             var room = CAPACITY_FRAMES - (written - head).toInt()
             if (room <= 0 && blockWhenFull && playing) {
                 onBlocked()
@@ -513,6 +522,8 @@ class MediaTrackRebuildTest {
             val tracks = CopyOnWriteArrayList<CarTrack>()
             /** Whether the car plays the track that was built at this position. */
             @Volatile var consumes: (Int) -> Boolean = { true }
+            /** Whether the car accepts a start of the track built at this position, as it does with media focus. */
+            @Volatile var startAccepted: (Int) -> Boolean = { true }
             @Volatile var blockWhenFull = false
             @Volatile var onBlocked: () -> Unit = {}
             var minBufferSize = 4096
@@ -525,6 +536,7 @@ class MediaTrackRebuildTest {
             fun reset() {
                 tracks.clear()
                 consumes = { true }
+                startAccepted = { true }
                 blockWhenFull = false
                 onBlocked = {}
                 minBufferSize = 4096
