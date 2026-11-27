@@ -2810,7 +2810,7 @@ private class AudioRenderer(
         val discarded = packetsDiscardedTotal.get()
         if (discarded != discardedAtLastTrim) {
             discardedAtLastTrim = discarded
-            trim.measureAgain()
+            trim.measureAgain(afterCut = true)
         }
         val head = track.playbackHeadPosition
         val queuedFrames = bufferProgress.queuedBytes(head) / frameBytes

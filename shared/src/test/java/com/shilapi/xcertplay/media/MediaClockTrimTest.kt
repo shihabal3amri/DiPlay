@@ -56,15 +56,18 @@ class MediaClockTrimTest {
     /**
      * Wireless CarPlay: the iPhone sends about 0.4 s of music at once, every 0.4 s by its clock give or take
      * 30 ms (#807, #976). The head unit's clock is accurate; playback starts once the target, and at least one
-     * burst, is queued.
+     * burst, is queued, or [queuedAtStart]. With [measures] the trim measures its target, as the renderer's does.
+     * A Wi-Fi hole loses [lostFrames] from the bursts due from [lossAtMs] on.
      */
-    private class BurstDrive(targetMs: Int, seed: Int = 7) {
+    private class BurstDrive(targetMs: Int, seed: Int = 7, measures: Boolean = false, queuedAtStart: Long = 0L,
+        private var lostFrames: Int = 0, private val lossAtMs: Int = 60_000) {
         val target = 48L * targetMs
-        val trim = MediaClockTrim(48_000, target)
+        val trim = MediaClockTrim(48_000, target, measuresTarget = measures)
         val random = Random(seed)
-        var queued = maxOf(target, 19_200L).toDouble()
+        var queued = maxOf(target, 19_200L, queuedAtStart).toDouble()
         val starvedSeconds = mutableListOf<Int>()
         val ratesAfterAMinute = mutableListOf<Int>()
+        val rateEachSecond = mutableListOf<Int>()
 
         fun run(seconds: Int) {
             var rate = 48_000
@@ -74,13 +77,16 @@ class MediaClockTrimTest {
             for (ms in 0 until seconds * 1000) {
                 val nowNs = ms * 1_000_000L
                 if (ms >= nextBurstMs) {
-                    queued += 19_200
+                    val lost = if (ms >= lossAtMs) minOf(lostFrames, 19_200) else 0
+                    lostFrames -= lost
+                    queued += 19_200 - lost
                     burst++
                     nextBurstMs = burst * 400 + (random.nextDouble() - 0.5) * 60
                     trim.sample(queued.toLong(), nowNs)
                     trim.rateDue(nowNs)?.let { rate = it }
                     if (ms >= 60_000) ratesAfterAMinute += rate
                 }
+                if (ms % 1000 == 0) rateEachSecond += rate
                 played += rate / 1000.0
                 while (played >= 1024) {
                     played -= 1024
@@ -153,6 +159,155 @@ class MediaClockTrimTest {
         }
 
         companion object { const val PACKET_FRAMES = 355 }
+    }
+
+    /**
+     * Wired CarPlay on the QUAD-CORE T507 in #1177 with the 1000 ms music buffer. Playback starts once the start level,
+     * 48 000 frames, is in the 1200 ms track, and the iPhone then sends a 355-frame packet every 7.4 ms as it plays
+     * them. Each of [stalls] holds the iPhone's music back, as opening or closing the 360° camera did: nothing arrives
+     * for [Stall.forMs], music then arrives as it is played but that much late for [Stall.lateForMs], and then the
+     * late music arrives at once. The head unit's clock is accurate.
+     */
+    private class WiredStartDrive(private val stalls: List<Stall>, private val halChunkFrames: Int = 256) {
+        class Stall(val atMs: Int, val forMs: Int, val lateForMs: Int)
+
+        val trim = MediaClockTrim(48_000, START_FRAMES, measuresTarget = true)
+        private val trackCapacity = 57_600.0
+        private var trackQueued = START_FRAMES.toDouble()
+        private val queue = ArrayDeque<Pair<Int, Long>>() // RTP sample, arrival
+        private var newestSample = 0
+        private var sentPackets = 0
+        var dropped = 0
+        val underrunSeconds = mutableListOf<Int>()
+        val levelEachSecond = mutableListOf<Long>()
+        val rateEachSecond = mutableListOf<Int>()
+
+        /** How far into the iPhone's music, in ms after playback started, the audio that has arrived by [ms] goes. */
+        private fun arrivedUpToMs(ms: Int): Double {
+            val stall = stalls.firstOrNull { ms >= it.atMs && ms < it.atMs + it.forMs + it.lateForMs } ?: return ms.toDouble()
+            return if (ms < stall.atMs + stall.forMs) stall.atMs.toDouble() else (ms - stall.forMs).toDouble()
+        }
+
+        fun run(seconds: Int) {
+            var rate = trim.rate
+            var played = 0.0
+            var lastWriteNs = 0L
+            for (ms in 0 until seconds * 1000) {
+                val nowNs = ms * 1_000_000L
+                val arrivedUpTo = arrivedUpToMs(ms)
+                while ((sentPackets + 1) * PACKET_FRAMES / 48.0 <= arrivedUpTo) {
+                    sentPackets++
+                    newestSample += PACKET_FRAMES
+                    if (queue.size < 192) queue.addLast(newestSample to nowNs) else dropped++
+                }
+                while (queue.isNotEmpty() && trackQueued + PACKET_FRAMES <= trackCapacity) {
+                    queue.removeFirst()
+                    trackQueued += PACKET_FRAMES
+                    // What AudioRenderer.trimClock reads after each write.
+                    val waiting = queue.firstOrNull()?.let { (newestSample - it.first).toLong() } ?: 0L
+                    val arrivedFrameNs = queue.drop(1).filter { it.second > lastWriteNs }
+                        .sumOf { PACKET_FRAMES.toDouble() * (nowNs - it.second) }
+                    trim.sample(trackQueued.toLong(), nowNs, waiting, arrivedFrameNs = arrivedFrameNs)
+                    lastWriteNs = nowNs
+                    trim.rateDue(nowNs)?.let { rate = it }
+                }
+                if (ms % 1000 == 0) {
+                    levelEachSecond += trackQueued.toLong() + queue.size * PACKET_FRAMES.toLong()
+                    rateEachSecond += rate
+                }
+                played += rate / 1000.0
+                while (played >= halChunkFrames) {
+                    played -= halChunkFrames
+                    if (trackQueued < halChunkFrames) underrunSeconds += ms / 1000
+                    trackQueued = (trackQueued - halChunkFrames).coerceAtLeast(0.0)
+                }
+            }
+        }
+
+        companion object {
+            const val PACKET_FRAMES = 355
+            const val START_FRAMES = 48_000L
+        }
+    }
+
+    @Test fun aStallAsWiredMusicStartsDoesNotLowerTheLevelTheTrimHolds() {
+        // 11-17 10:41:47 in #1177: the 360° camera opened as music started, and the music that arrived over the next
+        // seconds was late. The target measured there was about 0.6 s of the 1000 ms buffer. Once the late music came,
+        // the trim played 1.5 % fast for 50 s and ran the level down to 0.4 s, so music cut out when closing the camera
+        // at 10:43:25 held it back by about half a second.
+        for (stallAtMs in listOf(500, 1000, 1500)) for (stallMs in listOf(300, 600)) for (chunk in listOf(256, 13_440)) {
+            MediaClockTrim.learnedTrim = 0.0
+            val case = "a $stallMs ms stall $stallAtMs ms after play(), $chunk-frame chunks"
+            val drive = WiredStartDrive(listOf(WiredStartDrive.Stall(stallAtMs, stallMs, lateForMs = 5_000),
+                WiredStartDrive.Stall(98_000, 500, lateForMs = 0)), chunk)
+            drive.run(180)
+            assertEquals("$case: target", 48_000.0, drive.trim.targetFrames.toDouble(), 2_400.0)
+            assertEquals("$case: seconds at +1.5 %", 0, drive.rateEachSecond.count { it >= 48_720 })
+            assertEquals("$case: music ran dry at", emptyList<Int>(), drive.underrunSeconds.distinct())
+            assertEquals("$case: packets dropped", 0, drive.dropped)
+        }
+    }
+
+    @Test fun onlyALagGuardCutLetsTheTargetFallBelowTheStartThreshold() {
+        // Each write leaves 24 000 frames, half the 1000 ms start threshold, and 4 800 drain before the next.
+        fun targetAfter(measureAgain: MediaClockTrim.() -> Unit): Long {
+            val trim = MediaClockTrim(48_000, 48_000, measuresTarget = true).apply(measureAgain)
+            for (step in 0..40) {
+                val nowNs = step * 100_000_000L
+                trim.sample(24_000, nowNs)
+                trim.rateDue(nowNs)
+            }
+            return trim.targetFrames
+        }
+        // After play() that is late music: the target is the start threshold, less the drain between writes.
+        assertEquals(45_600L, targetAfter { measureAgain() })
+        // The lag guard cut queued music, so the level left is what the link holds now.
+        assertEquals(21_600L, targetAfter { measureAgain(afterCut = true) })
+    }
+
+    @Test fun overWiFiAMeasuredLevelBelowTheStartThresholdIsKept() {
+        // Playback started near the end of a burst, so the drained mean of the 0.4 s bursts sits below the 300 ms start
+        // threshold, but each burst leaves more than that queued (#807, #1068). That is the level the link holds:
+        // steering above it would play the music slow.
+        for (seed in 1..3) {
+            MediaClockTrim.learnedTrim = 0.0
+            val drive = BurstDrive(300, seed, measures = true, queuedAtStart = 22_000)
+            drive.run(300)
+            assertTrue("seed $seed target ${drive.trim.targetFrames}", drive.trim.targetFrames < 13_000)
+            assertEquals("seed $seed", 48_000.0, drive.ratesAfterAMinute.average(), 20.0)
+            assertEquals("seed $seed starved at", emptyList<Int>(), drive.starvedSeconds)
+        }
+    }
+
+    @Test fun atItsBoundTheTrimTeachesTheNextStreamNothing() {
+        val trim = MediaClockTrim(48_000, 14_400)
+        // Nothing queued for a minute: the trim plays as slowly as it may, and more integral could not slow it more.
+        for (second in 0..60) {
+            val nowNs = second * 1_000_000_000L
+            trim.sample(0, nowNs)
+            trim.rateDue(nowNs)
+        }
+        assertEquals(47_280, trim.rate)
+        assertEquals(0.0, MediaClockTrim.learnedTrim, 1e-9)
+        val next = MediaClockTrim(48_000, 14_400)
+        next.sample(14_400, 0)
+        assertNull("the next stream starts at the iPhone's rate", next.rateDue(0))
+    }
+
+    @Test fun afterAWiFiHoleTheTrimLeavesTheFloorSoonerAndOvershootsLess() {
+        // #1260's Geely Monjaro: a 1000 ms wireless buffer, an exact clock, and a Wi-Fi hole that lost 42 AAC packets.
+        // The level fell to a quarter and the trim played 1.5 % slow. Integrating there took the integral to -1.5 %, so
+        // the trim held 47 280 Hz for a minute after the level was back and then overshot to about 48 310 Hz. Here
+        // that took 40-44 s at 47 280 Hz and up to 48 298 Hz.
+        for (seed in 1..3) {
+            MediaClockTrim.learnedTrim = 0.0
+            val drive = BurstDrive(1000, seed, measures = true, lostFrames = 42 * 1024)
+            drive.run(400)
+            val afterTheHole = drive.rateEachSecond.drop(60)
+            assertTrue("seed $seed: ${afterTheHole.count { it == 47_280 }} s at 47 280 Hz", afterTheHole.count { it == 47_280 } < 30)
+            assertTrue("seed $seed: up to ${afterTheHole.max()} Hz", afterTheHole.max() < 48_250)
+            assertEquals("seed $seed", 48_000.0, afterTheHole.takeLast(30).average(), 30.0)
+        }
     }
 
     @Test fun measuringAgainAtEveryDropHeldTheSlowRateAndTheFullQueue() {
