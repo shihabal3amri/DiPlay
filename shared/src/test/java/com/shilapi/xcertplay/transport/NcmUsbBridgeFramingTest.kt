@@ -64,13 +64,38 @@ class NcmUsbBridgeFramingTest {
     }
 
     @Test fun nonzeroGarbageAfterAlignedBlockIsSkippedAndTheNextBlockRecovered() {
-        NcmFramingReplay.chunks.add(unpadded(alignedFrame, 1) + byteArrayOf(0x55))
-        NcmFramingReplay.chunks.add(Ntb16Codec.build(smallFrame, 2))
+        val chunks = listOf(unpadded(alignedFrame, 1) + byteArrayOf(0x55), Ntb16Codec.build(smallFrame, 2))
+        NcmFramingReplay.chunks.addAll(chunks)
         val diagnostics = withBridge { ncm ->
             assertArrayEquals(alignedFrame, ncm.recv(50))
             assertArrayEquals(smallFrame, ncm.recv(50))
         }
-        assertEquals(listOf("NCM resynchronized after Invalid NTB16 short-packet pad; skipped=1 resyncs=1"), diagnostics)
+        assertEquals(
+            listOf(
+                "NCM resynchronized after Invalid NTB16 short-packet pad; skipped=1 resyncs=1",
+                NcmUsbBridge.resyncTotals(resyncs = 1, skippedBytes = 1, inBytes = chunks.sumOf { it.size }.toLong()),
+            ),
+            diagnostics,
+        )
+    }
+
+    @Test fun closingReportsEveryResyncWhereThePerResyncLinesStopAtFive() {
+        // #1378: the per-resync lines show the first five and every 50th, too few to compare two sessions.
+        val junk = ByteArray(5) { 0x55 }
+        val chunk = (1..7).fold(ByteArray(0)) { bytes, sequence -> bytes + junk + Ntb16Codec.build(smallFrame, sequence) }
+        NcmFramingReplay.chunks.add(chunk)
+        val diagnostics = withBridge { ncm -> repeat(7) { assertArrayEquals(smallFrame, ncm.recv(50)) } }
+        val header = "NCM resynchronized after NCM read buffer does not begin with an NTB16 header"
+        assertEquals(
+            (1..5).map { "$header; skipped=5 resyncs=$it" } +
+                "NCM bulk-in resync totals resyncs=7 skippedBytes=35 inBytes=${chunk.size}",
+            diagnostics,
+        )
+    }
+
+    @Test fun closingReportsTotalsForABridgeWithNoResync() {
+        val diagnostics = withBridge { }
+        assertEquals(listOf("NCM bulk-in resync totals resyncs=0 skippedBytes=0 inBytes=0"), diagnostics)
     }
 
     @Test fun nextHeaderWithOnlyItsFirstSignatureByteCorrectIsDropped() {
@@ -103,12 +128,17 @@ class NcmUsbBridgeFramingTest {
         val frame64 = ByteArray(484 - 448) { (it * 7).toByte() } // 28 + 36 = 64 bytes
         val block = Ntb16Codec.build(frame64, 1)
         assertEquals(64, block.size)
-        NcmFramingReplay.chunks.add(block + byteArrayOf(0) + Ntb16Codec.build(smallFrame, 2))
+        val chunk = block + byteArrayOf(0) + Ntb16Codec.build(smallFrame, 2)
+        NcmFramingReplay.chunks.add(chunk)
         val diagnostics = withBridge(packetSize = 64) { ncm ->
             assertArrayEquals(frame64, ncm.recv(50))
             assertArrayEquals(smallFrame, ncm.recv(50))
         }
-        assertTrue("A 64-byte link pad is expected, not a resync: $diagnostics", diagnostics.isEmpty())
+        assertEquals(
+            "A 64-byte link pad is expected, not a resync",
+            listOf(NcmUsbBridge.resyncTotals(resyncs = 0, skippedBytes = 0, inBytes = chunk.size.toLong())),
+            diagnostics,
+        )
     }
 
     @Test fun aBlockCutShortInTheMiddleOfAStreamLosesOnlyThatBlock() {

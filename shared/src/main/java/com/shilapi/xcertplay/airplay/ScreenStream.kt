@@ -2,6 +2,7 @@ package com.shilapi.xcertplay.airplay
 
 import android.util.Log
 import java.io.Closeable
+import java.io.IOException
 import java.io.InputStream
 import java.net.InetAddress
 import java.net.InetSocketAddress
@@ -44,6 +45,13 @@ class ScreenStream(
     private var thread: Thread? = null
     @Volatile private var listener: Listener = object : Listener {}
 
+    /**
+     * Why the stream ended, for the diagnostic report: one of the [StreamEndDiagnostics] screen
+     * reasons. Set just before [Listener.onClosed]; null while the stream runs and when DiPlay closed it.
+     */
+    @Volatile var endReason: String? = null
+        private set
+
     fun listen(listener: Listener): Int {
         this.listener = listener
         val bound = ServerSocket()
@@ -67,33 +75,61 @@ class ScreenStream(
             socket = accepted
             run(accepted)
         } catch (error: Exception) {
-            if (!closed.get()) listener.onClosed(error)
+            if (!closed.get()) {
+                endReason = StreamEndDiagnostics.screenAcceptFailed(error)
+                listener.onClosed(error)
+            }
         }
     }
 
     private fun run(sock: Socket) {
         var failure: Throwable? = null
+        var reason = StreamEndDiagnostics.screenPeerEof()
         val stats = StreamReceiveStats("video", onDiagnostic)
         try {
             val input = sock.getInputStream()
             while (!closed.get()) {
                 stats.reading()
-                val header = readFully(input, HEADER_LEN) ?: break
+                val header = ByteArray(HEADER_LEN)
+                val headerBytes = readFully(input, header)
+                if (headerBytes < HEADER_LEN) {
+                    if (headerBytes > 0) reason = StreamEndDiagnostics.screenPeerEofInside("header", headerBytes, HEADER_LEN)
+                    break
+                }
                 val bodySize = readU32Le(header, 0)
-                if (bodySize > MAX_BODY) break
-                val body = readFully(input, bodySize) ?: break
+                // A size of 2 GiB or more reads as negative.
+                if (bodySize < 0 || bodySize > MAX_BODY) {
+                    reason = StreamEndDiagnostics.screenBodySizeOutOfRange(bodySize, MAX_BODY)
+                    break
+                }
+                val body = ByteArray(bodySize)
+                val bodyBytes = readFully(input, body)
+                if (bodyBytes < bodySize) {
+                    reason = StreamEndDiagnostics.screenPeerEofInside("body", bodyBytes, bodySize)
+                    break
+                }
                 val arrivalNanos = System.nanoTime()
                 stats.received(HEADER_LEN + bodySize)
                 onMessage(header, body, stats, arrivalNanos)
                 stats.processed()
             }
+        } catch (error: FrameDecryptException) {
+            failure = error.error
+            reason = StreamEndDiagnostics.screenDecryptFailed(error.frame, error.bodySize, error.error)
+        } catch (error: IOException) {
+            failure = error
+            reason = StreamEndDiagnostics.screenSocketError(error)
         } catch (error: Exception) {
             failure = error
+            reason = StreamEndDiagnostics.screenReceiveError(error)
         } finally {
             stats.flush(ended = true)
             if (socket === sock) socket = null
             safeClose(sock)
-            if (!closed.get()) listener.onClosed(failure)
+            if (!closed.get()) {
+                endReason = reason
+                listener.onClosed(failure)
+            }
         }
     }
 
@@ -102,7 +138,12 @@ class ScreenStream(
             OP_VIDEO_FRAME -> {
                 if (body.size < ScreenCodec.TAG_SIZE) return
                 val start = System.nanoTime()
-                val payload = ScreenCodec.decryptFrame(key, frameCounter.get(), header, body)
+                val counter = frameCounter.get()
+                val payload = try {
+                    ScreenCodec.decryptFrame(key, counter, header, body)
+                } catch (error: Exception) {
+                    throw FrameDecryptException(counter, body.size, error)
+                }
                 stats.decrypted(System.nanoTime() - start, body.size)
                 frameCounter.incrementAndGet()
                 if (firstFrameLogged.compareAndSet(false, true)) {
@@ -123,17 +164,19 @@ class ScreenStream(
         }
     }
 
-    private fun readFully(input: InputStream, length: Int): ByteArray? {
-        if (length < 0) return null
-        val output = ByteArray(length)
+    /** Fills [output]; returns how many bytes arrived, fewer than its size when the peer closed the stream. */
+    private fun readFully(input: InputStream, output: ByteArray): Int {
         var offset = 0
-        while (offset < length) {
-            val read = input.read(output, offset, length - offset)
-            if (read < 0) return null
+        while (offset < output.size) {
+            val read = input.read(output, offset, output.size - offset)
+            if (read < 0) break
             offset += read
         }
-        return output
+        return offset
     }
+
+    /** A sealed frame that did not open, with what the report may show about it: no contents. */
+    private class FrameDecryptException(val frame: Long, val bodySize: Int, val error: Exception) : Exception(error)
 
     private companion object {
         const val TAG = "xcertplay-usb"

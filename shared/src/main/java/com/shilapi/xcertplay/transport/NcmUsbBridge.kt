@@ -56,7 +56,10 @@ class NcmUsbBridge internal constructor(
     // A full-speed link uses 64-byte packets; the short-packet pad follows the real packet size.
     private val usbPacketSize = inEndpoint.maxPacketSize.takeIf { it > 0 } ?: USB_PACKET_SIZE
     private val resyncTimes = ArrayDeque<Long>()
-    private var resyncCount = 0
+    // The reader thread writes these totals; close() reads them for the session's report line.
+    @Volatile private var resyncCount = 0
+    @Volatile private var resyncSkippedTotal = 0L
+    @Volatile private var bulkInBytes = 0L
     private var resyncReason: String? = null
     private var resyncSkipped = 0
     private val readBuffer = ByteArray(READ_CHUNK_BYTES)
@@ -209,6 +212,7 @@ class NcmUsbBridge internal constructor(
             runCatching { requestToClose?.close() }
             val answered = directAdvertisements.get()
             if (answered > 0) runCatching { onDiagnostic("NCM directly answered USB neighbor solicitations=$answered") }
+            runCatching { onDiagnostic(resyncTotals(resyncCount, resyncSkippedTotal, bulkInBytes)) }
         }
     }
 
@@ -298,6 +302,7 @@ class NcmUsbBridge internal constructor(
         val skipped = next ?: (bufferedSize - (NTH16_LENGTH - 1)).coerceAtLeast(0)
         discard(skipped)
         resyncSkipped += skipped
+        resyncSkippedTotal += skipped
         return next != null
     }
 
@@ -404,6 +409,7 @@ class NcmUsbBridge internal constructor(
             readQueued = false
             val transferred = directReadBuffer.position()
             if (transferred <= 0) return null
+            bulkInBytes += transferred
             directReadBuffer.flip()
             directReadBuffer.get(readBuffer, 0, transferred)
             return transferred
@@ -455,6 +461,14 @@ class NcmUsbBridge internal constructor(
         private const val MAX_QUEUED_FRAMES = 256
         private const val MAX_QUEUED_BYTES = 1 shl 20
         private const val NANOS_PER_MILLISECOND = 1_000_000L
+
+        /**
+         * The line [close] writes once per bridge, so one wired connection: every bulk-IN resync,
+         * the bytes they skipped and all bytes read, where the per-resync lines show only the first
+         * [LOGGED_RESYNCS] and every 50th (#1378, #1338). A bridge with no resync still writes it.
+         */
+        fun resyncTotals(resyncs: Int, skippedBytes: Long, inBytes: Long): String =
+            "NCM bulk-in resync totals resyncs=$resyncs skippedBytes=$skippedBytes inBytes=$inBytes"
 
         /**
          * Retries a USB setup call that a vendor kernel can lose to its own cdc_ncm driver, which may

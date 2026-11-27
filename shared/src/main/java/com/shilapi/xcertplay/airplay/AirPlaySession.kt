@@ -368,6 +368,8 @@ class AirPlaySession(
             true
         } catch (error: Exception) {
             Log.w(TAG, "airplay event command failed type=${command["type"]}", error)
+            // A write that fails because the session is already closing is a consequence, not a reason.
+            if (!closed.get()) reportLog(StreamEndDiagnostics.eventCommandFailed(command["type"], error))
             close()
             false
         }
@@ -667,7 +669,11 @@ class AirPlaySession(
 
     private fun debugLog(message: String, uiVisible: Boolean = true) {
         Log.i(TAG, message)
-        if (!uiVisible) return
+        if (uiVisible) reportLog(message)
+    }
+
+    /** The report half of [debugLog], for a line whose logcat entry already carries the stack trace. */
+    private fun reportLog(message: String) {
         try {
             listener.onDebugLog(message)
         } catch (error: Exception) {
@@ -949,6 +955,7 @@ class AirPlaySession(
     }
 
     private fun runEventRead(socket: Socket) {
+        var endReason: String? = null
         try {
             val input = BufferedInputStream(socket.getInputStream())
             val output = BufferedOutputStream(socket.getOutputStream())
@@ -957,13 +964,18 @@ class AirPlaySession(
             val buffer = ByteArray(READ_CHUNK_BYTES)
             while (!closed.get()) {
                 val count = input.read(buffer)
-                if (count < 0) break
+                if (count < 0) {
+                    endReason = "peer EOF"
+                    break
+                }
                 val cipher = eventCipher ?: break
                 encrypted += buffer.copyOf(count)
                 val decrypted = try {
                     cipher.decrypt(encrypted)
                 } catch (error: Exception) {
                     Log.e(TAG, "airplay event decrypt failed encrypted=${encrypted.size}", error)
+                    reportLog(StreamEndDiagnostics.eventDecryptFailed(encrypted.size, error))
+                    endReason = "decrypt failed"
                     break
                 }
                 encrypted = decrypted.rest
@@ -986,9 +998,13 @@ class AirPlaySession(
                 }
             }
         } catch (error: Exception) {
-            if (!closed.get()) Log.e(TAG, "airplay event read failed", error)
+            if (!closed.get()) {
+                Log.e(TAG, "airplay event read failed", error)
+                reportLog(StreamEndDiagnostics.eventReadFailed(error))
+                endReason = "read failed"
+            }
         } finally {
-            debugLog("airplay event connection closed")
+            debugLog(StreamEndDiagnostics.eventConnectionClosed(endReason ?: "session closed"))
             videoPlaybackAvailability.setEventReady(false)
             if (eventSocket === socket) eventSocket = null
             eventCipher = null

@@ -40,7 +40,9 @@ class Android7UsbReadTest {
         } finally { ncm.close() }
         assertEquals(listOf(32_768, 16_384, 16_384), UsbQueueReplay.sizes)
         assertEquals(2, UsbQueueReplay.untimedWaits)
-        assertTrue(diagnostics.single().contains("api=25"))
+        assertTrue(diagnostics.first().contains("api=25"))
+        assertEquals(NcmUsbBridge.resyncTotals(0, 0, 2L * UsbReadQueueCompatibilityTest.payload.size), diagnostics.last())
+        assertEquals(2, diagnostics.size)
     }
 
     private fun readChunk(ncm: NcmUsbBridge): Int? = try {

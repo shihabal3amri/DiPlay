@@ -189,10 +189,11 @@ class CarPlayMediaEngine(
         val port = screen.listen(
             object : ScreenStream.Listener by currentScreenListener(type, frameSink, isCurrent = { streams[streamKey] === screen }) {
                 override fun onClosed(cause: Throwable?) {
-                    Log.w(
-                        TAG,
-                        "screen stream ended type=$type reason=${cause?.message ?: "peer EOF"}",
-                    )
+                    // logDebug writes logcat too, so `adb logcat -s xcertplay-usb` still shows the line.
+                    val reason = screen.endReason
+                        ?: cause?.let(StreamEndDiagnostics::describe)
+                        ?: StreamEndDiagnostics.screenPeerEof()
+                    session.logDebug(StreamEndDiagnostics.screenStreamEnded(type, reason))
                     if (streams.remove(streamKey, screen)) {
                         sink.onScreenStreamActive(type, false)
                     }

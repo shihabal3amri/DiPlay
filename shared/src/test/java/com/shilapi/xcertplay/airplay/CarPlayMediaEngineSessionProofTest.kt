@@ -7,6 +7,7 @@ import java.net.ServerSocket
 import java.net.Socket
 import java.nio.ByteBuffer
 import java.security.SecureRandom
+import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit
@@ -172,6 +173,35 @@ class CarPlayMediaEngineSessionProofTest {
         }
     }
 
+    @Test fun theReportSaysWhyTheScreenStreamEndedBeforeTheSessionCloses() {
+        // #1378: only logcat had this line, so a report could not tell the iPhone closing the video
+        // connection from DiPlay failing to read it.
+        val cases = listOf(
+            ByteArray(128) { 0xff.toByte() } to
+                "screen stream ended type=110 reason=body size out of range bodySize=4294967295 max=8388608",
+            sealedFrame(ByteArray(32).also(SecureRandom()::nextBytes), 0, NAL) to
+                "screen stream ended type=110 reason=frame decrypt failed frame=0 bodySize=22 error=",
+        )
+        for ((message, expected) in cases) {
+            val logs = CopyOnWriteArrayList<String>()
+            val engine = CarPlayMediaEngine(object : MediaSink {})
+            val session = session(connectedSocket(), logs)
+            try {
+                screenPeer(engine, session, type = 110) { _, send ->
+                    send(message)
+                    val deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(10)
+                    while (!session.isClosed && System.nanoTime() < deadline) Thread.sleep(5)
+                }
+                val ended = logs.filter { it.startsWith("screen stream ended ") }
+                assertEquals(logs.toString(), 1, ended.size)
+                assertTrue(ended.single(), ended.single().startsWith(expected))
+            } finally {
+                engine.onSessionClosed(session)
+                session.close()
+            }
+        }
+    }
+
     @Test fun clusterVideoDoesNotCount() {
         val frames = LinkedBlockingQueue<List<Byte>>()
         val engine = CarPlayMediaEngine(frameSink(frames))
@@ -285,7 +315,7 @@ class CarPlayMediaEngineSessionProofTest {
         Socket(server.inetAddress, server.localPort)
     }
 
-    private fun session(socket: Socket = Socket()): AirPlaySession {
+    private fun session(socket: Socket = Socket(), logs: MutableList<String>? = null): AirPlaySession {
         val session = AirPlaySession(
             socket = socket,
             config = AirPlayConfig(
@@ -293,7 +323,10 @@ class CarPlayMediaEngineSessionProofTest {
                 sourceVersion = "1.0", main = AirPlayDisplayConfig(widthPixels = 800, heightPixels = 480),
             ),
             identity = AirPlayIdentity.generate(), pairings = PairingStore(), mfi = null,
-            listener = object : AirPlaySessionListener {}, media = object : AirPlayMediaHandler {},
+            listener = object : AirPlaySessionListener {
+                override fun onDebugLog(message: String) { logs?.add(message) }
+            },
+            media = object : AirPlayMediaHandler {},
         )
         val secret = ByteArray(32).also(SecureRandom()::nextBytes)
         session.pairVerify.javaClass.getDeclaredField("sharedSecret").apply { isAccessible = true }
