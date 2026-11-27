@@ -1,5 +1,7 @@
 package com.shilapi.xcertplay.media
 
+import android.media.AudioManager
+
 /**
  * Notices a music track that says it plays while the car takes no audio from it (#1229).
  *
@@ -92,6 +94,77 @@ internal class MediaTrackStall {
     }
 }
 
+/**
+ * Starts a music track again whose start the car did not accept because another app held media focus (#1229).
+ *
+ * On a DiLink 3.0 (Android 9) a music track started while the car's Bluetooth music or its telephony (Siri over
+ * Bluetooth) held focus was never activated: AudioFlinger logged no `AT::add` for it, while Java said PLAYING, the
+ * head stayed at 0 and every write returned 0. Java's play() runs the native start again, and a start that was
+ * refused leaves the native track inactive, so the same track can be started again once DiPlay has focus back.
+ *
+ * Each focus gain allows one new start, for a track that plays with its head at 0 and has refused a write since it
+ * was last started. A gain waits for that write, because the buffer may still be filling. A later focus change
+ * replaces the gain, and a head that leaves 0 uses it up. A stream is started again at most [MAX_RESTARTS] times;
+ * the rebuild in [MediaTrackStall] keeps its own budget.
+ */
+internal class MediaFocusRestart {
+    data class Restart(val zeroWrites: Int, val number: Int)
+
+    // Focus callbacks, any thread: the number of changes, shifted left once, and whether the last one was a gain.
+    @Volatile private var focus = 0L
+
+    // Audio worker only.
+    private var seenFocus = 0L
+    private var armed = false
+    private var refusedWrites = 0
+    private var restarts = 0
+
+    /** Any thread: DiPlay's media audio focus changed. */
+    @Synchronized
+    fun focusChanged(change: Int) {
+        val changes = (focus shr 1) + 1
+        focus = (changes shl 1) or if (change == AudioManager.AUDIOFOCUS_GAIN) 1L else 0L
+    }
+
+    /** Worker: the track was told to play. Only writes it refuses after this count. */
+    fun played() {
+        refusedWrites = 0
+    }
+
+    /** Worker: the playing track refused a write. */
+    fun refused() {
+        refusedWrites++
+    }
+
+    /**
+     * Worker: whether to start the track again now. [track] returns whether it plays and its head; it is read only
+     * while a gain waits.
+     */
+    fun due(track: () -> Pair<Boolean, Int>): Restart? {
+        val current = focus
+        if (current != seenFocus) {
+            seenFocus = current
+            armed = current and 1L == 1L && restarts < MAX_RESTARTS
+        }
+        if (!armed) return null
+        val (playing, head) = track()
+        if (head != 0) {
+            // The car takes audio from this track: its start was accepted.
+            armed = false
+            return null
+        }
+        if (!playing || refusedWrites == 0) return null
+        armed = false
+        val zeroWrites = refusedWrites
+        refusedWrites = 0
+        return Restart(zeroWrites, ++restarts)
+    }
+
+    companion object {
+        const val MAX_RESTARTS = 3
+    }
+}
+
 /** Android's music volume when a music stream starts. A head unit may set its real volume outside Android. */
 class MusicVolume(val value: Int, val max: Int, val muted: Boolean, val fixed: Boolean)
 
@@ -111,6 +184,9 @@ object MediaAudioLines {
     fun rebuilt(recreated: Boolean) = "Audio: media track rebuilt recreated=$recreated"
 
     fun consumingAgain(headFrames: Long) = "Audio: car consumes CarPlay audio after the rebuild head=$headFrames"
+
+    fun startNotAccepted(zeroWrites: Int, restart: Int) = "Audio: media track start not accepted; focus held elsewhere; " +
+        "starting it again on focus gain (head=0, zeroWrites=$zeroWrites, restart=$restart/${MediaFocusRestart.MAX_RESTARTS})"
 
     /** [streamOverride] is the legacy stream music was moved to, whose volume may be another one; 0 for none. */
     fun started(volume: MusicVolume?, routeType: Int?, streamOverride: Int) = "Audio: media start " +
