@@ -30,7 +30,10 @@ class NcmUsbBridgeWriteTimeoutTest {
         val diagnostics = withBridge { ncm -> repeat(4) { ncm.send(frame, 2_000) } }
         val short = NcmUsbBridge.NOT_READY_WRITE_TIMEOUT_MILLIS
         assertEquals(listOf(short, short, short, 2_000), NcmWriteReplay.timeouts)
-        assertEquals(listOf("NCM bulk-out ready after 2 dropped frames"), diagnostics)
+        assertEquals(
+            listOf("NCM bulk-out ready after 2 dropped frames", NcmUsbBridge.resyncTotals(0, 0, 0)),
+            diagnostics,
+        )
     }
 
     @Test fun theLinkOpensWithTheFirstFrameThePhoneTakes() {

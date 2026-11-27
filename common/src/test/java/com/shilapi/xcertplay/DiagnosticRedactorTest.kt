@@ -7,7 +7,12 @@ import com.shilapi.xcertplay.orchestration.ConnectionDiagnosticLines
 import com.shilapi.xcertplay.iap2.message.Iap2ControlMessages
 import com.shilapi.xcertplay.iap2.trace.Iap2FrameFormatter
 import com.shilapi.xcertplay.iap2.trace.Iap2TraceDirection
+import com.shilapi.xcertplay.airplay.StreamEndDiagnostics
+import com.shilapi.xcertplay.transport.NcmUsbBridge
+import java.io.IOException
+import java.net.SocketException
 import java.nio.file.Files
+import javax.crypto.AEADBadTagException
 
 class DiagnosticRedactorTest {
     @Test fun additionalTroubleshootingMetadataSurvivesSavedReportWithoutPayloads() {
@@ -286,5 +291,68 @@ class DiagnosticRedactorTest {
         assertFalse(redacted, redacted.contains("Jane's iPhone"))
         assertFalse(redacted, redacted.contains("张三的 iPhone"))
         assertTrue(redacted, redacted.contains("connected=[redacted]"))
+    }
+
+    // #1378: the lines that say why a screen stream or the event channel ended, and the NCM totals,
+    // as the code writes them. A "body=" field or a field ending in "name" would drop a whole line.
+    @Test fun streamEndReasonsSurviveTheReportWithoutContents() {
+        val reset = SocketException("Connection reset")
+        val lines = listOf(
+            StreamEndDiagnostics.screenStreamEnded(110, StreamEndDiagnostics.screenPeerEof()),
+            StreamEndDiagnostics.screenStreamEnded(110, StreamEndDiagnostics.screenPeerEofInside("body", 20, 64)),
+            StreamEndDiagnostics.screenStreamEnded(110, StreamEndDiagnostics.screenBodySizeOutOfRange(-1, 8 shl 20)),
+            StreamEndDiagnostics.screenStreamEnded(
+                110,
+                StreamEndDiagnostics.screenDecryptFailed(812, 52_344, AEADBadTagException("Tag mismatch 00112233445566778899aabbccddeeff")),
+            ),
+            StreamEndDiagnostics.screenStreamEnded(111, StreamEndDiagnostics.screenSocketError(reset)),
+            StreamEndDiagnostics.screenStreamEnded(110, StreamEndDiagnostics.screenReceiveError(IllegalStateException("decoder gone"))),
+            StreamEndDiagnostics.eventDecryptFailed(1_234, AEADBadTagException("Tag mismatch")),
+            StreamEndDiagnostics.eventReadFailed(reset),
+            StreamEndDiagnostics.eventCommandFailed("forceKeyFrame", SocketException("Broken pipe")),
+            StreamEndDiagnostics.eventConnectionClosed("peer EOF"),
+            "CONNECTION_DIAGNOSTIC attempt=2 run=1 phase=CONTROL " + NcmUsbBridge.resyncTotals(150, 31_451, 98_765_432),
+        )
+        for (line in lines) assertEquals(line, DiagnosticRedactor.redact(line))
+        assertEquals(
+            listOf(
+                "screen stream ended type=110 reason=peer EOF",
+                "screen stream ended type=110 reason=peer EOF in body after 20 of 64 bytes",
+                "screen stream ended type=110 reason=body size out of range bodySize=4294967295 max=8388608",
+                // The class only: an AEAD message never reaches the report.
+                "screen stream ended type=110 reason=frame decrypt failed frame=812 bodySize=52344 error=AEADBadTagException",
+                "screen stream ended type=111 reason=socket error SocketException: Connection reset",
+                "screen stream ended type=110 reason=receive error IllegalStateException: decoder gone",
+                "airplay event decrypt failed encrypted=1234 error=AEADBadTagException",
+                "airplay event read failed error=SocketException: Connection reset",
+                "airplay event command failed type=forceKeyFrame error=SocketException: Broken pipe",
+                "airplay event connection closed reason=peer EOF",
+                "CONNECTION_DIAGNOSTIC attempt=2 run=1 phase=CONTROL NCM bulk-in resync totals resyncs=150 skippedBytes=31451 inBytes=98765432",
+            ),
+            lines,
+        )
+    }
+
+    @Test fun addressesInASocketErrorAreRedacted() {
+        val error = SocketException("failed to connect to /fe80::1c2b:3d4e:5f60:7182%ncm0 (port 7000) from /192.168.49.1 (port 50000)")
+        val redacted = DiagnosticRedactor.redact(StreamEndDiagnostics.screenStreamEnded(110, StreamEndDiagnostics.screenSocketError(error)))!!
+        assertTrue(redacted, redacted.startsWith("screen stream ended type=110 reason=socket error SocketException: failed to connect to /[ip]"))
+        assertFalse(redacted, redacted.contains("fe80"))
+        assertFalse(redacted, redacted.contains("192.168.49.1"))
+    }
+
+    @Test fun aMultilineOrLongErrorStaysOneBoundedLineInTheReport() {
+        // A line break would make the redactor drop the line, and with it the reason.
+        val error = IOException("first\r\nsecond\t" + "x".repeat(1_000))
+        val line = StreamEndDiagnostics.eventReadFailed(error)
+        assertEquals(line, DiagnosticRedactor.redact(line))
+        assertTrue(line, line.startsWith("airplay event read failed error=IOException: first second x"))
+        assertEquals(StreamEndDiagnostics.MAX_MESSAGE_CHARS, line.substringAfter("IOException: ").length)
+    }
+
+    @Test fun anErrorMessageTheRedactorRejectsStillDropsTheLine() {
+        assertNull(DiagnosticRedactor.redact(StreamEndDiagnostics.eventReadFailed(IOException("token=abc"))))
+        assertNull(DiagnosticRedactor.redact(StreamEndDiagnostics.screenStreamEnded(110,
+            StreamEndDiagnostics.screenSocketError(SocketException("peer hostname=Jane's iPhone")))))
     }
 }
